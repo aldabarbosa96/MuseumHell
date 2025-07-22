@@ -10,10 +10,14 @@ import com.jme3.system.AppSettings;
 import museumhell.input.GameInputManager;
 import museumhell.player.PlayerController;
 import museumhell.world.WorldBuilder;
+import museumhell.world.levelgen.BspGenerator;
+import museumhell.world.levelgen.LevelLayout;
+import museumhell.world.levelgen.Room;
 
 import java.awt.DisplayMode;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.util.List;
 
 public class MuseumHell extends SimpleApplication {
     private BulletAppState physics;
@@ -47,6 +51,7 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
+
         DirectionalLight sun = new DirectionalLight();
         sun.setDirection(new Vector3f(-1, -2, -3).normalizeLocal());
         sun.setColor(ColorRGBA.White);
@@ -60,23 +65,36 @@ public class MuseumHell extends SimpleApplication {
         stateManager.attach(physics);
         physics.setDebugEnabled(true);
 
+        LevelLayout layout = BspGenerator.generate(60, 60, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
-        world.buildRoom(20, 30, 10);
+        world.build(layout, 6f);
 
-        Vector3f startPos = new Vector3f(4, 3, 8);
+        List<Room> rooms = layout.rooms();
+        for (int i = 0; i < rooms.size(); i++) {
+            if (i == 0) continue;
+            if (Math.random() < 0.5) continue;
+            world.addLootToRoom(rooms.get(i), 1 + (int) (Math.random() * 3)); // 1-3 objetos
+        }
+
+
+        Vector3f startPos = layout.rooms().get(0).center3f(3f);
         playerCtrl = new PlayerController(assetManager, physics.getPhysicsSpace(), startPos);
         rootNode.attachChild(playerCtrl.getNode());
 
         inputMgr = new GameInputManager(inputManager, flyCam);
         inputMgr.setupCameraFollow(cam);
         inputMgr.registerPlayerControl(playerCtrl);
+
+        cam.setFrustumNear(0.5f);
     }
+
 
     @Override
     public void simpleUpdate(float tpf) {
         playerCtrl.update(tpf);
         inputMgr.update(tpf);
-        Vector3f eye = playerCtrl.getLocation().add(0, 0.5f, 0);
+        Vector3f lookBack = cam.getDirection().mult(-0.25f);
+        Vector3f eye = playerCtrl.getLocation().add(0, 0.4f, 0).addLocal(lookBack);
         cam.setLocation(eye);
     }
 }
