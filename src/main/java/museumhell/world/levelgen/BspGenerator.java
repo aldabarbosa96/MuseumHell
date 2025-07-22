@@ -6,9 +6,9 @@ import java.util.Random;
 
 public final class BspGenerator {
 
-    private static final int MIN_ROOM = 6;   // lado mínimo de una sala
+    private static final int MIN_ROOM = 8;   // lado mínimo de una sala
     private static final int MIN_SPLIT = MIN_ROOM * 2 + 2;
-    private static final int MAX_DEPTH = 4;
+    private static final int MAX_DEPTH = 6;
 
     private record Node(int x, int z, int w, int h, int depth) {
     }
@@ -25,16 +25,13 @@ public final class BspGenerator {
         boolean canSplitHoriz = n.w >= MIN_SPLIT;
         boolean canSplitVert = n.h >= MIN_SPLIT;
 
-        /*  ── Hoja ──
-         *  Sin márgenes internos  */
+        /*  ── Hoja ── */
         if (n.depth == MAX_DEPTH || (!canSplitHoriz && !canSplitVert)) {
-            out.add(new Room(n.x, n.z, n.w, n.h));   // ← ocupa 100% del nodo
+            out.add(new Room(n.x, n.z, n.w, n.h));
             return;
         }
 
-        /*  Decide eje de corte                                            */
-        boolean splitVert = (canSplitHoriz && canSplitVert) ? n.w > n.h          // sala más ancha que alta
-                : canSplitHoriz;     // sólo se puede en X
+        boolean splitVert = (canSplitHoriz && canSplitVert) ? n.w > n.h : canSplitHoriz;
 
         if (splitVert) {             // corte vertical ⇒ izquierda / derecha
             int cutMin = MIN_ROOM;

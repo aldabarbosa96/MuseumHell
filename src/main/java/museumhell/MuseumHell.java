@@ -65,7 +65,7 @@ public class MuseumHell extends SimpleApplication {
         stateManager.attach(physics);
         physics.setDebugEnabled(true);
 
-        LevelLayout layout = BspGenerator.generate(60, 60, System.nanoTime());
+        LevelLayout layout = BspGenerator.generate(80, 60, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
         world.build(layout, 6f);
 
