@@ -17,7 +17,7 @@ public class PlayerController {
         playerNode = new Node("Player");
         playerNode.setLocalTranslation(startPos);
 
-        CapsuleCollisionShape shape = new CapsuleCollisionShape(0.6f, 1.6f);
+        CapsuleCollisionShape shape = new CapsuleCollisionShape(0.8f, 1.8f);
         control = new CharacterControl(shape, 0.05f);
         control.setGravity(30);
         control.setJumpSpeed(12);

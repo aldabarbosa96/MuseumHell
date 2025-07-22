@@ -63,7 +63,7 @@ public class MuseumHell extends SimpleApplication {
 
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(true);
+        physics.setDebugEnabled(false);
 
         LevelLayout layout = BspGenerator.generate(80, 60, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());

@@ -164,15 +164,24 @@ public class WorldBuilder {
         return a1 < b2 && b1 < a2;
     }
 
-    private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA color) {
+    private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA base) {
         Geometry g = new Geometry(name, mesh);
-        Material m = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        m.setColor("Color", color);
-        m.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
 
+        float f = 0.05f + (float)Math.random()*0.07f;
+        ColorRGBA dark = base.mult(f);
+
+        Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        m.setBoolean("UseMaterialColors", true);
+        m.setColor("Ambient", dark);
+        m.setColor("Diffuse", dark);
+        m.setColor("Specular", ColorRGBA.Black);
+        m.setFloat("Shininess", 1);
+
+        m.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
         g.setMaterial(m);
         return g;
     }
+
 
 
     private void addStaticNode(Geometry geo) {
