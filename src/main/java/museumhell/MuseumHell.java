@@ -58,7 +58,7 @@ public class MuseumHell extends SimpleApplication {
         rootNode.addLight(sun);*/
 
         AmbientLight amb = new AmbientLight();
-        amb.setColor(ColorRGBA.White.mult(0.33f));
+        amb.setColor(ColorRGBA.White.mult(0.1f));
         rootNode.addLight(amb);
 
         physics = new BulletAppState();

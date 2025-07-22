@@ -19,6 +19,10 @@ public class WorldBuilder {
     private static final float DOOR_W = 2;
     private static final float WALL_T = 0.33f;
     private static final float MARGIN = 1.0f;
+    private static final int SMALL_SIDE = 8;
+    private static final int GRID_STEP = 12;
+    private static final int MAX_LAMPS = 4;
+    private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
 
     private final AssetManager assetManager;
     private final Node rootNode;
@@ -34,21 +38,47 @@ public class WorldBuilder {
 
         for (Room r : layout.rooms()) {
 
-            /* suelo y techo */
-            float cx = r.x() + r.w() * .5f;
-            float cz = r.z() + r.h() * .5f;
+            /* ---------- ILUMINACIÓN ---------- */
+            int w = r.w();
+            int d = r.h();
+            float cx = r.x() + w * 0.5f;
+            float cz = r.z() + d * 0.5f;
 
-            float roomMax = Math.max(r.w(), r.h());
+            if (w <= SMALL_SIDE && d <= SMALL_SIDE) {
+                // Sala pequeña: 1 lámpara central (tu ajuste original)
+                PointLight pl = new PointLight();
+                pl.setRadius(Math.max(w, d) * 0.95f);
+                pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1).mult(10f));
+                pl.setPosition(new Vector3f(cx, height - 0.3f, cz));
+                rootNode.addLight(pl);
 
-            PointLight pl = new PointLight();
-            pl.setRadius(roomMax * 0.95f);
-            pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1f).mult(10f));
-            pl.setPosition(new Vector3f(cx, height - 0.3f, cz));
+            } else {
+                // Sala mediana / grande: hasta MAX_LAMPS lámparas
+                int nx = Math.max(1, Math.round(w / (float) GRID_STEP));
+                int nz = Math.max(1, Math.round(d / (float) GRID_STEP));
+                int lampsToPlace = Math.min(nx * nz, MAX_LAMPS);
 
-            rootNode.addLight(pl);
+                float stepX = w / (float) (nx + 1);
+                float stepZ = d / (float) (nz + 1);
 
-            Box floorMesh = new Box(r.w() * .5f, 0.1f, r.h() * .5f);
-            Geometry floor = makeGeometry("Floor", floorMesh, ColorRGBA.LightGray);
+                int placed = 0;
+                for (int ix = 1; ix <= nx && placed < lampsToPlace; ix++) {
+                    for (int iz = 1; iz <= nz && placed < lampsToPlace; iz++) {
+
+                        PointLight pl = new PointLight();
+                        // radio algo menor para que las luces se solapen sin saturar
+                        pl.setRadius(Math.max(stepX, stepZ) * 1.8f);
+                        pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1).mult(10f));
+                        pl.setPosition(new Vector3f(r.x() + ix * stepX, height - 0.3f, r.z() + iz * stepZ));
+                        rootNode.addLight(pl);
+                        placed++;
+                    }
+                }
+            }
+
+            /* ---------- SUELO Y TECHO ---------- */
+            Box floorMesh = new Box(w * 0.5f, 0.1f, d * 0.5f);
+            Geometry floor = makeGeometry("Floor", floorMesh, ColorRGBA.Brown);
             floor.setLocalTranslation(cx, -0.1f, cz);
             addStaticNode(floor);
 
@@ -57,18 +87,17 @@ public class WorldBuilder {
             addStaticNode(ceil);
 
 
-            /* detección de vecinos  */
+            /* ---- Vecinos y muros ---- */
             boolean neighN = doorNorth(r, layout);
             boolean neighW = doorWest(r, layout);
             boolean neighS = doorSouth(r, layout);
             boolean neighE = doorEast(r, layout);
 
-            buildWallX(r.x(), r.z(), r.w(), height, neighN, "N");
-            buildWallZ(r.x(), r.z(), r.h(), height, neighW, "W");
+            buildWallX(r.x(), r.z(), w, height, neighN, "N");
+            buildWallZ(r.x(), r.z(), d, height, neighW, "W");
 
-            /* Sur y Este SOLO si no hay vecino (cerrar exterior) */
-            if (!neighS) buildWallX(r.x(), r.z() + r.h(), r.w(), height, false, "S");
-            if (!neighE) buildWallZ(r.x() + r.w(), r.z(), r.h(), height, false, "E");
+            if (!neighS) buildWallX(r.x(), r.z() + d, w, height, false, "S");
+            if (!neighE) buildWallZ(r.x() + w, r.z(), d, height, false, "E");
         }
     }
 
@@ -130,26 +159,25 @@ public class WorldBuilder {
         for (int i = 0; i < count; i++) {
             float lx = room.x() + 1f + (float) Math.random() * (room.w() - 2f);
             float lz = room.z() + 1f + (float) Math.random() * (room.h() - 2f);
-            Geometry loot = makeGeometry("Loot", new Box(.5f, .5f, .5f), ColorRGBA.Red);
+            Geometry loot = makeGeometry("Loot", new Box(.5f, .5f, .5f), ColorRGBA.Orange);
             loot.setLocalTranslation(lx, .5f, lz);
             addStaticNode(loot);
         }
     }
 
+    private int overlapLen(int a1, int a2, int b1, int b2) {
+        return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
+    }
+
+    /* ---------- puertas ---------- */
     private boolean doorNorth(Room a, LevelLayout L) {
         int ax1 = a.x(), ax2 = a.x() + a.w(), az1 = a.z();
         for (Room b : L.rooms()) {
             if (b == a) continue;
-            if (b.z() + b.h() == az1 && rangesOverlap(ax1, ax2, b.x(), b.x() + b.w())) return true;
-        }
-        return false;
-    }
-
-    private boolean doorWest(Room a, LevelLayout L) {
-        int az1 = a.z(), az2 = a.z() + a.h(), ax1 = a.x();
-        for (Room b : L.rooms()) {
-            if (b == a) continue;
-            if (b.x() + b.w() == ax1 && rangesOverlap(az1, az2, b.z(), b.z() + b.h())) return true;
+            if (b.z() + b.h() == az1) {
+                int len = overlapLen(ax1, ax2, b.x(), b.x() + b.w());
+                if (len >= MIN_OVERLAP_FOR_DOOR) return true;
+            }
         }
         return false;
     }
@@ -158,7 +186,22 @@ public class WorldBuilder {
         int ax1 = a.x(), ax2 = a.x() + a.w(), az2 = a.z() + a.h();
         for (Room b : L.rooms()) {
             if (b == a) continue;
-            if (b.z() == az2 && rangesOverlap(ax1, ax2, b.x(), b.x() + b.w())) return true;
+            if (b.z() == az2) {
+                int len = overlapLen(ax1, ax2, b.x(), b.x() + b.w());
+                if (len >= MIN_OVERLAP_FOR_DOOR) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean doorWest(Room a, LevelLayout L) {
+        int az1 = a.z(), az2 = a.z() + a.h(), ax1 = a.x();
+        for (Room b : L.rooms()) {
+            if (b == a) continue;
+            if (b.x() + b.w() == ax1) {
+                int len = overlapLen(az1, az2, b.z(), b.z() + b.h());
+                if (len >= MIN_OVERLAP_FOR_DOOR) return true;
+            }
         }
         return false;
     }
@@ -167,13 +210,12 @@ public class WorldBuilder {
         int az1 = a.z(), az2 = a.z() + a.h(), ax2 = a.x() + a.w();
         for (Room b : L.rooms()) {
             if (b == a) continue;
-            if (b.x() == ax2 && rangesOverlap(az1, az2, b.z(), b.z() + b.h())) return true;
+            if (b.x() == ax2) {
+                int len = overlapLen(az1, az2, b.z(), b.z() + b.h());
+                if (len >= MIN_OVERLAP_FOR_DOOR) return true;
+            }
         }
         return false;
-    }
-
-    private boolean rangesOverlap(int a1, int a2, int b1, int b2) {
-        return a1 < b2 && b1 < a2;
     }
 
     private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA base) {
