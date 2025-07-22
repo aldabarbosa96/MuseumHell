@@ -11,10 +11,9 @@ import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 
 public final class Stairs {
-
-    public static final float WIDTH = 2.5f;   // ancho libre de la escalera
-    public static final float STEP_H = 0.30f;  // alto de cada peldaño
-    public static final float STEP_DEPTH = 0.40f;  // huella de cada peldaño
+    public static final float WIDTH = 2.5f;
+    public static final float STEP_H = 0.3f;
+    public static final float STEP_DEPTH = 0.45f;
 
     public static void add(Node root, PhysicsSpace ps, AssetManager am, Vector3f base, float floorHeight) {
 
@@ -39,8 +38,6 @@ public final class Stairs {
         }
     }
 
-    /* ─────────────────── helpers ─────────────────── */
-
     private static Material makeMat(AssetManager am) {
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
@@ -50,5 +47,5 @@ public final class Stairs {
     }
 
     private Stairs() {
-    }   // utilidad estática: no instanciable
+    }
 }

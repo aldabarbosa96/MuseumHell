@@ -39,7 +39,16 @@ public class Prompt extends BaseAppState {
         txt.setCullHint(BitmapText.CullHint.Always);
     }
 
-    @Override protected void cleanup(Application app) { txt.removeFromParent(); }
-    @Override protected void onEnable()  { }
-    @Override protected void onDisable() { }
+    @Override
+    protected void cleanup(Application app) {
+        txt.removeFromParent();
+    }
+
+    @Override
+    protected void onEnable() {
+    }
+
+    @Override
+    protected void onDisable() {
+    }
 }

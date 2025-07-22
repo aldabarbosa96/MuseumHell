@@ -1,4 +1,4 @@
-package museumhell.engine.player;
+package museumhell.game.player;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
@@ -32,7 +32,7 @@ public class PlayerController {
     }
 
     public void update(float tpf) {
-        // Animaciones, salud, estados…
+        // TODO --> Animaciones, salud, estados…
     }
 
     public void move(Vector3f dir) {

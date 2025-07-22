@@ -84,8 +84,6 @@ public class Hud extends BaseAppState {
     protected void onDisable() {
     }
 
-    /* ---------- Helpers ---------- */
-
     private void layout() {
         float textW = txt.getLineWidth();
         float totalW = PAD + ICON_SIZE + PAD + textW + PAD;

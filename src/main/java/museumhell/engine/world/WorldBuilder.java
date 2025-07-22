@@ -7,6 +7,7 @@ import com.jme3.light.PointLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
@@ -20,30 +21,25 @@ import java.util.*;
  * Construye el contenido físico y gráfico del museo a partir de un {@link MuseumLayout}.
  */
 public class WorldBuilder {
-
-    /* ─────────────────── CONSTANTES ─────────────────── */
-
     private static final float DOOR_W = 2f, WALL_T = .33f, MARGIN = 1f;
     private static final int SMALL_SIDE = 8, GRID_STEP = 12, MAX_LAMPS = 4;
     private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     private static final float STAIR_WALL_GAP = 0.20f;
-    private static final float STAIR_FOOT_GAP =  1.5f;
-
-    /* ─────────────────── CAMPOS ─────────────────── */
-
+    private static final float STAIR_FOOT_GAP = 1.5f;
+    private static final int MAX_STAIRS_PER_FLOOR = 3;
     private final AssetManager am;
     private final Node root;
     private final PhysicsSpace space;
     private final List<Door> doors = new ArrayList<>();
-
-    /**
-     * Huecos (rectángulos) provocados por escaleras ― clave = índice de planta.
-     */
     private final Map<Integer, List<Rect>> stairVoids = new HashMap<>();
 
-    /* Rectángulo en planta ‑ ayuda para los huecos */
     private record Rect(float x1, float x2, float z1, float z2) {
     }
+
+    private record StairPlacement(int floor, float x, float z) {
+    }
+
+    private final List<StairPlacement> stairs = new ArrayList<>();
 
     public WorldBuilder(AssetManager am, Node root, PhysicsSpace space) {
         this.am = am;
@@ -51,20 +47,15 @@ public class WorldBuilder {
         this.space = space;
     }
 
-    /* ─────────────────── API PÚBLICA ─────────────────── */
 
     public void build(MuseumLayout museum) {
-        // 1) calcula primero los huecos causados por las escaleras
         calculateStairVoids(museum);
-
-        // 2) genera las plantas usando esos huecos
         float h = museum.floorHeight();
         for (int i = 0; i < museum.floors().size(); i++) {
             List<Rect> holes = stairVoids.getOrDefault(i, List.of());
             buildSingleFloor(museum.floors().get(i), museum.yOf(i), h, holes, i == 0);
         }
 
-        // 3) coloca las escaleras (ya no “carva” losas, porque llegan recortadas)
         connectFloors(museum);
     }
 
@@ -93,17 +84,9 @@ public class WorldBuilder {
         return best;
     }
 
-    public void addLootToRoom(Room r, int n) {
-        for (int i = 0; i < n; i++) {
-            float lx = r.x() + 1 + (float) Math.random() * (r.w() - 2);
-            float lz = r.z() + 1 + (float) Math.random() * (r.h() - 2);
-            Geometry g = makeGeometry("Loot", new Box(.5f, .5f, .5f), ColorRGBA.Orange);
-            g.setLocalTranslation(lx, .5f, lz);
-            addStatic(g);
-        }
+    private static boolean rectsOverlap(Rect a, Rect b) {
+        return a.x1 < b.x2 && a.x2 > b.x1 && a.z1 < b.z2 && a.z2 > b.z1;
     }
-
-    /* ─────────────────── GENERACIÓN DE PLANTAS ─────────────────── */
 
     private void buildSingleFloor(LevelLayout layout, float y0, float h, List<Rect> holes, boolean skipFloorHoles) {
 
@@ -115,7 +98,7 @@ public class WorldBuilder {
             int w = r.w(), d = r.h();
             float cx = r.x() + w * .5f, cz = r.z() + d * .5f;
 
-            /* luces ------------------------------------------------ */
+            /* luces */
             if (w <= SMALL_SIDE && d <= SMALL_SIDE) {
                 pointLight(cx, y0 + h - .3f, cz, Math.max(w, d) * .95f);
             } else {
@@ -129,13 +112,13 @@ public class WorldBuilder {
                         pointLight(r.x() + ix * sx, y0 + h - .3f, r.z() + iz * sz, Math.max(sx, sz) * 1.8f);
             }
 
-            /* suelo (piso actual) --------------------------------- */
+            /* suelo (piso actual) */
             addFloorPatches(r.x(), r.z(), w, d, floorHoles, y0 - .1f, .1f, "Floor", ColorRGBA.Brown);
 
             /* techo (siempre recortable) --------------------------- */
             addFloorPatches(r.x(), r.z(), w, d, holes, y0 + h, .1f, "Ceil", ColorRGBA.Blue);
 
-            /* muros + puertas ------------------------------------- */
+            /* muros + puertas  */
             boolean n = doorNorth(r, layout), wN = doorWest(r, layout);
             boolean s = doorSouth(r, layout), e = doorEast(r, layout);
 
@@ -146,9 +129,7 @@ public class WorldBuilder {
         }
     }
 
-    /**
-     * Recorta la losa (suelo/techo) en parches para evitar el hueco de la escalera.
-     */
+
     private void addFloorPatches(float rx, float rz, float rw, float rd, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
 
         /* Busca si la sala se solapa con algún hueco */
@@ -186,76 +167,90 @@ public class WorldBuilder {
         addStatic(g);
     }
 
-    /* ─────────────────── ESCALERAS ─────────────────── */
-
     private void calculateStairVoids(MuseumLayout museum) {
 
         if (museum.floors().size() < 2) return;
 
-        Room baseRoom = museum.floors().get(0).rooms().get(0);
+        Random rnd = new Random(museum.floors().size() * 73L);
 
-        /* ─── Posición X pegada a la pared Oeste (‑X) ─── */
-        float sx = baseRoom.x() + STAIR_WALL_GAP + Stairs.WIDTH * .5f;
-        if (sx + Stairs.WIDTH * .5f > baseRoom.x() + baseRoom.w()) {
-            /* Si no cabe, se pega a la pared Este (+X) */
-            sx = baseRoom.x() + baseRoom.w() - STAIR_WALL_GAP - Stairs.WIDTH * .5f;
-        }
-
-        /* ─── Profundidad y posición Z ─── */
         int steps = (int) Math.ceil(museum.floorHeight() / Stairs.STEP_H);
         float runDepth = steps * Stairs.STEP_DEPTH;
+        float hxPad = Stairs.WIDTH * .5f + 0.05f;
 
-        float sz = baseRoom.z() + Stairs.STEP_DEPTH * .5f + STAIR_FOOT_GAP;
-        if (sz + runDepth - Stairs.STEP_DEPTH * .5f > baseRoom.z() + baseRoom.h() - STAIR_FOOT_GAP) {
-            sz = baseRoom.z() + baseRoom.h() - runDepth + Stairs.STEP_DEPTH * .5f - STAIR_FOOT_GAP;
-        }
+        /* para impedir 2 escaleras en la misma sala */
+        Map<Integer, Set<Room>> usedRooms = new HashMap<>();
+        /* cuántas llevamos en cada planta inferior */
+        Map<Integer, Integer> stairsPerFloor = new HashMap<>();
 
-        /* ─── Rectángulo que cubre TODO el recorrido ─── */
-        final float PAD = 0.05f;
-        float hx = Stairs.WIDTH * .5f + PAD;
+        for (int floor = 0; floor < museum.floors().size() - 1; floor++) {
 
-        float minX = sx - hx, maxX = sx + hx;
-        float minZ = sz - Stairs.STEP_DEPTH * .5f;
-        float maxZ = sz + runDepth - Stairs.STEP_DEPTH * .5f;
+            LevelLayout A = museum.floors().get(floor);
+            LevelLayout B = museum.floors().get(floor + 1);
 
-        Rect rect = new Rect(minX, maxX, minZ, maxZ);
+            List<Room> roomsA = new ArrayList<>(A.rooms());
+            List<Room> roomsB = new ArrayList<>(B.rooms());
+            Collections.shuffle(roomsA, rnd);
+            Collections.shuffle(roomsB, rnd);
 
-        /* Registrar hueco en ambas plantas: i (techo) y i+1 (suelo) */
-        for (int i = 0; i < museum.floors().size() - 1; i++) {
-            stairVoids.computeIfAbsent(i, k -> new ArrayList<>()).add(rect); // techo planta i
-            stairVoids.computeIfAbsent(i + 1, k -> new ArrayList<>()).add(rect); // suelo planta i+1
+            outer:
+            for (Room ra : roomsA) {
+
+                /* Regla: no repetir sala */
+                if (usedRooms.computeIfAbsent(floor, k -> new HashSet<>()).contains(ra)) continue;
+                /* Regla: máx. 3 por planta */
+                if (stairsPerFloor.getOrDefault(floor, 0) >= MAX_STAIRS_PER_FLOOR) break;
+
+                for (Room rb : roomsB) {
+
+                    int ix1 = Math.max(ra.x(), rb.x());
+                    int ix2 = Math.min(ra.x() + ra.w(), rb.x() + rb.w());
+                    int iz1 = Math.max(ra.z(), rb.z());
+                    int iz2 = Math.min(ra.z() + ra.h(), rb.z() + rb.h());
+
+                    float interW = ix2 - ix1;
+                    float interD = iz2 - iz1;
+                    if (interW < Stairs.WIDTH + STAIR_WALL_GAP * 2) continue;
+                    if (interD < runDepth + STAIR_FOOT_GAP * 2) continue;
+
+                    /* Pared y chequeo puerta */
+                    boolean leftWall = rnd.nextBoolean();
+                    if (leftWall && doorWest(ra, A)) continue;
+                    if (!leftWall && doorEast(ra, A)) continue;
+
+                    float sx = leftWall ? ix1 + STAIR_WALL_GAP + Stairs.WIDTH * .5f : ix2 - STAIR_WALL_GAP - Stairs.WIDTH * .5f;
+
+                    float zMin = iz1 + Stairs.STEP_DEPTH * .5f + STAIR_FOOT_GAP;
+                    float zMax = iz2 - runDepth + Stairs.STEP_DEPTH * .5f - STAIR_FOOT_GAP;
+                    float sz = (zMax <= zMin) ? zMin : FastMath.interpolateLinear(rnd.nextFloat(), zMin, zMax);
+
+                    Rect r = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * .5f, sz + runDepth - Stairs.STEP_DEPTH * .5f);
+
+                    /* evitar solaparse con otras escaleras de la planta */
+                    for (Rect ex : stairVoids.getOrDefault(floor, List.of()))
+                        if (rectsOverlap(r, ex)) continue outer;
+
+                    /* registra huecos */
+                    stairVoids.computeIfAbsent(floor, k -> new ArrayList<>()).add(r);
+                    stairVoids.computeIfAbsent(floor + 1, k -> new ArrayList<>()).add(r);
+
+                    /* guarda para instanciar */
+                    stairs.add(new StairPlacement(floor, sx, sz));
+
+                    /* actualiza controles */
+                    usedRooms.get(floor).add(ra);
+                    stairsPerFloor.merge(floor, 1, Integer::sum);
+                    break;          // pasa a otra sala inferior
+                }
+            }
         }
     }
 
     private void connectFloors(MuseumLayout museum) {
-
-        if (museum.floors().size() < 2) return;
-
-        Room baseRoom = museum.floors().get(0).rooms().get(0);
-
-        /* ─── Posición X pegada a pared Oeste (o Este si no cabe) ─── */
-        float sx = baseRoom.x() + STAIR_WALL_GAP + Stairs.WIDTH * .5f;
-        if (sx + Stairs.WIDTH * .5f > baseRoom.x() + baseRoom.w()) {
-            sx = baseRoom.x() + baseRoom.w() - STAIR_WALL_GAP - Stairs.WIDTH * .5f;
-        }
-
-        /* ─── Posición Z y profundidad ─── */
-        int steps = (int) Math.ceil(museum.floorHeight() / Stairs.STEP_H);
-        float runDepth = steps * Stairs.STEP_DEPTH;
-
-        float sz = baseRoom.z() + Stairs.STEP_DEPTH * .5f + STAIR_FOOT_GAP;
-        if (sz + runDepth - Stairs.STEP_DEPTH * .5f > baseRoom.z() + baseRoom.h() - STAIR_FOOT_GAP) {
-            sz = baseRoom.z() + baseRoom.h() - runDepth + Stairs.STEP_DEPTH * .5f - STAIR_FOOT_GAP;
-        }
-
-        /* ─── Instancia las escaleras en cada planta ─── */
-        for (int i = 0; i < museum.floors().size() - 1; i++) {
-            float y0 = museum.yOf(i);
-            Stairs.add(root, space, am, new Vector3f(sx, y0, sz), museum.floorHeight());
+        for (StairPlacement sp : stairs) {
+            float y0 = museum.yOf(sp.floor);
+            Stairs.add(root, space, am, new Vector3f(sp.x, y0, sp.z), museum.floorHeight());
         }
     }
-
-    /* ─────────────────── MUROS Y PUERTAS ─────────────────── */
 
     private void buildWallX(float x0, float z, int w, float y0, float h, boolean neighbor, String tag) {
 
@@ -319,8 +314,6 @@ public class WorldBuilder {
         doors.add(dObj);
     }
 
-    /* ─────────────────── PUERTAS ─────────────────── */
-
     private int overlap(int a1, int a2, int b1, int b2) {
         return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
     }
@@ -354,8 +347,6 @@ public class WorldBuilder {
             if (b != a && b.x() == ax && overlap(az1, az2, b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR) return true;
         return false;
     }
-
-    /* ─────────────────── UTILIDADES LOW‑LEVEL ─────────────────── */
 
     private void pointLight(float x, float y, float z, float radius) {
         PointLight pl = new PointLight();

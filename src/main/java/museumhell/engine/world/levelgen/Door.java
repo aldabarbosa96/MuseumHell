@@ -11,15 +11,11 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 
 public class Door {
-
     private static final float SPEED = 3f;
-
     private final Geometry geo;
     private final RigidBodyControl body;
-
     private final Vector3f closedPos;
     private final Vector3f openPos;
-
     private boolean targetOpen = false;
     private float progress = 0f;
 

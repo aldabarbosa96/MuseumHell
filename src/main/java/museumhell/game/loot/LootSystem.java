@@ -6,7 +6,7 @@ import com.jme3.asset.AssetManager;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.ui.Hud;
-import museumhell.engine.player.PlayerController;
+import museumhell.game.player.PlayerController;
 import museumhell.engine.world.levelgen.Room;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +39,6 @@ public class LootSystem extends BaseAppState {
         }
         hud.set(collected, items.size());
     }
-
-    /* ---------- BaseAppState ---------- */
 
     @Override
     public void update(float tpf) {

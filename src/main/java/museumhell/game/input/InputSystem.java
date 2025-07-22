@@ -7,7 +7,7 @@ import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
-import museumhell.engine.player.PlayerController;
+import museumhell.game.player.PlayerController;
 import museumhell.engine.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
 

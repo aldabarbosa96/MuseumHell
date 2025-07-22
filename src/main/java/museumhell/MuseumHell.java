@@ -5,8 +5,10 @@ import com.jme3.bullet.BulletAppState;
 import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.Node;
 import com.jme3.system.AppSettings;
-import museumhell.engine.player.PlayerController;
+import museumhell.game.player.PlayerController;
 import museumhell.engine.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
@@ -16,7 +18,6 @@ import museumhell.game.interaction.InteractionSystem;
 import museumhell.game.loot.LootSystem;
 import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
-import org.codehaus.groovy.util.FastArray;
 
 import java.awt.*;
 
@@ -50,7 +51,7 @@ public class MuseumHell extends SimpleApplication {
 
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(false);
+        physics.setDebugEnabled(true);
 
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
