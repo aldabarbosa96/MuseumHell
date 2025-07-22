@@ -1,0 +1,76 @@
+package museumhell.input;
+
+import com.jme3.input.FlyByCamera;
+import com.jme3.input.InputManager;
+import com.jme3.input.KeyInput;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.KeyTrigger;
+import com.jme3.math.Vector3f;
+import com.jme3.renderer.Camera;
+import museumhell.player.PlayerController;
+
+public class GameInputManager implements ActionListener {
+    private final InputManager inMgr;
+    private final FlyByCamera flyCam;
+    private Camera cam;
+    private PlayerController player;
+
+    private boolean up, down, left, right, sprint;
+
+    private static final float WALK_SPEED = 8f;
+    private static final float SPRINT_MULT = 2f;
+
+    public GameInputManager(InputManager inMgr, FlyByCamera flyCam) {
+        this.inMgr = inMgr;
+        this.flyCam = flyCam;
+        setupMappings();
+    }
+
+    private void setupMappings() {
+        inMgr.addMapping("Left", new KeyTrigger(KeyInput.KEY_A));
+        inMgr.addMapping("Right", new KeyTrigger(KeyInput.KEY_D));
+        inMgr.addMapping("Up", new KeyTrigger(KeyInput.KEY_W));
+        inMgr.addMapping("Down", new KeyTrigger(KeyInput.KEY_S));
+        inMgr.addMapping("Jump", new KeyTrigger(KeyInput.KEY_SPACE));
+        inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
+        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint");
+
+        flyCam.setDragToRotate(false);
+        flyCam.setRotationSpeed(1.5f);
+    }
+
+    public void setupCameraFollow(Camera cam) {
+        this.cam = cam;
+    }
+
+    public void registerPlayerControl(PlayerController pc) {
+        this.player = pc;
+    }
+
+    @Override
+    public void onAction(String name, boolean isPressed, float tpf) {
+        switch (name) {
+            case "Left" -> left = isPressed;
+            case "Right" -> right = isPressed;
+            case "Up" -> up = isPressed;
+            case "Down" -> down = isPressed;
+            case "Sprint" -> sprint = isPressed;
+            case "Jump" -> {
+                if (isPressed && player != null) player.jump();
+            }
+        }
+    }
+
+    public void update(float tpf) {
+        if (player == null || cam == null) return;
+
+        Vector3f dir = new Vector3f();
+        if (left) dir.addLocal(cam.getLeft());
+        if (right) dir.addLocal(cam.getLeft().negate());
+        if (up) dir.addLocal(cam.getDirection());
+        if (down) dir.addLocal(cam.getDirection().negate());
+
+        float speed = sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED;
+        player.move(dir.multLocal(speed * tpf));
+    }
+}

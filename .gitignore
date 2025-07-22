@@ -1,0 +1,11 @@
+/.gradle/
+/.nb-gradle/
+/build/
+/private/
+/*.dll
+/*.dylib
+/*.so
+
+/.idea/
+
+local.properties
