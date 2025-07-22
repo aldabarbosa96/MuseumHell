@@ -3,9 +3,11 @@ package museumhell.world;
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.control.RigidBodyControl;
+import com.jme3.light.PointLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
@@ -36,6 +38,15 @@ public class WorldBuilder {
             float cx = r.x() + r.w() * .5f;
             float cz = r.z() + r.h() * .5f;
 
+            float roomMax = Math.max(r.w(), r.h());
+
+            PointLight pl = new PointLight();
+            pl.setRadius(roomMax * 0.95f);
+            pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1f).mult(10f));
+            pl.setPosition(new Vector3f(cx, height - 0.3f, cz));
+
+            rootNode.addLight(pl);
+
             Box floorMesh = new Box(r.w() * .5f, 0.1f, r.h() * .5f);
             Geometry floor = makeGeometry("Floor", floorMesh, ColorRGBA.LightGray);
             floor.setLocalTranslation(cx, -0.1f, cz);
@@ -44,6 +55,7 @@ public class WorldBuilder {
             Geometry ceil = makeGeometry("Ceil", floorMesh, ColorRGBA.Blue);
             ceil.setLocalTranslation(cx, height, cz);
             addStaticNode(ceil);
+
 
             /* detección de vecinos  */
             boolean neighN = doorNorth(r, layout);
@@ -167,7 +179,7 @@ public class WorldBuilder {
     private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA base) {
         Geometry g = new Geometry(name, mesh);
 
-        float f = 0.05f + (float)Math.random()*0.07f;
+        float f = 0.05f + (float) Math.random() * 0.07f;
         ColorRGBA dark = base.mult(f);
 
         Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
@@ -181,7 +193,6 @@ public class WorldBuilder {
         g.setMaterial(m);
         return g;
     }
-
 
 
     private void addStaticNode(Geometry geo) {

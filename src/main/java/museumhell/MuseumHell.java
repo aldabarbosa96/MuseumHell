@@ -52,13 +52,13 @@ public class MuseumHell extends SimpleApplication {
     @Override
     public void simpleInitApp() {
 
-        DirectionalLight sun = new DirectionalLight();
+        /*DirectionalLight sun = new DirectionalLight();
         sun.setDirection(new Vector3f(-1, -2, -3).normalizeLocal());
         sun.setColor(ColorRGBA.White);
-        rootNode.addLight(sun);
+        rootNode.addLight(sun);*/
 
         AmbientLight amb = new AmbientLight();
-        amb.setColor(ColorRGBA.White.mult(0.3f));
+        amb.setColor(ColorRGBA.White.mult(0.33f));
         rootNode.addLight(amb);
 
         physics = new BulletAppState();
