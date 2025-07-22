@@ -1,4 +1,4 @@
-package museumhell.input;
+package museumhell.manager.input;
 
 import com.jme3.input.FlyByCamera;
 import com.jme3.input.InputManager;

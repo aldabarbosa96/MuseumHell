@@ -252,6 +252,16 @@ public class WorldBuilder {
         }
     }
 
+    public Door nearestDoor(Vector3f pos, float maxDist) {
+        Door best = null;
+        float best2 = maxDist * maxDist;
+        for (Door d : doors) {
+            float dist2 = d.getAccessPoint().distanceSquared(pos);
+            if (dist2 < best2) { best2 = dist2; best = d; }
+        }
+        return best;
+    }
+
     private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA base) {
         Geometry g = new Geometry(name, mesh);
 

@@ -66,6 +66,19 @@ public class LootManager extends BaseAppState {
             hud.set(collected, collected + items.size());
         }
     }
+
+    public LootItem nearestLoot(Vector3f pos, float maxDist) {
+        LootItem best = null;
+        float best2 = maxDist * maxDist;
+        for (LootItem li : items) {
+            Vector3f w = li.getWorldTranslation();
+            float dx = w.x - pos.x, dz = w.z - pos.z;
+            float d2 = dx*dx + dz*dz;          // plano XZ
+            if (d2 < best2) { best2 = d2; best = li; }
+        }
+        return best;
+    }
+
     @Override
     protected void initialize(Application app) {
     }

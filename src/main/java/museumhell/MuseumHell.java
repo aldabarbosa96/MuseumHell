@@ -3,13 +3,14 @@ package museumhell;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.light.AmbientLight;
-import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.system.AppSettings;
-import museumhell.input.GameInputManager;
+import museumhell.manager.input.GameInputManager;
+import museumhell.manager.interaction.InteractionManager;
 import museumhell.player.PlayerController;
 import museumhell.ui.Hud;
+import museumhell.ui.PromptHud;
 import museumhell.world.WorldBuilder;
 import museumhell.world.levelgen.BspGenerator;
 import museumhell.world.levelgen.LevelLayout;
@@ -65,7 +66,7 @@ public class MuseumHell extends SimpleApplication {
 
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(false);
+        physics.setDebugEnabled(true);
 
         LevelLayout layout = BspGenerator.generate(80, 60, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
@@ -93,8 +94,14 @@ public class MuseumHell extends SimpleApplication {
         Hud hud = new Hud();
         stateManager.attach(hud);
 
+        PromptHud prompt = new PromptHud();
+        stateManager.attach(prompt);
+
         LootManager lootMgr = new LootManager(assetManager, rootNode, playerCtrl, hud);
         stateManager.attach(lootMgr);
+
+        InteractionManager im = new InteractionManager(playerCtrl, world, lootMgr, prompt);
+        stateManager.attach(im);
 
         inputMgr.setLootManager(lootMgr);
 
