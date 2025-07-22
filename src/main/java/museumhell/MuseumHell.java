@@ -75,7 +75,7 @@ public class MuseumHell extends SimpleApplication {
         for (int i = 0; i < rooms.size(); i++) {
             if (i == 0) continue;
             if (Math.random() < 0.5) continue;
-            world.addLootToRoom(rooms.get(i), 1 + (int) (Math.random() * 3)); // 1-3 objetos
+            world.addLootToRoom(rooms.get(i), 1 + (int) (Math.random() * 3));
         }
 
 
@@ -95,6 +95,8 @@ public class MuseumHell extends SimpleApplication {
 
         LootManager lootMgr = new LootManager(assetManager, rootNode, playerCtrl, hud);
         stateManager.attach(lootMgr);
+
+        inputMgr.setLootManager(lootMgr);
 
         for (int i = 1; i < rooms.size(); i++) {
             if (Math.random() < 0.5) continue;

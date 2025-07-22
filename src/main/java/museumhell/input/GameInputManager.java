@@ -9,6 +9,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import museumhell.player.PlayerController;
 import museumhell.world.WorldBuilder;
+import museumhell.world.loot.LootManager;
 
 public class GameInputManager implements ActionListener {
     private WorldBuilder world;
@@ -16,6 +17,7 @@ public class GameInputManager implements ActionListener {
     private final FlyByCamera flyCam;
     private Camera cam;
     private PlayerController player;
+    private LootManager lootMgr;
 
     private boolean up, down, left, right, sprint;
 
@@ -62,8 +64,11 @@ public class GameInputManager implements ActionListener {
                 if (isPressed && player != null) player.jump();
             }
             case "Use" -> {
-                if (isPressed && world != null && player != null)
-                    world.tryUseDoor(player.getLocation());
+                if (isPressed && world != null && player != null) {
+                    world.tryUseDoor(player.getLocation());                // puertas
+                    if (lootMgr != null)                                   // loot
+                        lootMgr.tryPickUp(player.getLocation());
+                }
             }
         }
     }
@@ -81,5 +86,11 @@ public class GameInputManager implements ActionListener {
         player.move(dir.multLocal(speed * tpf));
     }
 
-    public void setWorld(WorldBuilder w) { this.world = w; }
+    public void setWorld(WorldBuilder w) {
+        this.world = w;
+    }
+
+    public void setLootManager(LootManager lm) {
+        this.lootMgr = lm;
+    }
 }

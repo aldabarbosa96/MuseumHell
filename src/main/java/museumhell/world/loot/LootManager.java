@@ -8,14 +8,10 @@ import com.jme3.scene.Node;
 import museumhell.ui.Hud;
 import museumhell.player.PlayerController;
 import museumhell.world.levelgen.Room;
-
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-/**
- * Gestiona lista de loot y su recogida mediante distancia.
- */
+
 public class LootManager extends BaseAppState {
 
     private final AssetManager am;
@@ -48,20 +44,28 @@ public class LootManager extends BaseAppState {
 
     @Override
     public void update(float tpf) {
-        Vector3f p = player.getLocation();
-        Iterator<LootItem> it = items.iterator();
-        final float R2 = 1.0f;      // distancia de recogida (m)
-        while (it.hasNext()) {
-            LootItem li = it.next();
-            if (li.getWorldTranslation().distanceSquared(p) < R2) {
-                root.detachChild(li);
-                it.remove();
-                collected++;
-                hud.set(collected, collected + items.size());
-            }
-        }
     }
 
+    public void tryPickUp(Vector3f playerPos) {
+        final float MAX2 = 1.2f * 1.2f;
+        LootItem target = null;
+        float best = MAX2;
+
+        for (LootItem li : items) {
+            Vector3f w = li.getWorldTranslation();
+            float dx = w.x - playerPos.x;
+            float dz = w.z - playerPos.z;
+            float d2 = dx*dx + dz*dz;
+            if (d2 < best) { best = d2; target = li; }
+        }
+
+        if (target != null) {
+            root.detachChild(target);
+            items.remove(target);
+            collected++;
+            hud.set(collected, collected + items.size());
+        }
+    }
     @Override
     protected void initialize(Application app) {
     }
