@@ -82,6 +82,7 @@ public class MuseumHell extends SimpleApplication {
         rootNode.attachChild(playerCtrl.getNode());
 
         inputMgr = new GameInputManager(inputManager, flyCam);
+        inputMgr.setWorld(world);
         inputMgr.setupCameraFollow(cam);
         inputMgr.registerPlayerControl(playerCtrl);
 
@@ -93,6 +94,7 @@ public class MuseumHell extends SimpleApplication {
     public void simpleUpdate(float tpf) {
         playerCtrl.update(tpf);
         inputMgr.update(tpf);
+        world.update(tpf);
         Vector3f lookBack = cam.getDirection().mult(-0.25f);
         Vector3f eye = playerCtrl.getLocation().add(0, 0.4f, 0).addLocal(lookBack);
         cam.setLocation(eye);

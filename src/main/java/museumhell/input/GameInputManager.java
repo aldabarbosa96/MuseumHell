@@ -8,8 +8,10 @@ import com.jme3.input.controls.KeyTrigger;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import museumhell.player.PlayerController;
+import museumhell.world.WorldBuilder;
 
 public class GameInputManager implements ActionListener {
+    private WorldBuilder world;
     private final InputManager inMgr;
     private final FlyByCamera flyCam;
     private Camera cam;
@@ -33,7 +35,8 @@ public class GameInputManager implements ActionListener {
         inMgr.addMapping("Down", new KeyTrigger(KeyInput.KEY_S));
         inMgr.addMapping("Jump", new KeyTrigger(KeyInput.KEY_SPACE));
         inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
-        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint");
+        inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
+        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use");
 
         flyCam.setDragToRotate(false);
         flyCam.setRotationSpeed(1.5f);
@@ -58,6 +61,10 @@ public class GameInputManager implements ActionListener {
             case "Jump" -> {
                 if (isPressed && player != null) player.jump();
             }
+            case "Use" -> {
+                if (isPressed && world != null && player != null)
+                    world.tryUseDoor(player.getLocation());
+            }
         }
     }
 
@@ -73,4 +80,6 @@ public class GameInputManager implements ActionListener {
         float speed = sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED;
         player.move(dir.multLocal(speed * tpf));
     }
+
+    public void setWorld(WorldBuilder w) { this.world = w; }
 }

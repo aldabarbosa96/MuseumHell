@@ -12,8 +12,12 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
+import museumhell.world.levelgen.Door;
 import museumhell.world.levelgen.LevelLayout;
 import museumhell.world.levelgen.Room;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class WorldBuilder {
     private static final float DOOR_W = 2;
@@ -23,6 +27,7 @@ public class WorldBuilder {
     private static final int GRID_STEP = 12;
     private static final int MAX_LAMPS = 4;
     private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
+    private List<Door> doors = new ArrayList<>();
 
     private final AssetManager assetManager;
     private final Node rootNode;
@@ -126,6 +131,15 @@ public class WorldBuilder {
         Geometry gR = makeGeometry("Wall" + tag + "_R", new Box((MARGIN + side) * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
         gR.setLocalTranslation(x0 + width - (MARGIN + side) * .5f, h * .5f, z);
         addStaticNode(gR);
+
+        float doorX = x0 + MARGIN + side + DOOR_W * .5f;
+        Vector3f doorPos = new Vector3f(doorX, h * .5f, z);
+
+        Vector3f slideX = new Vector3f(DOOR_W + 0.05f, 0, 0);
+
+        Door door = new Door(assetManager, physicsSpace, doorPos, DOOR_W, h, WALL_T, slideX);
+        rootNode.attachChild(door.getSpatial());
+        doors.add(door);
     }
 
     /*  Pared paralela al eje Z (E-W)  */
@@ -153,6 +167,16 @@ public class WorldBuilder {
         Geometry gB = makeGeometry("Wall" + tag + "_B", new Box(WALL_T, h * .5f, (MARGIN + side) * .5f), ColorRGBA.DarkGray);
         gB.setLocalTranslation(x, h * .5f, z0 + depth - (MARGIN + side) * .5f);
         addStaticNode(gB);
+
+        float doorZ = z0 + MARGIN + side + DOOR_W * .5f;
+        Vector3f doorPos = new Vector3f(x, h * .5f, doorZ);
+
+        Vector3f slideZ = new Vector3f(0, 0, DOOR_W + 0.05f);
+
+        Door door = new Door(assetManager, physicsSpace, doorPos, WALL_T, h, DOOR_W, slideZ);
+        rootNode.attachChild(door.getSpatial());
+        doors.add(door);
+
     }
 
     public void addLootToRoom(Room room, int count) {
@@ -218,6 +242,16 @@ public class WorldBuilder {
         return false;
     }
 
+    public void tryUseDoor(Vector3f playerPos) {
+        final float MAX_DIST = 2.0f;
+        for (Door d : doors) {
+            if (d.getAccessPoint().distance(playerPos) < MAX_DIST) {
+                d.toggle();
+                break;
+            }
+        }
+    }
+
     private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA base) {
         Geometry g = new Geometry(name, mesh);
 
@@ -241,5 +275,9 @@ public class WorldBuilder {
         geo.addControl(new RigidBodyControl(0));
         rootNode.attachChild(geo);
         physicsSpace.add(geo.getControl(RigidBodyControl.class));
+    }
+
+    public void update(float tpf) {
+        for (Door d : doors) d.update(tpf);
     }
 }
