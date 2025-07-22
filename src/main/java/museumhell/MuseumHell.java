@@ -6,16 +6,16 @@ import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.system.AppSettings;
-import museumhell.manager.input.GameInputManager;
-import museumhell.manager.interaction.InteractionManager;
-import museumhell.player.PlayerController;
+import museumhell.game.input.GameInputManager;
+import museumhell.game.interaction.InteractionManager;
+import museumhell.engine.player.PlayerController;
 import museumhell.ui.Hud;
 import museumhell.ui.PromptHud;
-import museumhell.world.WorldBuilder;
-import museumhell.world.levelgen.BspGenerator;
-import museumhell.world.levelgen.LevelLayout;
-import museumhell.world.levelgen.Room;
-import museumhell.world.loot.LootManager;
+import museumhell.engine.world.WorldBuilder;
+import museumhell.engine.world.levelgen.BspGenerator;
+import museumhell.engine.world.levelgen.LevelLayout;
+import museumhell.engine.world.levelgen.Room;
+import museumhell.game.loot.LootManager;
 
 import java.awt.DisplayMode;
 import java.awt.GraphicsDevice;
@@ -110,7 +110,6 @@ public class MuseumHell extends SimpleApplication {
             lootMgr.scatter(rooms.get(i), 1 + (int)(Math.random() * 3));
         }
     }
-
 
     @Override
     public void simpleUpdate(float tpf) {

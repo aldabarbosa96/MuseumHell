@@ -1,14 +1,14 @@
-package museumhell.manager.interaction;
+package museumhell.game.interaction;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.math.Vector3f;
-import museumhell.player.PlayerController;
+import museumhell.engine.player.PlayerController;
 import museumhell.ui.PromptHud;
-import museumhell.world.WorldBuilder;
-import museumhell.world.levelgen.Door;
-import museumhell.world.loot.LootItem;
-import museumhell.world.loot.LootManager;
+import museumhell.engine.world.WorldBuilder;
+import museumhell.engine.world.levelgen.Door;
+import museumhell.game.loot.LootItem;
+import museumhell.game.loot.LootManager;
 
 public class InteractionManager extends BaseAppState {
 

@@ -1,4 +1,4 @@
-package museumhell.world.levelgen;
+package museumhell.engine.world.levelgen;
 
 import java.util.List;
 

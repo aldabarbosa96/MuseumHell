@@ -1,4 +1,4 @@
-package museumhell.world.loot;
+package museumhell.game.loot;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;

@@ -1,4 +1,4 @@
-package museumhell.manager.input;
+package museumhell.game.input;
 
 import com.jme3.input.FlyByCamera;
 import com.jme3.input.InputManager;
@@ -7,9 +7,9 @@ import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
-import museumhell.player.PlayerController;
-import museumhell.world.WorldBuilder;
-import museumhell.world.loot.LootManager;
+import museumhell.engine.player.PlayerController;
+import museumhell.engine.world.WorldBuilder;
+import museumhell.game.loot.LootManager;
 
 public class GameInputManager implements ActionListener {
     private WorldBuilder world;

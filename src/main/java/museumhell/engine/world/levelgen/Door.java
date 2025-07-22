@@ -1,4 +1,4 @@
-package museumhell.world.levelgen;
+package museumhell.engine.world.levelgen;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;

@@ -1,4 +1,4 @@
-package museumhell.world.levelgen;
+package museumhell.engine.world.levelgen;
 
 import com.jme3.math.Vector3f;
 

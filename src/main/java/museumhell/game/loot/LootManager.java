@@ -1,4 +1,4 @@
-package museumhell.world.loot;
+package museumhell.game.loot;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
@@ -6,8 +6,8 @@ import com.jme3.asset.AssetManager;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.ui.Hud;
-import museumhell.player.PlayerController;
-import museumhell.world.levelgen.Room;
+import museumhell.engine.player.PlayerController;
+import museumhell.engine.world.levelgen.Room;
 import java.util.ArrayList;
 import java.util.List;
 

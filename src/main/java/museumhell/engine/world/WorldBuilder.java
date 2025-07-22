@@ -1,4 +1,4 @@
-package museumhell.world;
+package museumhell.engine.world;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
@@ -12,9 +12,9 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
-import museumhell.world.levelgen.Door;
-import museumhell.world.levelgen.LevelLayout;
-import museumhell.world.levelgen.Room;
+import museumhell.engine.world.levelgen.Door;
+import museumhell.engine.world.levelgen.LevelLayout;
+import museumhell.engine.world.levelgen.Room;
 
 import java.util.ArrayList;
 import java.util.List;
