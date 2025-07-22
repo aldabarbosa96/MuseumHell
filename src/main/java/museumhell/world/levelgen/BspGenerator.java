@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Random;
 
 public final class BspGenerator {
-    private static final int MIN_ROOM = 8;   // lado mínimo de una sala
+    private static final int MIN_ROOM = 10;   // lado mínimo de una sala
     private static final int MIN_SPLIT = MIN_ROOM * 2 + 2;
-    private static final int MAX_DEPTH = 6;
+    private static final int MAX_DEPTH = 8;
 
     private record Node(int x, int z, int w, int h, int depth) {
     }

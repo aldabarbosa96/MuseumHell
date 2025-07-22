@@ -9,10 +9,12 @@ import com.jme3.math.Vector3f;
 import com.jme3.system.AppSettings;
 import museumhell.input.GameInputManager;
 import museumhell.player.PlayerController;
+import museumhell.ui.Hud;
 import museumhell.world.WorldBuilder;
 import museumhell.world.levelgen.BspGenerator;
 import museumhell.world.levelgen.LevelLayout;
 import museumhell.world.levelgen.Room;
+import museumhell.world.loot.LootManager;
 
 import java.awt.DisplayMode;
 import java.awt.GraphicsDevice;
@@ -87,6 +89,17 @@ public class MuseumHell extends SimpleApplication {
         inputMgr.registerPlayerControl(playerCtrl);
 
         cam.setFrustumNear(0.55f);
+
+        Hud hud = new Hud();
+        stateManager.attach(hud);
+
+        LootManager lootMgr = new LootManager(assetManager, rootNode, playerCtrl, hud);
+        stateManager.attach(lootMgr);
+
+        for (int i = 1; i < rooms.size(); i++) {
+            if (Math.random() < 0.5) continue;
+            lootMgr.scatter(rooms.get(i), 1 + (int)(Math.random() * 3));
+        }
     }
 
 
