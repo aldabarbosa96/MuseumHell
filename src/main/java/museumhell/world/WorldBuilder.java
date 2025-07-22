@@ -14,10 +14,9 @@ import museumhell.world.levelgen.LevelLayout;
 import museumhell.world.levelgen.Room;
 
 public class WorldBuilder {
-
-    private static final float DOOR_W = 1.4f;
-    private static final float WALL_T = 0.1f;
-    private static final int MAX_GAP = 4;
+    private static final float DOOR_W = 2;
+    private static final float WALL_T = 0.33f;
+    private static final float MARGIN = 1.0f;
 
     private final AssetManager assetManager;
     private final Node rootNode;
@@ -33,83 +32,98 @@ public class WorldBuilder {
 
         for (Room r : layout.rooms()) {
 
-            /* suelo */
+            /* suelo y techo */
             float cx = r.x() + r.w() * .5f;
             float cz = r.z() + r.h() * .5f;
 
             Box floorMesh = new Box(r.w() * .5f, 0.1f, r.h() * .5f);
-            Geometry floor = makeGeom("Floor", floorMesh, ColorRGBA.LightGray);
+            Geometry floor = makeGeometry("Floor", floorMesh, ColorRGBA.LightGray);
             floor.setLocalTranslation(cx, -0.1f, cz);
-            addStatic(floor);
+            addStaticNode(floor);
 
-            /* techo */
-            Geometry ceil = makeGeom("Ceil", floorMesh, ColorRGBA.Blue);
+            Geometry ceil = makeGeometry("Ceil", floorMesh, ColorRGBA.Blue);
             ceil.setLocalTranslation(cx, height, cz);
-            addStatic(ceil);
+            addStaticNode(ceil);
 
-            /* vecinos */
-            boolean doorN = doorNorth(r, layout);
-            boolean doorW = doorWest(r, layout);
+            /* detección de vecinos  */
+            boolean neighN = doorNorth(r, layout);
+            boolean neighW = doorWest(r, layout);
+            boolean neighS = doorSouth(r, layout);
+            boolean neighE = doorEast(r, layout);
 
-            /* paredes */
-            buildWallX(r.x(), r.z(), r.w(), height, doorN, "N");
-            buildWallZ(r.x(), r.z(), r.h(), height, doorW, "W");
+            buildWallX(r.x(), r.z(), r.w(), height, neighN, "N");
+            buildWallZ(r.x(), r.z(), r.h(), height, neighW, "W");
+
+            /* Sur y Este SOLO si no hay vecino (cerrar exterior) */
+            if (!neighS) buildWallX(r.x(), r.z() + r.h(), r.w(), height, false, "S");
+            if (!neighE) buildWallZ(r.x() + r.w(), r.z(), r.h(), height, false, "E");
         }
     }
 
-    private void buildWallX(float x0, float z, int width, float h, boolean door, String tag) {
 
-        if (!door) {
-            Geometry g = makeGeom("Wall" + tag, new Box(width * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+    private void buildWallX(float x0, float z, int width, float h, boolean hasNeighbor, String tag) {
+
+        if (!hasNeighbor) {                    // — muro macizo exterior —
+            Geometry g = makeGeometry("Wall" + tag, new Box(width * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
             g.setLocalTranslation(x0 + width * .5f, h * .5f, z);
-            addStatic(g);
+            addStaticNode(g);
             return;
         }
 
-        float side = (width - DOOR_W) * .5f;
-        if (side <= 0) return;
+        float free = width - 2 * MARGIN;
+        if (free < DOOR_W) {
+            hasNeighbor = false;
+            buildWallX(x0, z, width, h, hasNeighbor, tag);
+            return;
+        }
 
-        Geometry gL = makeGeom("Wall" + tag + "_L", new Box(side * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-        gL.setLocalTranslation(x0 + side * .5f, h * .5f, z);
-        addStatic(gL);
+        float side = (free - DOOR_W) * .5f;
+        Geometry gL = makeGeometry("Wall" + tag + "_L", new Box((MARGIN + side) * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+        gL.setLocalTranslation(x0 + (MARGIN + side) * .5f, h * .5f, z);
+        addStaticNode(gL);
 
-        Geometry gR = makeGeom("Wall" + tag + "_R", new Box(side * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-        gR.setLocalTranslation(x0 + width - side * .5f, h * .5f, z);
-        addStatic(gR);
+        Geometry gR = makeGeometry("Wall" + tag + "_R", new Box((MARGIN + side) * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+        gR.setLocalTranslation(x0 + width - (MARGIN + side) * .5f, h * .5f, z);
+        addStaticNode(gR);
     }
 
-    private void buildWallZ(float x, float z0, int depth, float h, boolean door, String tag) {
+    /*  Pared paralela al eje Z (E-W)  */
+    private void buildWallZ(float x, float z0, int depth, float h, boolean hasNeighbor, String tag) {
 
-        if (!door) {
-            Geometry g = makeGeom("Wall" + tag, new Box(WALL_T, h * .5f, depth * .5f), ColorRGBA.DarkGray);
+        if (!hasNeighbor) {                    // — muro macizo exterior —
+            Geometry g = makeGeometry("Wall" + tag, new Box(WALL_T, h * .5f, depth * .5f), ColorRGBA.DarkGray);
             g.setLocalTranslation(x, h * .5f, z0 + depth * .5f);
-            addStatic(g);
+            addStaticNode(g);
             return;
         }
 
-        float side = (depth - DOOR_W) * .5f;
-        if (side <= 0) return;
+        float free = depth - 2 * MARGIN;
+        if (free < DOOR_W) {
+            hasNeighbor = false;
+            buildWallZ(x, z0, depth, h, hasNeighbor, tag);
+            return;
+        }
 
-        Geometry gT = makeGeom("Wall" + tag + "_T", new Box(WALL_T, h * .5f, side * .5f), ColorRGBA.DarkGray);
-        gT.setLocalTranslation(x, h * .5f, z0 + side * .5f);
-        addStatic(gT);
+        float side = (free - DOOR_W) * .5f;
+        Geometry gT = makeGeometry("Wall" + tag + "_T", new Box(WALL_T, h * .5f, (MARGIN + side) * .5f), ColorRGBA.DarkGray);
+        gT.setLocalTranslation(x, h * .5f, z0 + (MARGIN + side) * .5f);
+        addStaticNode(gT);
 
-        Geometry gB = makeGeom("Wall" + tag + "_B", new Box(WALL_T, h * .5f, side * .5f), ColorRGBA.DarkGray);
-        gB.setLocalTranslation(x, h * .5f, z0 + depth - side * .5f);
-        addStatic(gB);
+        Geometry gB = makeGeometry("Wall" + tag + "_B", new Box(WALL_T, h * .5f, (MARGIN + side) * .5f), ColorRGBA.DarkGray);
+        gB.setLocalTranslation(x, h * .5f, z0 + depth - (MARGIN + side) * .5f);
+        addStaticNode(gB);
     }
 
     public void addLootToRoom(Room room, int count) {
         for (int i = 0; i < count; i++) {
             float lx = room.x() + 1f + (float) Math.random() * (room.w() - 2f);
             float lz = room.z() + 1f + (float) Math.random() * (room.h() - 2f);
-            Geometry loot = makeGeom("Loot", new Box(.5f, .5f, .5f), ColorRGBA.Red);
+            Geometry loot = makeGeometry("Loot", new Box(.5f, .5f, .5f), ColorRGBA.Red);
             loot.setLocalTranslation(lx, .5f, lz);
-            addStatic(loot);
+            addStaticNode(loot);
         }
     }
 
-    /* ---------------- puertas reciprocas ---------------------------------- */
     private boolean doorNorth(Room a, LevelLayout L) {
         int ax1 = a.x(), ax2 = a.x() + a.w(), az1 = a.z();
         for (Room b : L.rooms()) {
@@ -128,12 +142,29 @@ public class WorldBuilder {
         return false;
     }
 
+    private boolean doorSouth(Room a, LevelLayout L) {
+        int ax1 = a.x(), ax2 = a.x() + a.w(), az2 = a.z() + a.h();
+        for (Room b : L.rooms()) {
+            if (b == a) continue;
+            if (b.z() == az2 && rangesOverlap(ax1, ax2, b.x(), b.x() + b.w())) return true;
+        }
+        return false;
+    }
+
+    private boolean doorEast(Room a, LevelLayout L) {
+        int az1 = a.z(), az2 = a.z() + a.h(), ax2 = a.x() + a.w();
+        for (Room b : L.rooms()) {
+            if (b == a) continue;
+            if (b.x() == ax2 && rangesOverlap(az1, az2, b.z(), b.z() + b.h())) return true;
+        }
+        return false;
+    }
 
     private boolean rangesOverlap(int a1, int a2, int b1, int b2) {
         return a1 < b2 && b1 < a2;
     }
 
-    private Geometry makeGeom(String name, Mesh mesh, ColorRGBA color) {
+    private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA color) {
         Geometry g = new Geometry(name, mesh);
         Material m = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
         m.setColor("Color", color);
@@ -144,7 +175,7 @@ public class WorldBuilder {
     }
 
 
-    private void addStatic(Geometry geo) {
+    private void addStaticNode(Geometry geo) {
         geo.addControl(new RigidBodyControl(0));
         rootNode.attachChild(geo);
         physicsSpace.add(geo.getControl(RigidBodyControl.class));

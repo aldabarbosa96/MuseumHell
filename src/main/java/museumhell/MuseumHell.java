@@ -85,7 +85,7 @@ public class MuseumHell extends SimpleApplication {
         inputMgr.setupCameraFollow(cam);
         inputMgr.registerPlayerControl(playerCtrl);
 
-        cam.setFrustumNear(0.5f);
+        cam.setFrustumNear(0.55f);
     }
 
 
