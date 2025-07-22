@@ -7,7 +7,7 @@ import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
 import com.jme3.math.ColorRGBA;
 
-public class PromptHud extends BaseAppState {
+public class Prompt extends BaseAppState {
 
     private BitmapText txt;
 

@@ -4,20 +4,20 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.math.Vector3f;
 import museumhell.engine.player.PlayerController;
-import museumhell.ui.PromptHud;
+import museumhell.ui.Prompt;
 import museumhell.engine.world.WorldBuilder;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.game.loot.LootItem;
-import museumhell.game.loot.LootManager;
+import museumhell.game.loot.LootSystem;
 
-public class InteractionManager extends BaseAppState {
+public class InteractionSystem extends BaseAppState {
 
     private final PlayerController player;
     private final WorldBuilder world;
-    private final LootManager loot;
-    private final PromptHud hud;
+    private final LootSystem loot;
+    private final Prompt hud;
 
-    public InteractionManager(PlayerController pc, WorldBuilder world, LootManager loot, PromptHud hud) {
+    public InteractionSystem(PlayerController pc, WorldBuilder world, LootSystem loot, Prompt hud) {
         this.player = pc;
         this.world = world;
         this.loot = loot;

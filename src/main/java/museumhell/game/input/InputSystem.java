@@ -9,22 +9,22 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import museumhell.engine.player.PlayerController;
 import museumhell.engine.world.WorldBuilder;
-import museumhell.game.loot.LootManager;
+import museumhell.game.loot.LootSystem;
 
-public class GameInputManager implements ActionListener {
+public class InputSystem implements ActionListener {
     private WorldBuilder world;
     private final InputManager inMgr;
     private final FlyByCamera flyCam;
     private Camera cam;
     private PlayerController player;
-    private LootManager lootMgr;
+    private LootSystem lootMgr;
 
     private boolean up, down, left, right, sprint;
 
     private static final float WALK_SPEED = 8f;
     private static final float SPRINT_MULT = 2f;
 
-    public GameInputManager(InputManager inMgr, FlyByCamera flyCam) {
+    public InputSystem(InputManager inMgr, FlyByCamera flyCam) {
         this.inMgr = inMgr;
         this.flyCam = flyCam;
         setupMappings();
@@ -90,7 +90,7 @@ public class GameInputManager implements ActionListener {
         this.world = w;
     }
 
-    public void setLootManager(LootManager lm) {
+    public void setLootManager(LootSystem lm) {
         this.lootMgr = lm;
     }
 }

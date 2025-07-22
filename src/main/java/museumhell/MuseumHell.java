@@ -6,45 +6,36 @@ import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.system.AppSettings;
-import museumhell.game.input.GameInputManager;
-import museumhell.game.interaction.InteractionManager;
 import museumhell.engine.player.PlayerController;
-import museumhell.ui.Hud;
-import museumhell.ui.PromptHud;
 import museumhell.engine.world.WorldBuilder;
-import museumhell.engine.world.levelgen.BspGenerator;
-import museumhell.engine.world.levelgen.LevelLayout;
+import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
-import museumhell.game.loot.LootManager;
+import museumhell.engine.world.levelgen.generator.MuseumGenerator;
+import museumhell.game.input.InputSystem;
+import museumhell.game.interaction.InteractionSystem;
+import museumhell.game.loot.LootSystem;
+import museumhell.ui.Hud;
+import museumhell.ui.Prompt;
+import org.codehaus.groovy.util.FastArray;
 
-import java.awt.DisplayMode;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
-import java.util.List;
+import java.awt.*;
 
 public class MuseumHell extends SimpleApplication {
+
     private BulletAppState physics;
-    private PlayerController playerCtrl;
-    private GameInputManager inputMgr;
     private WorldBuilder world;
+    private PlayerController player;
+    private InputSystem input;
 
     public static void main(String[] args) {
-        GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-        DisplayMode desktop = device.getDisplayMode();
-
-        final float SCALE = 0.75f;
-        int winWidth = Math.round(desktop.getWidth() * SCALE);
-        int winHeight = Math.round(desktop.getHeight() * SCALE);
-
+        DisplayMode dm = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
+        float scale = .75f;
         AppSettings cfg = new AppSettings(true);
-        cfg.setTitle("Museum Hell");
-        cfg.setFullscreen(false);
-        cfg.setResolution(winWidth, winHeight);
-        int hz = desktop.getRefreshRate();
-        if (hz > 0) cfg.setFrequency(hz);
+        cfg.setResolution(Math.round(dm.getWidth() * scale), Math.round(dm.getHeight() * scale));
+        cfg.setTitle("MuseumHell");
         cfg.setVSync(true);
-        cfg.setFrameRate(-1);
         cfg.setGammaCorrection(true);
+        if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate());
 
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);
@@ -55,69 +46,52 @@ public class MuseumHell extends SimpleApplication {
     @Override
     public void simpleInitApp() {
 
-        /*DirectionalLight sun = new DirectionalLight();
-        sun.setDirection(new Vector3f(-1, -2, -3).normalizeLocal());
-        sun.setColor(ColorRGBA.White);
-        rootNode.addLight(sun);*/
-
-        AmbientLight amb = new AmbientLight();
-        amb.setColor(ColorRGBA.White.mult(0.1f));
-        rootNode.addLight(amb);
+        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(.1f)));
 
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(true);
+        physics.setDebugEnabled(false);
 
-        LevelLayout layout = BspGenerator.generate(80, 60, System.nanoTime());
+        /* ---------- WORLD ---------- */
+        MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
-        world.build(layout, 6f);
+        world.build(museum);
 
-        List<Room> rooms = layout.rooms();
-        for (int i = 0; i < rooms.size(); i++) {
-            if (i == 0) continue;
-            if (Math.random() < 0.5) continue;
-            world.addLootToRoom(rooms.get(i), 1 + (int) (Math.random() * 3));
-        }
+        /* ---------- PLAYER ---------- */
+        Room startRoom = museum.floors().get(0).rooms().get(0);
+        player = new PlayerController(assetManager, physics.getPhysicsSpace(), startRoom.center3f(3f));
+        rootNode.attachChild(player.getNode());
 
-
-        Vector3f startPos = layout.rooms().get(0).center3f(3f);
-        playerCtrl = new PlayerController(assetManager, physics.getPhysicsSpace(), startPos);
-        rootNode.attachChild(playerCtrl.getNode());
-
-        inputMgr = new GameInputManager(inputManager, flyCam);
-        inputMgr.setWorld(world);
-        inputMgr.setupCameraFollow(cam);
-        inputMgr.registerPlayerControl(playerCtrl);
-
-        cam.setFrustumNear(0.55f);
+        /* ---------- SYSTEMS ---------- */
+        input = new InputSystem(inputManager, flyCam);
+        input.setupCameraFollow(cam);
+        input.registerPlayerControl(player);
+        input.setWorld(world);
 
         Hud hud = new Hud();
         stateManager.attach(hud);
-
-        PromptHud prompt = new PromptHud();
+        Prompt prompt = new Prompt();
         stateManager.attach(prompt);
 
-        LootManager lootMgr = new LootManager(assetManager, rootNode, playerCtrl, hud);
-        stateManager.attach(lootMgr);
+        LootSystem loot = new LootSystem(assetManager, rootNode, player, hud);
+        stateManager.attach(loot);
+        input.setLootManager(loot);
 
-        InteractionManager im = new InteractionManager(playerCtrl, world, lootMgr, prompt);
-        stateManager.attach(im);
+        stateManager.attach(new InteractionSystem(player, world, loot, prompt));
 
-        inputMgr.setLootManager(lootMgr);
+        /* ---------- LOOT SPAWN ---------- */
+        museum.floors().forEach(f -> f.rooms().stream().skip(1).filter(r -> Math.random() > .5).forEach(r -> loot.scatter(r, 1 + (int) (Math.random() * 3))));
 
-        for (int i = 1; i < rooms.size(); i++) {
-            if (Math.random() < 0.5) continue;
-            lootMgr.scatter(rooms.get(i), 1 + (int)(Math.random() * 3));
-        }
+        cam.setFrustumNear(.55f);
     }
 
     @Override
     public void simpleUpdate(float tpf) {
-        playerCtrl.update(tpf);
-        inputMgr.update(tpf);
+        player.update(tpf);
+        input.update(tpf);
         world.update(tpf);
-        Vector3f lookBack = cam.getDirection().mult(-0.25f);
-        Vector3f eye = playerCtrl.getLocation().add(0, 0.4f, 0).addLocal(lookBack);
+
+        Vector3f eye = player.getLocation().add(0, .4f, 0).addLocal(cam.getDirection().mult(-.25f));
         cam.setLocation(eye);
     }
 }

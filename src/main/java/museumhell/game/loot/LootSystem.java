@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class LootManager extends BaseAppState {
+public class LootSystem extends BaseAppState {
 
     private final AssetManager am;
     private final Node root;
@@ -22,7 +22,7 @@ public class LootManager extends BaseAppState {
     private final List<LootItem> items = new ArrayList<>();
     private int collected = 0;
 
-    public LootManager(AssetManager am, Node root, PlayerController player, Hud hud) {
+    public LootSystem(AssetManager am, Node root, PlayerController player, Hud hud) {
         this.am = am;
         this.root = root;
         this.player = player;

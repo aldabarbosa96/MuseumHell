@@ -1,4 +1,7 @@
-package museumhell.engine.world.levelgen;
+package museumhell.engine.world.levelgen.generator;
+
+import museumhell.engine.world.levelgen.LevelLayout;
+import museumhell.engine.world.levelgen.Room;
 
 import java.util.ArrayList;
 import java.util.List;
