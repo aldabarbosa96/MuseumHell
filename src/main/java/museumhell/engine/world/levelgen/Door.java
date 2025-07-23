@@ -11,7 +11,8 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 
 public class Door {
-    private static final float SPEED = 3f;
+    private static final float SPEED = 3.5f;
+    private static final float PROTRUDE = 0.05f;
     private final Geometry geo;
     private final RigidBodyControl body;
     private final Vector3f closedPos;
@@ -20,12 +21,10 @@ public class Door {
     private float progress = 0f;
 
     public Door(AssetManager am, PhysicsSpace space, Vector3f center, float w, float h, float t, Vector3f offset) {
-
-        // 1) calcula posiciones
         closedPos = center.clone();
-        openPos = center.add(offset);
+        Vector3f dir = offset.normalize();
+        openPos = center.add(offset).add(dir.mult(PROTRUDE));
 
-        // 2) crea geometría
         geo = new Geometry("Door", new Box(w * .5f, h * .5f, t * .5f));
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
@@ -34,11 +33,8 @@ public class Door {
         geo.setMaterial(m);
         geo.setLocalTranslation(closedPos);
 
-        // 3) crea el RigidBodyControl (mass=0)
         body = new RigidBodyControl(0);
         geo.addControl(body);
-
-        // 4) añádelo al espacio y **luego** marca kinematic
         space.add(body);
         body.setKinematic(true);
     }
@@ -47,9 +43,6 @@ public class Door {
         return geo;
     }
 
-    /**
-     * Punto donde el jugador pulsa para abrir/cerrar
-     */
     public Vector3f getAccessPoint() {
         return closedPos;
     }
@@ -63,16 +56,13 @@ public class Door {
     }
 
     public void update(float tpf) {
-        // a) calcula interpolación
-        float dir = targetOpen ? +1f : -1f;
-        progress = FastMath.clamp(progress + dir * (SPEED * tpf) / openPos.distance(closedPos), 0f, 1f);
+        float dirSign = targetOpen ? +1f : -1f;
+        progress = FastMath.clamp(progress + dirSign * (SPEED * tpf) / openPos.distance(closedPos), 0f, 1f);
 
-        // b) mueve geometría y collider
-        Vector3f newPos = FastMath.interpolateLinear(progress, closedPos, openPos);
-        geo.setLocalTranslation(newPos);
-        body.setPhysicsLocation(newPos);
+        Vector3f pos = FastMath.interpolateLinear(progress, closedPos, openPos);
+        geo.setLocalTranslation(pos);
+        body.setPhysicsLocation(pos);
 
-        // c) sólo bloquee físicas mientras NO esté completamente abierto
         body.setEnabled(progress < 1f);
     }
 }

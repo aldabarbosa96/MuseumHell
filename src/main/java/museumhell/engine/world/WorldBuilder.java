@@ -22,7 +22,7 @@ import java.util.*;
  * Construye el contenido físico y gráfico del museo a partir de un {@link MuseumLayout}.
  */
 public class WorldBuilder {
-    private static final float DOOR_W = 2f, WALL_T = .33f, MARGIN = 1f;
+    private static final float DOOR_W = 2.5f, WALL_T = .33f, MARGIN = 1f;
     private static final float HOLE_W = DOOR_W * 2f;
     private static final int SMALL_SIDE = 8, GRID_STEP = 12, MAX_LAMPS = 4;
     private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
@@ -137,10 +137,8 @@ public class WorldBuilder {
             addFloorPatches(r.x(), r.z(), w, d, holes, y0 + h, 0.1f, "Ceil", ColorRGBA.Blue);
 
             /* --------- Muros y conexiones --------- */
-            // Norte y Oeste siempre (evita duplicar muro opuesto)
             handleWall(r, Direction.NORTH, conns, rooms, y0, h);
             handleWall(r, Direction.WEST, conns, rooms, y0, h);
-            // Sur y Este solo si no hay vecino, para no dibujar doble muro
             if (!hasNeighbor(r, rooms, Direction.SOUTH)) {
                 handleWall(r, Direction.SOUTH, conns, rooms, y0, h);
             }
@@ -161,7 +159,7 @@ public class WorldBuilder {
                 case OPENING -> buildWallWithOpening(r, dir, y0, h, rooms);
                 case CORRIDOR -> {
                     buildWallWithOpening(r, dir, y0, h, rooms);
-                    buildCorridor(r, dir, y0, h);
+                    buildCorridor(r, dir, y0, h, rooms);
                 }
             }
         }
@@ -350,13 +348,27 @@ public class WorldBuilder {
     }
 
 
-    private void buildCorridor(Room r, Direction dir, float y0, float h) {
-        // Por ahora basta con la misma apertura.
-        // Si en el futuro quieres un pasillo visible,
-        // crea aquí su geometría (suelo, techo y muros).
-        // Ejemplo de stub:
-        // buildWallWithOpening(r, dir, y0, h);
+    private void buildCorridor(Room r, Direction dir, float y0, float h, List<Room> rooms) {
+        float[] ov = getOverlapRange(r, rooms, dir);
+        float center = (ov[0] + ov[1]) * .5f;
+        float half = HOLE_W * .5f;
+        float eps = .02f;
+
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            float z = dir == Direction.NORTH ? r.z() - WALL_T * .5f : r.z() + r.h() + WALL_T * .5f;
+            float floorY = y0 - .1f - eps;
+            float ceilY = y0 + h + eps;
+            makePatch(center - half, z, HOLE_W, WALL_T, floorY, .1f, "CorrFloor", ColorRGBA.Brown);
+            makePatch(center - half, z, HOLE_W, WALL_T, ceilY, .1f, "CorrCeil", ColorRGBA.Blue);
+        } else {
+            float x = dir == Direction.WEST ? r.x() - WALL_T * .5f : r.x() + r.w() + WALL_T * .5f;
+            float floorY = y0 - .1f - eps;
+            float ceilY = y0 + h + eps;
+            makePatch(x, center - half, WALL_T, HOLE_W, floorY, .1f, "CorrFloor", ColorRGBA.Brown);
+            makePatch(x, center - half, WALL_T, HOLE_W, ceilY, .1f, "CorrCeil", ColorRGBA.Blue);
+        }
     }
+
 
     private void addFloorPatches(float rx, float rz, float rw, float rd, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
 
