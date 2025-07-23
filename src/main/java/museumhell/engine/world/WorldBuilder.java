@@ -13,6 +13,8 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
+import museumhell.engine.world.builders.FloorBuilder;
+import museumhell.engine.world.builders.LightPlacer;
 import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
 
@@ -24,19 +26,35 @@ import java.util.*;
 public class WorldBuilder {
     private static final float DOOR_W = 2.5f, WALL_T = .33f, MARGIN = 1f;
     private static final float HOLE_W = DOOR_W * 2f;
-    private static final int SMALL_SIDE = 8, GRID_STEP = 12, MAX_LAMPS = 4;
     private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     private static final float STAIR_WALL_GAP = 0.20f;
     private static final float STAIR_FOOT_GAP = 1.5f;
     private static final int MAX_STAIRS_PER_FLOOR = 3;
     private static final float CORRIDOR_WALL_T = WALL_T * 3f;
+    private final LightPlacer lightPlacer;
+    private final FloorBuilder floorBuilder;
     private final AssetManager am;
     private final Node root;
     private final PhysicsSpace space;
     private final List<Door> doors = new ArrayList<>();
     private final Map<Integer, List<Rect>> stairVoids = new HashMap<>();
 
-    private record Rect(float x1, float x2, float z1, float z2) {
+    public record Rect(float x1, float x2, float z1, float z2) {
+        public float x1() {
+            return x1;
+        }
+
+        public float x2() {
+            return x2;
+        }
+
+        public float z1() {
+            return z1;
+        }
+
+        public float z2() {
+            return z2;
+        }
     }
 
     private record StairPlacement(int floor, float x, float z) {
@@ -48,6 +66,8 @@ public class WorldBuilder {
         this.am = am;
         this.root = root;
         this.space = space;
+        this.lightPlacer = new LightPlacer(root);
+        this.floorBuilder = new FloorBuilder(root, space, am);
     }
 
 
@@ -107,10 +127,9 @@ public class WorldBuilder {
     }
 
     private void buildSingleFloor(LevelLayout layout, List<Connection> conns, float y0, float h, List<Rect> holes, boolean skipFloorHoles) {
-        // Prepara los huecos de escalera para el suelo
         List<Rect> floorHoles = skipFloorHoles ? List.of() : holes;
-        // Obtiene la lista de todas las salas de esta planta
         List<Room> rooms = layout.rooms();
+        lightPlacer.placeLights(layout.rooms(), y0, h);
 
         for (Room r : rooms) {
             if (isCorridor(r)) {
@@ -118,28 +137,10 @@ public class WorldBuilder {
                 continue;
             }
             int w = r.w(), d = r.h();
-            float cx = r.x() + w * 0.5f;
-            float cz = r.z() + d * 0.5f;
-
-            /* --------- Luces --------- */
-            if (w <= SMALL_SIDE && d <= SMALL_SIDE) {
-                pointLight(cx, y0 + h - 0.3f, cz, Math.max(w, d) * .95f);
-            } else {
-                int nx = Math.max(1, Math.round(w / (float) GRID_STEP));
-                int nz = Math.max(1, Math.round(d / (float) GRID_STEP));
-                int lamps = Math.min(nx * nz, MAX_LAMPS);
-                float sx = w / (float) (nx + 1), sz = d / (float) (nz + 1);
-                int placed = 0;
-                for (int ix = 1; ix <= nx && placed < lamps; ix++) {
-                    for (int iz = 1; iz <= nz && placed < lamps; iz++, placed++) {
-                        pointLight(r.x() + ix * sx, y0 + h - 0.3f, r.z() + iz * sz, Math.max(sx, sz) * 1.8f);
-                    }
-                }
-            }
 
             /* --------- Suelo y techo --------- */
-            addFloorPatches(r.x(), r.z(), w, d, floorHoles, y0 - 0.1f, 0.1f, "Floor", ColorRGBA.Brown);
-            addFloorPatches(r.x(), r.z(), w, d, holes, y0 + h, 0.1f, "Ceil", ColorRGBA.Blue);
+            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, y0 - 0.1f, 0.1f, "Floor", ColorRGBA.Brown);
+            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, y0 + h, 0.1f, "Ceil", ColorRGBA.Blue);
 
             /* --------- Muros y conexiones --------- */
             handleWall(r, Direction.NORTH, conns, rooms, y0, h);
@@ -366,37 +367,6 @@ public class WorldBuilder {
     }
 
 
-    private void addFloorPatches(float rx, float rz, float rw, float rd, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
-
-        /* Busca si la sala se solapa con algún hueco */
-        for (Rect v : holes) {
-            float hx1 = Math.max(v.x1, rx);
-            float hx2 = Math.min(v.x2, rx + rw);
-            float hz1 = Math.max(v.z1, rz);
-            float hz2 = Math.min(v.z2, rz + rd);
-
-            if (hx1 < hx2 && hz1 < hz2) {      // hay solapamiento → 4 parches máx.
-
-                // 1) izquierda
-                if (hx1 > rx) makePatch(rx, rz, hx1 - rx, rd, y, t, tag + "_L", col);
-
-                // 2) derecha
-                if (hx2 < rx + rw) makePatch(hx2, rz, rx + rw - hx2, rd, y, t, tag + "_R", col);
-
-                // 3) delante
-                if (hz1 > rz) makePatch(hx1, rz, hx2 - hx1, hz1 - rz, y, t, tag + "_F", col);
-
-                // 4) detrás
-                if (hz2 < rz + rd) makePatch(hx1, hz2, hx2 - hx1, rz + rd - hz2, y, t, tag + "_B", col);
-
-                return; // solo un hueco por sala en esta implementación
-            }
-        }
-
-        /* Sin hueco → losa completa */
-        makePatch(rx, rz, rw, rd, y, t, tag, col);
-    }
-
     private void makePatch(float x, float z, float w, float d, float y, float t, String name, ColorRGBA col) {
         Geometry g = makeGeometry(name, new Box(w * .5f, t * .5f, d * .5f), col);
         g.setLocalTranslation(x + w * .5f, y, z + d * .5f);
@@ -494,14 +464,6 @@ public class WorldBuilder {
         for (Room b : L.rooms())
             if (b != a && b.x() == ax && overlap(az1, az2, b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR) return true;
         return false;
-    }
-
-    private void pointLight(float x, float y, float z, float radius) {
-        PointLight pl = new PointLight();
-        pl.setRadius(radius);
-        pl.setColor(new ColorRGBA(1f, .75f, .45f, 1f).mult(10f));
-        pl.setPosition(new Vector3f(x, y, z));
-        root.addLight(pl);
     }
 
     private Geometry makeGeometry(String name, Mesh mesh, ColorRGBA base) {
