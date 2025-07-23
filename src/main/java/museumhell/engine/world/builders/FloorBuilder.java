@@ -17,16 +17,12 @@ public class FloorBuilder {
     private final PhysicsSpace space;
     private final AssetManager assetManager;
 
-    // Ahora sólo root, space y assetManager (sin wallThickness)
     public FloorBuilder(Node root, PhysicsSpace space, AssetManager assetManager) {
         this.root = root;
         this.space = space;
         this.assetManager = assetManager;
     }
 
-    /**
-     * Igual firma de antes, con tag y color.
-     */
     public void buildPatches(int x, int z, int w, int d, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
         // Material “oscuro” idéntico al antiguo makeGeometry para suelos
         Material mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
@@ -37,9 +33,7 @@ public class FloorBuilder {
         mat.setColor("Diffuse", dark);
         mat.setColor("Specular", ColorRGBA.Black);
         mat.setFloat("Shininess", 1f);
-        // (sin polyOffset ni specular brillante)
 
-        // Cortamos por huecos tal cual hacías
         for (Rect v : holes) {
             float hx1 = Math.max(v.x1(), x);
             float hx2 = Math.min(v.x2(), x + w);
