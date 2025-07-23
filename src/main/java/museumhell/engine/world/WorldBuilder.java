@@ -14,6 +14,7 @@ import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 import museumhell.engine.world.levelgen.*;
+import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
 
 import java.util.*;
 
@@ -48,18 +49,31 @@ public class WorldBuilder {
     }
 
 
+    // 1) build: genera conexiones y las pasa a buildSingleFloor
     public void build(MuseumLayout museum) {
         stairVoids.clear();
         stairs.clear();
         calculateStairVoids(museum);
         float h = museum.floorHeight();
+
+        // 1.a) genera conexiones por planta
+        List<List<Connection>> floorConns = new ArrayList<>();
+        long seed = System.nanoTime();
+        for (LevelLayout lvl : museum.floors()) {
+            floorConns.add(ConnectionGenerator.build(lvl, seed++));
+        }
+
+        // 1.b) construye cada planta con sus conexiones
         for (int i = 0; i < museum.floors().size(); i++) {
+            LevelLayout lvl = museum.floors().get(i);
             List<Rect> holes = stairVoids.getOrDefault(i, List.of());
-            buildSingleFloor(museum.floors().get(i), museum.yOf(i), h, holes, i == 0);
+            List<Connection> conns = floorConns.get(i);
+            buildSingleFloor(lvl, conns, museum.yOf(i), h, holes, i == 0);
         }
 
         connectFloors(museum);
     }
+
 
     public void update(float tpf) {
         doors.forEach(d -> d.update(tpf));
@@ -90,47 +104,259 @@ public class WorldBuilder {
         return a.x1 < b.x2 && a.x2 > b.x1 && a.z1 < b.z2 && a.z2 > b.z1;
     }
 
-    private void buildSingleFloor(LevelLayout layout, float y0, float h, List<Rect> holes, boolean skipFloorHoles) {
-
-        /* Lista de huecos que SÍ se aplicará al suelo de esta planta */
+    private void buildSingleFloor(LevelLayout layout, List<Connection> conns, float y0, float h, List<Rect> holes, boolean skipFloorHoles) {
+        // Prepara los huecos de escalera para el suelo
         List<Rect> floorHoles = skipFloorHoles ? List.of() : holes;
+        // Obtiene la lista de todas las salas de esta planta
+        List<Room> rooms = layout.rooms();
 
-        for (Room r : layout.rooms()) {
-
+        for (Room r : rooms) {
             int w = r.w(), d = r.h();
-            float cx = r.x() + w * .5f, cz = r.z() + d * .5f;
+            float cx = r.x() + w * 0.5f;
+            float cz = r.z() + d * 0.5f;
 
-            /* luces */
+            /* --------- Luces --------- */
             if (w <= SMALL_SIDE && d <= SMALL_SIDE) {
-                pointLight(cx, y0 + h - .3f, cz, Math.max(w, d) * .95f);
+                pointLight(cx, y0 + h - 0.3f, cz, Math.max(w, d) * .95f);
             } else {
                 int nx = Math.max(1, Math.round(w / (float) GRID_STEP));
                 int nz = Math.max(1, Math.round(d / (float) GRID_STEP));
                 int lamps = Math.min(nx * nz, MAX_LAMPS);
                 float sx = w / (float) (nx + 1), sz = d / (float) (nz + 1);
                 int placed = 0;
-                for (int ix = 1; ix <= nx && placed < lamps; ix++)
-                    for (int iz = 1; iz <= nz && placed < lamps; iz++, placed++)
-                        pointLight(r.x() + ix * sx, y0 + h - .3f, r.z() + iz * sz, Math.max(sx, sz) * 1.8f);
+                for (int ix = 1; ix <= nx && placed < lamps; ix++) {
+                    for (int iz = 1; iz <= nz && placed < lamps; iz++, placed++) {
+                        pointLight(r.x() + ix * sx, y0 + h - 0.3f, r.z() + iz * sz, Math.max(sx, sz) * 1.8f);
+                    }
+                }
             }
 
-            /* suelo (piso actual) */
-            addFloorPatches(r.x(), r.z(), w, d, floorHoles, y0 - .1f, .1f, "Floor", ColorRGBA.Brown);
+            /* --------- Suelo y techo --------- */
+            addFloorPatches(r.x(), r.z(), w, d, floorHoles, y0 - 0.1f, 0.1f, "Floor", ColorRGBA.Brown);
+            addFloorPatches(r.x(), r.z(), w, d, holes, y0 + h, 0.1f, "Ceil", ColorRGBA.Blue);
 
-            /* techo (siempre recortable) --------------------------- */
-            addFloorPatches(r.x(), r.z(), w, d, holes, y0 + h, .1f, "Ceil", ColorRGBA.Blue);
-
-            /* muros + puertas  */
-            boolean hasSouth = doorSouth(r, layout);
-            boolean hasEast = doorEast(r, layout);
-
-            buildWallX(r, layout, y0, h, true);
-            buildWallZ(r, layout, y0, h, true);
-            if (!hasSouth) buildWallX(r, layout, y0, h, false);
-            if (!hasEast) buildWallZ(r, layout, y0, h, false);
+            /* --------- Muros y conexiones --------- */
+            // Norte y Oeste siempre (evita duplicar muro opuesto)
+            handleWall(r, Direction.NORTH, conns, rooms, y0, h);
+            handleWall(r, Direction.WEST, conns, rooms, y0, h);
+            // Sur y Este solo si no hay vecino, para no dibujar doble muro
+            if (!hasNeighbor(r, rooms, Direction.SOUTH)) {
+                handleWall(r, Direction.SOUTH, conns, rooms, y0, h);
+            }
+            if (!hasNeighbor(r, rooms, Direction.EAST)) {
+                handleWall(r, Direction.EAST, conns, rooms, y0, h);
+            }
         }
     }
 
+
+    private void handleWall(Room r, Direction dir, List<Connection> conns, List<Room> rooms, float y0, float h) {
+        Connection c = findConnection(conns, r, dir);
+        if (c == null) {
+            buildSolidWall(r, dir, y0, h);
+        } else {
+            switch (c.type()) {
+                case DOOR -> buildWallWithDoor(r, dir, y0, h, rooms);
+                case OPENING -> buildWallWithOpening(r, dir, y0, h, rooms);
+                case CORRIDOR -> {
+                    buildWallWithOpening(r, dir, y0, h, rooms);
+                    buildCorridor(r, dir, y0, h);
+                }
+            }
+        }
+    }
+
+    private float[] getOverlapRange(Room r, List<Room> rooms, Direction dir) {
+        int a1, a2, b1, b2;
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            // solapamiento en X
+            a1 = r.x();
+            a2 = r.x() + r.w();
+            int zEdge = dir == Direction.NORTH ? r.z() : r.z() + r.h();
+            for (Room o : rooms) {
+                if ((dir == Direction.NORTH && o.z() + o.h() == zEdge) || (dir == Direction.SOUTH && o.z() == zEdge)) {
+                    b1 = o.x();
+                    b2 = o.x() + o.w();
+                    int overlap = Math.min(a2, b2) - Math.max(a1, b1);
+                    if (overlap >= MIN_OVERLAP_FOR_DOOR) {
+                        float start = Math.max(a1, b1);
+                        float end = Math.min(a2, b2);
+                        return new float[]{start, end};
+                    }
+                }
+            }
+        } else {
+            // solapamiento en Z
+            a1 = r.z();
+            a2 = r.z() + r.h();
+            int xEdge = dir == Direction.WEST ? r.x() : r.x() + r.w();
+            for (Room o : rooms) {
+                if ((dir == Direction.WEST && o.x() + o.w() == xEdge) || (dir == Direction.EAST && o.x() == xEdge)) {
+                    b1 = o.z();
+                    b2 = o.z() + o.h();
+                    int overlap = Math.min(a2, b2) - Math.max(a1, b1);
+                    if (overlap >= MIN_OVERLAP_FOR_DOOR) {
+                        float start = Math.max(a1, b1);
+                        float end = Math.min(a2, b2);
+                        return new float[]{start, end};
+                    }
+                }
+            }
+        }
+        throw new IllegalStateException("No hay vecino válido para dir=" + dir + " en sala " + r);
+    }
+
+
+    private boolean hasNeighbor(Room a, List<Room> rooms, Direction dir) {
+        for (Room b : rooms) {
+            switch (dir) {
+                case NORTH -> {
+                    if (b.z() + b.h() == a.z() && overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
+                        return true;
+                }
+                case SOUTH -> {
+                    if (b.z() == a.z() + a.h() && overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
+                        return true;
+                }
+                case WEST -> {
+                    if (b.x() + b.w() == a.x() && overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
+                        return true;
+                }
+                case EAST -> {
+                    if (b.x() == a.x() + a.w() && overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private Direction opposite(Direction d) {
+        return switch (d) {
+            case NORTH -> Direction.SOUTH;
+            case SOUTH -> Direction.NORTH;
+            case EAST -> Direction.WEST;
+            case WEST -> Direction.EAST;
+        };
+    }
+
+    private Connection findConnection(List<Connection> conns, Room room, Direction dir) {
+        for (Connection c : conns) {
+            // si room es el origen y la dir coincide…
+            if (c.a() == room && c.dir() == dir) {
+                return c;
+            }
+            // o si room es el destino y la dir opuesta coincide
+            if (c.b() == room && opposite(c.dir()) == dir) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+
+    private void buildSolidWall(Room r, Direction dir, float y0, float h) {
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            // muro horizontal
+            float z = (dir == Direction.NORTH ? r.z() : r.z() + r.h());
+            Geometry g = makeGeometry("Wall" + dir, new Box(r.w() * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+            g.setLocalTranslation(r.x() + r.w() * .5f, y0 + h * .5f, z);
+            addStatic(g);
+        } else {
+            // muro vertical
+            float x = (dir == Direction.WEST ? r.x() : r.x() + r.w());
+            Geometry g = makeGeometry("Wall" + dir, new Box(WALL_T, h * .5f, r.h() * .5f), ColorRGBA.DarkGray);
+            g.setLocalTranslation(x, y0 + h * .5f, r.z() + r.h() * .5f);
+            addStatic(g);
+        }
+    }
+
+    private void buildWallWithOpening(Room r, Direction dir, float y0, float h, List<Room> rooms) {
+        float[] ov = getOverlapRange(r, rooms, dir);
+        float holeCenter = (ov[0] + ov[1]) * .5f;
+        float halfDoor = DOOR_W * .5f;
+
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            float z = dir == Direction.NORTH ? r.z() : r.z() + r.h();
+            // izquierda
+            float leftW = holeCenter - halfDoor - r.x();
+            if (leftW > 0) {
+                Geometry gL = makeGeometry("Wall" + dir + "_L", new Box(leftW * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+                gL.setLocalTranslation(r.x() + leftW * .5f, y0 + h * .5f, z);
+                addStatic(gL);
+            }
+            // derecha
+            float rightW = (r.x() + r.w()) - (holeCenter + halfDoor);
+            if (rightW > 0) {
+                Geometry gR = makeGeometry("Wall" + dir + "_R", new Box(rightW * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+                gR.setLocalTranslation(r.x() + r.w() - rightW * .5f, y0 + h * .5f, z);
+                addStatic(gR);
+            }
+        } else {
+            float x = dir == Direction.WEST ? r.x() : r.x() + r.w();
+            // trasera
+            float backD = holeCenter - halfDoor - r.z();
+            if (backD > 0) {
+                Geometry gB = makeGeometry("Wall" + dir + "_B", new Box(WALL_T, h * .5f, backD * .5f), ColorRGBA.DarkGray);
+                gB.setLocalTranslation(x, y0 + h * .5f, r.z() + backD * .5f);
+                addStatic(gB);
+            }
+            // frontal
+            float frontD = (r.z() + r.h()) - (holeCenter + halfDoor);
+            if (frontD > 0) {
+                Geometry gF = makeGeometry("Wall" + dir + "_F", new Box(WALL_T, h * .5f, frontD * .5f), ColorRGBA.DarkGray);
+                gF.setLocalTranslation(x, y0 + h * .5f, r.z() + r.h() - frontD * .5f);
+                addStatic(gF);
+            }
+        }
+    }
+
+    private void buildWallWithDoor(Room r, Direction dir, float y0, float h, List<Room> rooms) {
+        // 1) crea primero el hueco (idéntico a buildWallWithOpening)
+        buildWallWithOpening(r, dir, y0, h, rooms);
+
+        // 2) calcula el centro real de la puerta según solapamiento
+        float[] ov = getOverlapRange(r, rooms, dir);
+        float holeCenter = (ov[0] + ov[1]) * 0.5f;
+
+        // 3) decide centro y offset correctamente según la orientación
+        Vector3f center, offset;
+        float doorWidth = DOOR_W, doorThick = WALL_T;
+        if (dir == Direction.NORTH) {
+            center = new Vector3f(holeCenter, y0 + h * 0.5f, r.z());
+            // desliza en X, igual que antes:
+            offset = new Vector3f(doorWidth + 0.05f, 0, 0);
+        } else if (dir == Direction.SOUTH) {
+            center = new Vector3f(holeCenter, y0 + h * 0.5f, r.z() + r.h());
+            offset = new Vector3f(doorWidth + 0.05f, 0, 0);
+        } else if (dir == Direction.WEST) {
+            center = new Vector3f(r.x(), y0 + h * 0.5f, holeCenter);
+            // desliza en Z para muros este/oeste:
+            offset = new Vector3f(0, 0, doorWidth + 0.05f);
+        } else { // EAST
+            center = new Vector3f(r.x() + r.w(), y0 + h * 0.5f, holeCenter);
+            offset = new Vector3f(0, 0, doorWidth + 0.05f);
+        }
+
+        // 4) instancia la puerta con el ancho y grosor correctos
+        // norte/sur: ancho = DOOR_W, grosor = WALL_T
+        // este/oeste: ancho = WALL_T, grosor = DOOR_W
+        float w = (dir == Direction.NORTH || dir == Direction.SOUTH) ? doorWidth : doorThick;
+        float t = (dir == Direction.NORTH || dir == Direction.SOUTH) ? doorThick : doorWidth;
+
+        Door d = new Door(am, space, center, w, h, t, offset);
+        root.attachChild(d.getSpatial());
+        doors.add(d);
+    }
+
+
+    private void buildCorridor(Room r, Direction dir, float y0, float h) {
+        // Por ahora basta con la misma apertura.
+        // Si en el futuro quieres un pasillo visible,
+        // crea aquí su geometría (suelo, techo y muros).
+        // Ejemplo de stub:
+        // buildWallWithOpening(r, dir, y0, h);
+    }
 
     private void addFloorPatches(float rx, float rz, float rw, float rd, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
 
@@ -242,114 +468,9 @@ public class WorldBuilder {
         }
     }
 
-    private void buildWallX(Room r, LevelLayout layout, float y0, float h, boolean isNorth) {
-        float z = isNorth ? r.z() : r.z() + r.h();
-        int x0 = r.x(), w = r.w();
-
-        int ox1 = 0, ox2 = 0;
-        for (Room b : layout.rooms()) {
-            boolean ok = isNorth ? (b.z() + b.h() == r.z()) : (b.z() == r.z() + r.h());
-            if (!ok) continue;
-            int bx1 = b.x(), bx2 = b.x() + b.w();
-            int ix1 = Math.max(x0, bx1), ix2 = Math.min(x0 + w, bx2);
-            if (ix2 - ix1 >= MIN_OVERLAP_FOR_DOOR) {
-                ox1 = ix1;
-                ox2 = ix2;
-                break;
-            }
-        }
-        if (ox2 <= ox1) {
-            Geometry muro = makeGeometry("Wall" + (isNorth ? "N" : "S"), new Box(w * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-            muro.setLocalTranslation(x0 + w * .5f, y0 + h * .5f, z);
-            addStatic(muro);
-            return;
-        }
-
-        float cx = (ox1 + ox2) * .5f;
-        float s = cx - DOOR_W * .5f;
-        float l = s - x0;
-        float rgt = (x0 + w) - (s + DOOR_W);
-
-        if (l > 0) {
-            Geometry gL = makeGeometry("Wall" + (isNorth ? "N" : "S") + "_L", new Box(l * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-            gL.setLocalTranslation(x0 + l * .5f, y0 + h * .5f, z);
-            addStatic(gL);
-        }
-        if (rgt > 0) {
-            Geometry gR = makeGeometry("Wall" + (isNorth ? "N" : "S") + "_R", new Box(rgt * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-            gR.setLocalTranslation(x0 + w - rgt * .5f, y0 + h * .5f, z);
-            addStatic(gR);
-        }
-
-        Vector3f pos = new Vector3f(cx, y0 + h * .5f, z);
-        Door puerta = new Door(am, space, pos, DOOR_W, h, WALL_T, new Vector3f(DOOR_W + .05f, 0, 0));
-        root.attachChild(puerta.getSpatial());
-        doors.add(puerta);
-    }
-
-    private void buildWallZ(Room r, LevelLayout layout, float y0, float h, boolean isWest) {
-        float x = isWest ? r.x() : r.x() + r.w();
-        int z0 = r.z(), d = r.h();
-
-        int oz1 = 0, oz2 = 0;
-        for (Room b : layout.rooms()) {
-            boolean ok = isWest ? (b.x() + b.w() == r.x()) : (b.x() == r.x() + r.w());
-            if (!ok) continue;
-            int bz1 = b.z(), bz2 = b.z() + b.h();
-            int iz1 = Math.max(z0, bz1), iz2 = Math.min(z0 + d, bz2);
-            if (iz2 - iz1 >= MIN_OVERLAP_FOR_DOOR) {
-                oz1 = iz1;
-                oz2 = iz2;
-                break;
-            }
-        }
-        if (oz2 <= oz1) {
-            Geometry muro = makeGeometry("Wall" + (isWest ? "W" : "E"), new Box(WALL_T, h * .5f, d * .5f), ColorRGBA.DarkGray);
-            muro.setLocalTranslation(x, y0 + h * .5f, z0 + d * .5f);
-            addStatic(muro);
-            return;
-        }
-
-        float cz = (oz1 + oz2) * .5f;
-        float s = cz - DOOR_W * .5f;
-        float b = s - z0;
-        float f = (z0 + d) - (s + DOOR_W);
-
-        if (b > 0) {
-            Geometry gB = makeGeometry("Wall" + (isWest ? "W" : "E") + "_B", new Box(WALL_T, h * .5f, b * .5f), ColorRGBA.DarkGray);
-            gB.setLocalTranslation(x, y0 + h * .5f, z0 + b * .5f);
-            addStatic(gB);
-        }
-        if (f > 0) {
-            Geometry gF = makeGeometry("Wall" + (isWest ? "W" : "E") + "_F", new Box(WALL_T, h * .5f, f * .5f), ColorRGBA.DarkGray);
-            gF.setLocalTranslation(x, y0 + h * .5f, z0 + d - f * .5f);
-            addStatic(gF);
-        }
-
-        Vector3f pos = new Vector3f(x, y0 + h * .5f, cz);
-        Door puerta = new Door(am, space, pos, WALL_T, h, DOOR_W, new Vector3f(0, 0, DOOR_W + .05f));
-        root.attachChild(puerta.getSpatial());
-        doors.add(puerta);
-    }
-
 
     private int overlap(int a1, int a2, int b1, int b2) {
         return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
-    }
-
-    private boolean doorNorth(Room a, LevelLayout L) {
-        int ax1 = a.x(), ax2 = a.x() + a.w(), az = a.z();
-        for (Room b : L.rooms())
-            if (b != a && b.z() + b.h() == az && overlap(ax1, ax2, b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
-                return true;
-        return false;
-    }
-
-    private boolean doorSouth(Room a, LevelLayout L) {
-        int ax1 = a.x(), ax2 = a.x() + a.w(), az = a.z() + a.h();
-        for (Room b : L.rooms())
-            if (b != a && b.z() == az && overlap(ax1, ax2, b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR) return true;
-        return false;
     }
 
     private boolean doorWest(Room a, LevelLayout L) {
