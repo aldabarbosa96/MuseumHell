@@ -49,6 +49,8 @@ public class WorldBuilder {
 
 
     public void build(MuseumLayout museum) {
+        stairVoids.clear();
+        stairs.clear();
         calculateStairVoids(museum);
         float h = museum.floorHeight();
         for (int i = 0; i < museum.floors().size(); i++) {
@@ -119,13 +121,13 @@ public class WorldBuilder {
             addFloorPatches(r.x(), r.z(), w, d, holes, y0 + h, .1f, "Ceil", ColorRGBA.Blue);
 
             /* muros + puertas  */
-            boolean n = doorNorth(r, layout), wN = doorWest(r, layout);
-            boolean s = doorSouth(r, layout), e = doorEast(r, layout);
+            boolean hasSouth = doorSouth(r, layout);
+            boolean hasEast = doorEast(r, layout);
 
-            buildWallX(r.x(), r.z(), w, y0, h, n, "N");
-            buildWallZ(r.x(), r.z(), d, y0, h, wN, "W");
-            if (!s) buildWallX(r.x(), r.z() + d, w, y0, h, false, "S");
-            if (!e) buildWallZ(r.x() + w, r.z(), d, y0, h, false, "E");
+            buildWallX(r, layout, y0, h, true);
+            buildWallZ(r, layout, y0, h, true);
+            if (!hasSouth) buildWallX(r, layout, y0, h, false);
+            if (!hasEast) buildWallZ(r, layout, y0, h, false);
         }
     }
 
@@ -168,82 +170,70 @@ public class WorldBuilder {
     }
 
     private void calculateStairVoids(MuseumLayout museum) {
-
         if (museum.floors().size() < 2) return;
 
         Random rnd = new Random(museum.floors().size() * 73L);
-
         int steps = (int) Math.ceil(museum.floorHeight() / Stairs.STEP_H);
         float runDepth = steps * Stairs.STEP_DEPTH;
         float hxPad = Stairs.WIDTH * .5f + 0.05f;
 
-        /* para impedir 2 escaleras en la misma sala */
-        Map<Integer, Set<Room>> usedRooms = new HashMap<>();
-        /* cuántas llevamos en cada planta inferior */
-        Map<Integer, Integer> stairsPerFloor = new HashMap<>();
-
         for (int floor = 0; floor < museum.floors().size() - 1; floor++) {
-
             LevelLayout A = museum.floors().get(floor);
             LevelLayout B = museum.floors().get(floor + 1);
 
+            Map<Room, Boolean> usedRoom = new HashMap<>();
+            int placed = 0;
+
             List<Room> roomsA = new ArrayList<>(A.rooms());
-            List<Room> roomsB = new ArrayList<>(B.rooms());
             Collections.shuffle(roomsA, rnd);
-            Collections.shuffle(roomsB, rnd);
 
-            outer:
             for (Room ra : roomsA) {
+                if (placed >= MAX_STAIRS_PER_FLOOR) break;
+                if (usedRoom.getOrDefault(ra, false)) continue;
 
-                /* Regla: no repetir sala */
-                if (usedRooms.computeIfAbsent(floor, k -> new HashSet<>()).contains(ra)) continue;
-                /* Regla: máx. 3 por planta */
-                if (stairsPerFloor.getOrDefault(floor, 0) >= MAX_STAIRS_PER_FLOOR) break;
+                List<Room> roomsB = new ArrayList<>(B.rooms());
+                Collections.shuffle(roomsB, rnd);
 
                 for (Room rb : roomsB) {
-
                     int ix1 = Math.max(ra.x(), rb.x());
                     int ix2 = Math.min(ra.x() + ra.w(), rb.x() + rb.w());
                     int iz1 = Math.max(ra.z(), rb.z());
                     int iz2 = Math.min(ra.z() + ra.h(), rb.z() + rb.h());
+                    if (ix2 - ix1 < Stairs.WIDTH + STAIR_WALL_GAP * 2) continue;
+                    if (iz2 - iz1 < runDepth + STAIR_FOOT_GAP * 2) continue;
 
-                    float interW = ix2 - ix1;
-                    float interD = iz2 - iz1;
-                    if (interW < Stairs.WIDTH + STAIR_WALL_GAP * 2) continue;
-                    if (interD < runDepth + STAIR_FOOT_GAP * 2) continue;
+                    boolean left = rnd.nextBoolean();
+                    if (left && doorWest(ra, A)) continue;
+                    if (!left && doorEast(ra, A)) continue;
 
-                    /* Pared y chequeo puerta */
-                    boolean leftWall = rnd.nextBoolean();
-                    if (leftWall && doorWest(ra, A)) continue;
-                    if (!leftWall && doorEast(ra, A)) continue;
-
-                    float sx = leftWall ? ix1 + STAIR_WALL_GAP + Stairs.WIDTH * .5f : ix2 - STAIR_WALL_GAP - Stairs.WIDTH * .5f;
-
+                    float sx = left ? ix1 + STAIR_WALL_GAP + Stairs.WIDTH * .5f : ix2 - STAIR_WALL_GAP - Stairs.WIDTH * .5f;
                     float zMin = iz1 + Stairs.STEP_DEPTH * .5f + STAIR_FOOT_GAP;
                     float zMax = iz2 - runDepth + Stairs.STEP_DEPTH * .5f - STAIR_FOOT_GAP;
-                    float sz = (zMax <= zMin) ? zMin : FastMath.interpolateLinear(rnd.nextFloat(), zMin, zMax);
+                    float sz = (zMax > zMin) ? FastMath.interpolateLinear(rnd.nextFloat(), zMin, zMax) : zMin;
 
-                    Rect r = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * .5f, sz + runDepth - Stairs.STEP_DEPTH * .5f);
+                    Rect hole = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * .5f, sz + runDepth - Stairs.STEP_DEPTH * .5f);
 
-                    /* evitar solaparse con otras escaleras de la planta */
-                    for (Rect ex : stairVoids.getOrDefault(floor, List.of()))
-                        if (rectsOverlap(r, ex)) continue outer;
+                    boolean conflict = false;
+                    for (Rect ex : stairVoids.getOrDefault(floor, List.of())) {
+                        if (rectsOverlap(hole, ex)) {
+                            conflict = true;
+                            break;
+                        }
+                    }
+                    if (conflict) continue;
 
-                    /* registra huecos */
-                    stairVoids.computeIfAbsent(floor, k -> new ArrayList<>()).add(r);
-                    stairVoids.computeIfAbsent(floor + 1, k -> new ArrayList<>()).add(r);
-
-                    /* guarda para instanciar */
+                    stairVoids.computeIfAbsent(floor, k -> new ArrayList<>()).add(hole);
+                    stairVoids.computeIfAbsent(floor + 1, k -> new ArrayList<>()).add(hole);
                     stairs.add(new StairPlacement(floor, sx, sz));
 
-                    /* actualiza controles */
-                    usedRooms.get(floor).add(ra);
-                    stairsPerFloor.merge(floor, 1, Integer::sum);
-                    break;          // pasa a otra sala inferior
+                    usedRoom.put(ra, true);
+                    placed++;
+                    break;
                 }
             }
         }
     }
+
 
     private void connectFloors(MuseumLayout museum) {
         for (StairPlacement sp : stairs) {
@@ -252,67 +242,96 @@ public class WorldBuilder {
         }
     }
 
-    private void buildWallX(float x0, float z, int w, float y0, float h, boolean neighbor, String tag) {
+    private void buildWallX(Room r, LevelLayout layout, float y0, float h, boolean isNorth) {
+        float z = isNorth ? r.z() : r.z() + r.h();
+        int x0 = r.x(), w = r.w();
 
-        if (!neighbor) {
-            Geometry g = makeGeometry("Wall" + tag, new Box(w * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-            g.setLocalTranslation(x0 + w * .5f, y0 + h * .5f, z);
-            addStatic(g);
+        int ox1 = 0, ox2 = 0;
+        for (Room b : layout.rooms()) {
+            boolean ok = isNorth ? (b.z() + b.h() == r.z()) : (b.z() == r.z() + r.h());
+            if (!ok) continue;
+            int bx1 = b.x(), bx2 = b.x() + b.w();
+            int ix1 = Math.max(x0, bx1), ix2 = Math.min(x0 + w, bx2);
+            if (ix2 - ix1 >= MIN_OVERLAP_FOR_DOOR) {
+                ox1 = ix1;
+                ox2 = ix2;
+                break;
+            }
+        }
+        if (ox2 <= ox1) {
+            Geometry muro = makeGeometry("Wall" + (isNorth ? "N" : "S"), new Box(w * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+            muro.setLocalTranslation(x0 + w * .5f, y0 + h * .5f, z);
+            addStatic(muro);
             return;
         }
 
-        float free = w - 2 * MARGIN;
-        if (free < DOOR_W) {
-            buildWallX(x0, z, w, y0, h, false, tag);
-            return;
+        float cx = (ox1 + ox2) * .5f;
+        float s = cx - DOOR_W * .5f;
+        float l = s - x0;
+        float rgt = (x0 + w) - (s + DOOR_W);
+
+        if (l > 0) {
+            Geometry gL = makeGeometry("Wall" + (isNorth ? "N" : "S") + "_L", new Box(l * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+            gL.setLocalTranslation(x0 + l * .5f, y0 + h * .5f, z);
+            addStatic(gL);
+        }
+        if (rgt > 0) {
+            Geometry gR = makeGeometry("Wall" + (isNorth ? "N" : "S") + "_R", new Box(rgt * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+            gR.setLocalTranslation(x0 + w - rgt * .5f, y0 + h * .5f, z);
+            addStatic(gR);
         }
 
-        float side = (free - DOOR_W) * .5f;
-
-        Geometry gL = makeGeometry("Wall" + tag + "_L", new Box((MARGIN + side) * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-        gL.setLocalTranslation(x0 + (MARGIN + side) * .5f, y0 + h * .5f, z);
-        addStatic(gL);
-
-        Geometry gR = makeGeometry("Wall" + tag + "_R", new Box((MARGIN + side) * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-        gR.setLocalTranslation(x0 + w - (MARGIN + side) * .5f, y0 + h * .5f, z);
-        addStatic(gR);
-
-        float doorX = x0 + MARGIN + side + DOOR_W * .5f;
-        Door d = new Door(am, space, new Vector3f(doorX, y0 + h * .5f, z), DOOR_W, h, WALL_T, new Vector3f(DOOR_W + .05f, 0, 0));
-        root.attachChild(d.getSpatial());
-        doors.add(d);
+        Vector3f pos = new Vector3f(cx, y0 + h * .5f, z);
+        Door puerta = new Door(am, space, pos, DOOR_W, h, WALL_T, new Vector3f(DOOR_W + .05f, 0, 0));
+        root.attachChild(puerta.getSpatial());
+        doors.add(puerta);
     }
 
-    private void buildWallZ(float x, float z0, int d, float y0, float h, boolean neighbor, String tag) {
+    private void buildWallZ(Room r, LevelLayout layout, float y0, float h, boolean isWest) {
+        float x = isWest ? r.x() : r.x() + r.w();
+        int z0 = r.z(), d = r.h();
 
-        if (!neighbor) {
-            Geometry g = makeGeometry("Wall" + tag, new Box(WALL_T, h * .5f, d * .5f), ColorRGBA.DarkGray);
-            g.setLocalTranslation(x, y0 + h * .5f, z0 + d * .5f);
-            addStatic(g);
+        int oz1 = 0, oz2 = 0;
+        for (Room b : layout.rooms()) {
+            boolean ok = isWest ? (b.x() + b.w() == r.x()) : (b.x() == r.x() + r.w());
+            if (!ok) continue;
+            int bz1 = b.z(), bz2 = b.z() + b.h();
+            int iz1 = Math.max(z0, bz1), iz2 = Math.min(z0 + d, bz2);
+            if (iz2 - iz1 >= MIN_OVERLAP_FOR_DOOR) {
+                oz1 = iz1;
+                oz2 = iz2;
+                break;
+            }
+        }
+        if (oz2 <= oz1) {
+            Geometry muro = makeGeometry("Wall" + (isWest ? "W" : "E"), new Box(WALL_T, h * .5f, d * .5f), ColorRGBA.DarkGray);
+            muro.setLocalTranslation(x, y0 + h * .5f, z0 + d * .5f);
+            addStatic(muro);
             return;
         }
 
-        float free = d - 2 * MARGIN;
-        if (free < DOOR_W) {
-            buildWallZ(x, z0, d, y0, h, false, tag);
-            return;
+        float cz = (oz1 + oz2) * .5f;
+        float s = cz - DOOR_W * .5f;
+        float b = s - z0;
+        float f = (z0 + d) - (s + DOOR_W);
+
+        if (b > 0) {
+            Geometry gB = makeGeometry("Wall" + (isWest ? "W" : "E") + "_B", new Box(WALL_T, h * .5f, b * .5f), ColorRGBA.DarkGray);
+            gB.setLocalTranslation(x, y0 + h * .5f, z0 + b * .5f);
+            addStatic(gB);
+        }
+        if (f > 0) {
+            Geometry gF = makeGeometry("Wall" + (isWest ? "W" : "E") + "_F", new Box(WALL_T, h * .5f, f * .5f), ColorRGBA.DarkGray);
+            gF.setLocalTranslation(x, y0 + h * .5f, z0 + d - f * .5f);
+            addStatic(gF);
         }
 
-        float side = (free - DOOR_W) * .5f;
-
-        Geometry gT = makeGeometry("Wall" + tag + "_T", new Box(WALL_T, h * .5f, (MARGIN + side) * .5f), ColorRGBA.DarkGray);
-        gT.setLocalTranslation(x, y0 + h * .5f, z0 + (MARGIN + side) * .5f);
-        addStatic(gT);
-
-        Geometry gB = makeGeometry("Wall" + tag + "_B", new Box(WALL_T, h * .5f, (MARGIN + side) * .5f), ColorRGBA.DarkGray);
-        gB.setLocalTranslation(x, y0 + h * .5f, z0 + d - (MARGIN + side) * .5f);
-        addStatic(gB);
-
-        float doorZ = z0 + MARGIN + side + DOOR_W * .5f;
-        Door dObj = new Door(am, space, new Vector3f(x, y0 + h * .5f, doorZ), WALL_T, h, DOOR_W, new Vector3f(0, 0, DOOR_W + .05f));
-        root.attachChild(dObj.getSpatial());
-        doors.add(dObj);
+        Vector3f pos = new Vector3f(x, y0 + h * .5f, cz);
+        Door puerta = new Door(am, space, pos, WALL_T, h, DOOR_W, new Vector3f(0, 0, DOOR_W + .05f));
+        root.attachChild(puerta.getSpatial());
+        doors.add(puerta);
     }
+
 
     private int overlap(int a1, int a2, int b1, int b2) {
         return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
