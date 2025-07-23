@@ -29,6 +29,7 @@ public class WorldBuilder {
     private static final float STAIR_WALL_GAP = 0.20f;
     private static final float STAIR_FOOT_GAP = 1.5f;
     private static final int MAX_STAIRS_PER_FLOOR = 3;
+    private static final float CORRIDOR_WALL_T = WALL_T * 3f;
     private final AssetManager am;
     private final Node root;
     private final PhysicsSpace space;
@@ -112,6 +113,10 @@ public class WorldBuilder {
         List<Room> rooms = layout.rooms();
 
         for (Room r : rooms) {
+            if (isCorridor(r)) {
+                buildThickCorridor(r, y0, h);
+                continue;
+            }
             int w = r.w(), d = r.h();
             float cx = r.x() + w * 0.5f;
             float cz = r.z() + d * 0.5f;
@@ -155,15 +160,17 @@ public class WorldBuilder {
             buildSolidWall(r, dir, y0, h);
         } else {
             switch (c.type()) {
-                case DOOR -> buildWallWithDoor(r, dir, y0, h, rooms);
-                case OPENING -> buildWallWithOpening(r, dir, y0, h, rooms);
-                case CORRIDOR -> {
-                    buildWallWithOpening(r, dir, y0, h, rooms);
-                    buildCorridor(r, dir, y0, h, rooms);
-                }
+                case DOOR:
+                    buildWallWithDoor(r, dir, y0, h, rooms);
+                    break;
+                case OPENING:
+                    float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
+                    buildOpeningWall(r, dir, y0, h, rooms, HOLE_W, thickness);
+                    break;
             }
         }
     }
+
 
     private float[] getOverlapRange(Room r, List<Room> rooms, Direction dir) {
         int a1, a2, b1, b2;
@@ -270,54 +277,38 @@ public class WorldBuilder {
         }
     }
 
-    private void createOpening(Room r, Direction dir, float y0, float h, List<Room> rooms, float holeWidth) {
+    private void buildOpeningWall(Room r, Direction dir, float y0, float h, List<Room> rooms, float holeWidth, float wallThickness) {
         float[] ov = getOverlapRange(r, rooms, dir);
-        float holeCenter = (ov[0] + ov[1]) * .5f;
+        float center = (ov[0] + ov[1]) * .5f;
         float halfHole = holeWidth * .5f;
 
         if (dir == Direction.NORTH || dir == Direction.SOUTH) {
-            float z = (dir == Direction.NORTH ? r.z() : r.z() + r.h());
-            // izquierda
-            float leftW = holeCenter - halfHole - r.x();
-            if (leftW > 0) {
-                Geometry gL = makeGeometry("Wall" + dir + "_L", new Box(leftW * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-                gL.setLocalTranslation(r.x() + leftW * .5f, y0 + h * .5f, z);
-                addStatic(gL);
-            }
-            // derecha
-            float rightW = (r.x() + r.w()) - (holeCenter + halfHole);
-            if (rightW > 0) {
-                Geometry gR = makeGeometry("Wall" + dir + "_R", new Box(rightW * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
-                gR.setLocalTranslation(r.x() + r.w() - rightW * .5f, y0 + h * .5f, z);
-                addStatic(gR);
-            }
+            float z = dir == Direction.NORTH ? r.z() : r.z() + r.h();
+            float leftW = center - halfHole - r.x();
+            float rightW = (r.x() + r.w()) - (center + halfHole);
+            if (leftW > 0) addWallSlice(r.x() + leftW * 0.5f, y0 + h * 0.5f, z, leftW * 0.5f, h * 0.5f, wallThickness);
+            if (rightW > 0)
+                addWallSlice(r.x() + r.w() - rightW * 0.5f, y0 + h * 0.5f, z, rightW * 0.5f, h * 0.5f, wallThickness);
         } else {
-            float x = (dir == Direction.WEST ? r.x() : r.x() + r.w());
-            // trasera
-            float backD = holeCenter - halfHole - r.z();
-            if (backD > 0) {
-                Geometry gB = makeGeometry("Wall" + dir + "_B", new Box(WALL_T, h * .5f, backD * .5f), ColorRGBA.DarkGray);
-                gB.setLocalTranslation(x, y0 + h * .5f, r.z() + backD * .5f);
-                addStatic(gB);
-            }
-            // frontal
-            float frontD = (r.z() + r.h()) - (holeCenter + halfHole);
-            if (frontD > 0) {
-                Geometry gF = makeGeometry("Wall" + dir + "_F", new Box(WALL_T, h * .5f, frontD * .5f), ColorRGBA.DarkGray);
-                gF.setLocalTranslation(x, y0 + h * .5f, r.z() + r.h() - frontD * .5f);
-                addStatic(gF);
-            }
+            float x = dir == Direction.WEST ? r.x() : r.x() + r.w();
+            float backD = center - halfHole - r.z();
+            float frontD = (r.z() + r.h()) - (center + halfHole);
+            if (backD > 0) addWallSlice(x, y0 + h * 0.5f, r.z() + backD * 0.5f, wallThickness, h * 0.5f, backD * 0.5f);
+            if (frontD > 0)
+                addWallSlice(x, y0 + h * 0.5f, r.z() + r.h() - frontD * 0.5f, wallThickness, h * 0.5f, frontD * 0.5f);
         }
     }
 
-    // 2) buildWallWithOpening llama ahora al helper con HOLE_W:
-    private void buildWallWithOpening(Room r, Direction dir, float y0, float h, List<Room> rooms) {
-        createOpening(r, dir, y0, h, rooms, HOLE_W);
+    private void addWallSlice(float x, float y, float z, float sx, float sy, float sz) {
+        Geometry g = makeGeometry("WallSlice", new Box(sx, sy, sz), ColorRGBA.Gray);
+        g.setLocalTranslation(x, y, z);
+        addStatic(g);
     }
+
 
     private void buildWallWithDoor(Room r, Direction dir, float y0, float h, List<Room> rooms) {
         // 1) hacer hueco justo del ancho de la puerta
-        createOpening(r, dir, y0, h, rooms, DOOR_W);
+        buildOpeningWall(r, dir, y0, h, rooms, DOOR_W, WALL_T);
 
         // 2) calcular centro
         float[] ov = getOverlapRange(r, rooms, dir);
@@ -347,26 +338,31 @@ public class WorldBuilder {
         doors.add(d);
     }
 
+    private void buildThickCorridor(Room r, float y0, float h) {
+        float x = r.x(), z = r.z(), w = r.w(), d = r.h();
+        float cx = x + w * 0.5f, cz = z + d * 0.5f;
 
-    private void buildCorridor(Room r, Direction dir, float y0, float h, List<Room> rooms) {
-        float[] ov = getOverlapRange(r, rooms, dir);
-        float center = (ov[0] + ov[1]) * .5f;
-        float half = HOLE_W * .5f;
-        float eps = .02f;
+        // suelo + techo (igual que siempre)
+        makePatch(x, z, w, d, y0 - .1f, .1f, "CorrFloor", ColorRGBA.Brown);
+        makePatch(x, z, w, d, y0 + h, .1f, "CorrCeil", ColorRGBA.Blue);
 
-        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
-            float z = dir == Direction.NORTH ? r.z() - WALL_T * .5f : r.z() + r.h() + WALL_T * .5f;
-            float floorY = y0 - .1f - eps;
-            float ceilY = y0 + h + eps;
-            makePatch(center - half, z, HOLE_W, WALL_T, floorY, .1f, "CorrFloor", ColorRGBA.Brown);
-            makePatch(center - half, z, HOLE_W, WALL_T, ceilY, .1f, "CorrCeil", ColorRGBA.Blue);
-        } else {
-            float x = dir == Direction.WEST ? r.x() - WALL_T * .5f : r.x() + r.w() + WALL_T * .5f;
-            float floorY = y0 - .1f - eps;
-            float ceilY = y0 + h + eps;
-            makePatch(x, center - half, WALL_T, HOLE_W, floorY, .1f, "CorrFloor", ColorRGBA.Brown);
-            makePatch(x, center - half, WALL_T, HOLE_W, ceilY, .1f, "CorrCeil", ColorRGBA.Blue);
-        }
+        // muros N/S con grosor CORRIDOR_WALL_T
+        Geometry wallN = makeGeometry("CorrN", new Box(w * 0.5f, h * 0.5f, CORRIDOR_WALL_T), ColorRGBA.Gray);
+        wallN.setLocalTranslation(cx, y0 + h * 0.5f, z);
+        addStatic(wallN);
+
+        Geometry wallS = makeGeometry("CorrS", new Box(w * 0.5f, h * 0.5f, CORRIDOR_WALL_T), ColorRGBA.Gray);
+        wallS.setLocalTranslation(cx, y0 + h * 0.5f, z + d);
+        addStatic(wallS);
+
+        // muros W/E con grosor CORRIDOR_WALL_T
+        Geometry wallW = makeGeometry("CorrW", new Box(CORRIDOR_WALL_T, h * 0.5f, d * 0.5f), ColorRGBA.Gray);
+        wallW.setLocalTranslation(x, y0 + h * 0.5f, cz);
+        addStatic(wallW);
+
+        Geometry wallE = makeGeometry("CorrE", new Box(CORRIDOR_WALL_T, h * 0.5f, d * 0.5f), ColorRGBA.Gray);
+        wallE.setLocalTranslation(x + w, y0 + h * 0.5f, cz);
+        addStatic(wallE);
     }
 
 
@@ -526,5 +522,9 @@ public class WorldBuilder {
         g.addControl(new RigidBodyControl(0));
         root.attachChild(g);
         space.add(g);
+    }
+
+    private boolean isCorridor(Room r) {
+        return Float.compare(r.w(), HOLE_W) == 0 || Float.compare(r.h(), HOLE_W) == 0;
     }
 }
