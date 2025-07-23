@@ -25,7 +25,7 @@ public class ConnectionGenerator {
                     continue;
                 }
                 double p = rnd.nextDouble();
-                ConnectionType t = (p < 0.5) ? ConnectionType.DOOR : (p < 0.8) ? ConnectionType.OPENING : ConnectionType.CORRIDOR;
+                ConnectionType t = (p < 0.7) ? ConnectionType.DOOR : (p < 0.8) ? ConnectionType.OPENING : ConnectionType.CORRIDOR;
                 out.add(new Connection(r, nbr, dir, t));
             }
         }

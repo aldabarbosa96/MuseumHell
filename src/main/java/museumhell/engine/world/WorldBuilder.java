@@ -23,6 +23,7 @@ import java.util.*;
  */
 public class WorldBuilder {
     private static final float DOOR_W = 2f, WALL_T = .33f, MARGIN = 1f;
+    private static final float HOLE_W = DOOR_W * 2f;
     private static final int SMALL_SIDE = 8, GRID_STEP = 12, MAX_LAMPS = 4;
     private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     private static final float STAIR_WALL_GAP = 0.20f;
@@ -271,38 +272,38 @@ public class WorldBuilder {
         }
     }
 
-    private void buildWallWithOpening(Room r, Direction dir, float y0, float h, List<Room> rooms) {
+    private void createOpening(Room r, Direction dir, float y0, float h, List<Room> rooms, float holeWidth) {
         float[] ov = getOverlapRange(r, rooms, dir);
         float holeCenter = (ov[0] + ov[1]) * .5f;
-        float halfDoor = DOOR_W * .5f;
+        float halfHole = holeWidth * .5f;
 
         if (dir == Direction.NORTH || dir == Direction.SOUTH) {
-            float z = dir == Direction.NORTH ? r.z() : r.z() + r.h();
+            float z = (dir == Direction.NORTH ? r.z() : r.z() + r.h());
             // izquierda
-            float leftW = holeCenter - halfDoor - r.x();
+            float leftW = holeCenter - halfHole - r.x();
             if (leftW > 0) {
                 Geometry gL = makeGeometry("Wall" + dir + "_L", new Box(leftW * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
                 gL.setLocalTranslation(r.x() + leftW * .5f, y0 + h * .5f, z);
                 addStatic(gL);
             }
             // derecha
-            float rightW = (r.x() + r.w()) - (holeCenter + halfDoor);
+            float rightW = (r.x() + r.w()) - (holeCenter + halfHole);
             if (rightW > 0) {
                 Geometry gR = makeGeometry("Wall" + dir + "_R", new Box(rightW * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
                 gR.setLocalTranslation(r.x() + r.w() - rightW * .5f, y0 + h * .5f, z);
                 addStatic(gR);
             }
         } else {
-            float x = dir == Direction.WEST ? r.x() : r.x() + r.w();
+            float x = (dir == Direction.WEST ? r.x() : r.x() + r.w());
             // trasera
-            float backD = holeCenter - halfDoor - r.z();
+            float backD = holeCenter - halfHole - r.z();
             if (backD > 0) {
                 Geometry gB = makeGeometry("Wall" + dir + "_B", new Box(WALL_T, h * .5f, backD * .5f), ColorRGBA.DarkGray);
                 gB.setLocalTranslation(x, y0 + h * .5f, r.z() + backD * .5f);
                 addStatic(gB);
             }
             // frontal
-            float frontD = (r.z() + r.h()) - (holeCenter + halfDoor);
+            float frontD = (r.z() + r.h()) - (holeCenter + halfHole);
             if (frontD > 0) {
                 Geometry gF = makeGeometry("Wall" + dir + "_F", new Box(WALL_T, h * .5f, frontD * .5f), ColorRGBA.DarkGray);
                 gF.setLocalTranslation(x, y0 + h * .5f, r.z() + r.h() - frontD * .5f);
@@ -311,39 +312,38 @@ public class WorldBuilder {
         }
     }
 
+    // 2) buildWallWithOpening llama ahora al helper con HOLE_W:
+    private void buildWallWithOpening(Room r, Direction dir, float y0, float h, List<Room> rooms) {
+        createOpening(r, dir, y0, h, rooms, HOLE_W);
+    }
+
     private void buildWallWithDoor(Room r, Direction dir, float y0, float h, List<Room> rooms) {
-        // 1) crea primero el hueco (idéntico a buildWallWithOpening)
-        buildWallWithOpening(r, dir, y0, h, rooms);
+        // 1) hacer hueco justo del ancho de la puerta
+        createOpening(r, dir, y0, h, rooms, DOOR_W);
 
-        // 2) calcula el centro real de la puerta según solapamiento
+        // 2) calcular centro
         float[] ov = getOverlapRange(r, rooms, dir);
-        float holeCenter = (ov[0] + ov[1]) * 0.5f;
+        float holeCenter = (ov[0] + ov[1]) * .5f;
 
-        // 3) decide centro y offset correctamente según la orientación
+        // 3) decidir posición y offset
         Vector3f center, offset;
-        float doorWidth = DOOR_W, doorThick = WALL_T;
         if (dir == Direction.NORTH) {
-            center = new Vector3f(holeCenter, y0 + h * 0.5f, r.z());
-            // desliza en X, igual que antes:
-            offset = new Vector3f(doorWidth + 0.05f, 0, 0);
+            center = new Vector3f(holeCenter, y0 + h * .5f, r.z());
+            offset = new Vector3f(DOOR_W + .05f, 0, 0);
         } else if (dir == Direction.SOUTH) {
-            center = new Vector3f(holeCenter, y0 + h * 0.5f, r.z() + r.h());
-            offset = new Vector3f(doorWidth + 0.05f, 0, 0);
+            center = new Vector3f(holeCenter, y0 + h * .5f, r.z() + r.h());
+            offset = new Vector3f(DOOR_W + .05f, 0, 0);
         } else if (dir == Direction.WEST) {
-            center = new Vector3f(r.x(), y0 + h * 0.5f, holeCenter);
-            // desliza en Z para muros este/oeste:
-            offset = new Vector3f(0, 0, doorWidth + 0.05f);
+            center = new Vector3f(r.x(), y0 + h * .5f, holeCenter);
+            offset = new Vector3f(0, 0, DOOR_W + .05f);
         } else { // EAST
-            center = new Vector3f(r.x() + r.w(), y0 + h * 0.5f, holeCenter);
-            offset = new Vector3f(0, 0, doorWidth + 0.05f);
+            center = new Vector3f(r.x() + r.w(), y0 + h * .5f, holeCenter);
+            offset = new Vector3f(0, 0, DOOR_W + .05f);
         }
 
-        // 4) instancia la puerta con el ancho y grosor correctos
-        // norte/sur: ancho = DOOR_W, grosor = WALL_T
-        // este/oeste: ancho = WALL_T, grosor = DOOR_W
-        float w = (dir == Direction.NORTH || dir == Direction.SOUTH) ? doorWidth : doorThick;
-        float t = (dir == Direction.NORTH || dir == Direction.SOUTH) ? doorThick : doorWidth;
-
+        // 4) crear la puerta con las dimensiones correctas
+        float w = (dir == Direction.NORTH || dir == Direction.SOUTH) ? DOOR_W : WALL_T;
+        float t = (dir == Direction.NORTH || dir == Direction.SOUTH) ? WALL_T : DOOR_W;
         Door d = new Door(am, space, center, w, h, t, offset);
         root.attachChild(d.getSpatial());
         doors.add(d);

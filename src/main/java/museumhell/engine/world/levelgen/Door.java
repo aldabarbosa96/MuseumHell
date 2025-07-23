@@ -21,28 +21,35 @@ public class Door {
 
     public Door(AssetManager am, PhysicsSpace space, Vector3f center, float w, float h, float t, Vector3f offset) {
 
+        // 1) calcula posiciones
         closedPos = center.clone();
         openPos = center.add(offset);
 
+        // 2) crea geometría
         geo = new Geometry("Door", new Box(w * .5f, h * .5f, t * .5f));
-
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
         m.setColor("Diffuse", ColorRGBA.DarkGray);
         m.setColor("Ambient", ColorRGBA.DarkGray.mult(0.4f));
         geo.setMaterial(m);
-
         geo.setLocalTranslation(closedPos);
 
+        // 3) crea el RigidBodyControl (mass=0)
         body = new RigidBodyControl(0);
         geo.addControl(body);
+
+        // 4) añádelo al espacio y **luego** marca kinematic
         space.add(body);
+        body.setKinematic(true);
     }
 
     public Geometry getSpatial() {
         return geo;
     }
 
+    /**
+     * Punto donde el jugador pulsa para abrir/cerrar
+     */
     public Vector3f getAccessPoint() {
         return closedPos;
     }
@@ -51,36 +58,21 @@ public class Door {
         return progress >= 0.99f;
     }
 
-
     public void toggle() {
         targetOpen = !targetOpen;
     }
 
     public void update(float tpf) {
-
-        // 1) Calcula el progreso (igual que antes)
-        float dir = targetOpen ? 1f : -1f;
+        // a) calcula interpolación
+        float dir = targetOpen ? +1f : -1f;
         progress = FastMath.clamp(progress + dir * (SPEED * tpf) / openPos.distance(closedPos), 0f, 1f);
 
-        // 2) Calcula la nueva posición interpolada
+        // b) mueve geometría y collider
         Vector3f newPos = FastMath.interpolateLinear(progress, closedPos, openPos);
-
-        // 3) Mueve la geometría de la puerta
         geo.setLocalTranslation(newPos);
-
-        // 4) Actualiza siempre la posición del hitbox para que siga la puerta
         body.setPhysicsLocation(newPos);
 
-        // 5) Habilita o deshabilita la colisión según el progreso
-        if (progress < 0.95f) {
-            if (!body.isEnabled()) {
-                body.setEnabled(true);
-            }
-        } else {
-            if (body.isEnabled()) {
-                body.setEnabled(false);
-            }
-        }
+        // c) sólo bloquee físicas mientras NO esté completamente abierto
+        body.setEnabled(progress < 1f);
     }
-
 }
