@@ -58,16 +58,29 @@ public class Door {
 
     public void update(float tpf) {
 
+        // 1) Calcula el progreso (igual que antes)
         float dir = targetOpen ? 1f : -1f;
         progress = FastMath.clamp(progress + dir * (SPEED * tpf) / openPos.distance(closedPos), 0f, 1f);
+
+        // 2) Calcula la nueva posición interpolada
         Vector3f newPos = FastMath.interpolateLinear(progress, closedPos, openPos);
+
+        // 3) Mueve la geometría de la puerta
         geo.setLocalTranslation(newPos);
 
-        if (progress < 0.01f) {
-            body.setPhysicsLocation(closedPos);
-            body.setEnabled(true);
-        } else if (progress > 0.99f) {
-            body.setEnabled(false);
+        // 4) Actualiza siempre la posición del hitbox para que siga la puerta
+        body.setPhysicsLocation(newPos);
+
+        // 5) Habilita o deshabilita la colisión según el progreso
+        if (progress < 0.95f) {
+            if (!body.isEnabled()) {
+                body.setEnabled(true);
+            }
+        } else {
+            if (body.isEnabled()) {
+                body.setEnabled(false);
+            }
         }
     }
+
 }
