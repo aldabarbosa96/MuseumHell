@@ -38,7 +38,6 @@ public class WorldBuilder {
     private final Node root;
     private final PhysicsSpace space;
     private final List<Door> doors = new ArrayList<>();
-    private final Map<Integer, List<Rect>> stairVoids = new HashMap<>();
 
     public record Rect(float x1, float x2, float z1, float z2) {
         public float x1() {
@@ -57,11 +56,6 @@ public class WorldBuilder {
             return z2;
         }
     }
-
-    private record StairPlacement(int floor, float x, float z) {
-    }
-
-    private final List<StairPlacement> stairs = new ArrayList<>();
 
     public WorldBuilder(AssetManager am, Node root, PhysicsSpace space) {
         this.am = am;

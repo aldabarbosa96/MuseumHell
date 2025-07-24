@@ -22,9 +22,9 @@ public class LightPlacer {
     }
 
     public void placeLights(List<Room> rooms, float baseY, float height) {
-        for (Room room : rooms) {
+        /*for (Room room : rooms) {
             placeRoomLight(room, baseY, height);
-        }
+        }*/
     }
 
     private void placeRoomLight(Room room, float baseY, float height) {
@@ -57,7 +57,7 @@ public class LightPlacer {
     private void addPointLight(float x, float y, float z, float radius) {
         PointLight pl = new PointLight();
         pl.setRadius(radius);
-        pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1f).multLocal(10f));
+        pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1f).multLocal(0.1f));
         pl.setPosition(new Vector3f(x, y, z));
         root.addLight(pl);
     }

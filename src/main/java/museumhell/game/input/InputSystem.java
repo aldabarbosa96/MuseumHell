@@ -86,6 +86,15 @@ public class InputSystem implements ActionListener {
         player.move(dir.multLocal(speed * tpf));
     }
 
+
+    public boolean isMovingForwardBack() {
+        return up || down;
+    }
+
+    public boolean isSprinting() {
+        return sprint;
+    }
+
     public void setWorld(WorldBuilder w) {
         this.world = w;
     }
