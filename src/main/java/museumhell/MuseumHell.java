@@ -1,12 +1,10 @@
 package museumhell;
 
 import com.jme3.app.SimpleApplication;
-import com.jme3.asset.plugins.FileLocator;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
-import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
@@ -14,6 +12,7 @@ import museumhell.engine.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
+import museumhell.engine.world.levelgen.roomObjects.Camera;
 import museumhell.game.input.InputSystem;
 import museumhell.game.interaction.InteractionSystem;
 import museumhell.game.loot.LootSystem;
@@ -26,7 +25,6 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class MuseumHell extends SimpleApplication {
 
@@ -66,7 +64,7 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
-        cameraBase = assetManager.loadModel("Models/Camara video_Hector.glb");
+        cameraBase = assetManager.loadModel("Models/camara.glb");
         cameraBase.scale(0.5f);
 
         // Luz ambiental tenue
@@ -83,7 +81,10 @@ public class MuseumHell extends SimpleApplication {
         world.build(museum);
 
         cameraBase.scale(0.5f);
-        placeCamerasInCorners(museum);
+
+        float cameraExtrusion = 1f;
+        var camBuilder = new Camera(rootNode, cameraBase, cameraExtrusion);
+        camBuilder.build(museum);
 
         /* ---------- PLAYER ---------- */
         Room startRoom = museum.floors().get(0).rooms().get(0);
@@ -154,46 +155,4 @@ public class MuseumHell extends SimpleApplication {
 
         world.getLightPlacer().updateFlashlight(smoothEyePos, smoothDirection);
     }
-
-    private void placeCamerasInCorners(MuseumLayout museum) {
-        float floorH = museum.floorHeight();
-        // cuánto queremos que sobresalgan
-        final float cameraExtrusion = 1f;
-
-        for (int f = 0; f < museum.floors().size(); f++) {
-            for (Room r : museum.floors().get(f).rooms()) {
-                if (Math.random() > 0.5) continue;
-
-                float baseY = f * floorH;
-                float yCam = baseY + floorH - 0.3f;
-
-                float x1 = r.x() + 0.2f, x2 = r.x() + r.w() - 0.2f;
-                float z1 = r.z() + 0.2f, z2 = r.z() + r.h() - 0.2f;
-                Vector3f[] corners = new Vector3f[]{new Vector3f(x1, yCam, z1), new Vector3f(x2, yCam, z1), new Vector3f(x2, yCam, z2), new Vector3f(x1, yCam, z2)};
-
-                for (Vector3f pos0 : corners) {
-                    // calculamos el centro para orientar la cámara
-                    Vector3f center = r.center3f(baseY + floorH * 0.5f);
-                    // dir apunta de la cámara hacia el centro; queremos la normal exterior, así que invertimos
-                    Vector3f dirToCenter = pos0.subtract(center).normalizeLocal();
-                    Vector3f normalOut = dirToCenter.negate();
-
-                    // desplazamos la posición hacia fuera
-                    Vector3f posExtruded = pos0.add(normalOut.mult(cameraExtrusion));
-
-                    // clonamos el modelo y lo colocamos
-                    Spatial cam = cameraBase.clone();
-                    cam.setLocalTranslation(posExtruded);
-
-                    // orientamos la cámara (mirando hacia el centro)
-                    Quaternion q = new Quaternion().lookAt(dirToCenter, Vector3f.UNIT_Y);
-                    cam.setLocalRotation(q);
-
-                    rootNode.attachChild(cam);
-                }
-            }
-        }
-    }
-
-
 }
