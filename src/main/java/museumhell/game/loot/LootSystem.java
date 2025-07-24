@@ -26,25 +26,29 @@ public class LootSystem extends BaseAppState {
     private final PhysicsSpace space;
     private final PlayerController player;
     private final Hud hud;
+    private final float floorHeight;
 
     private final List<LootItem> items = new ArrayList<>();
     private int collected = 0;
 
-    public LootSystem(AssetManager am, Node root, PhysicsSpace space, PlayerController player, Hud hud) {
+    public LootSystem(AssetManager am, Node root, PhysicsSpace space, PlayerController player, Hud hud, float floorHeight) {
         this.am = am;
         this.root = root;
         this.space = space;
         this.player = player;
         this.hud = hud;
+        this.floorHeight = floorHeight;
     }
 
 
-    public void scatter(Room room, int n) {
-        float halfSize = 0.25f;                    // mitad del cubo
-        float wallThickness = 0.33f;                    // igual que en WallBuilder
+    public void scatter(Room room, int floorIdx, int n) {
+        float halfSize = 0.25f;   // mitad del cubo
+        float wallThickness = 0.33f;   // igual que en WallBuilder
         float margin = wallThickness + halfSize + 0.05f;
+        float baseY = floorIdx * floorHeight;
+        float y = baseY - 0.05f + halfSize;
 
-        // Área de muestreo XZ que garantice que no toquemos muros
+        // Área XZ dentro de la sala, dejando margen a los muros
         float xMin = room.x() + margin;
         float xMax = room.x() + room.w() - margin;
         float zMin = room.z() + margin;
@@ -55,52 +59,52 @@ public class LootSystem extends BaseAppState {
             float x = ThreadLocalRandom.current().nextFloat() * (xMax - xMin) + xMin;
             float z = ThreadLocalRandom.current().nextFloat() * (zMax - zMin) + zMin;
 
-            // 1) Ray‑cast desde muy arriba hacia abajo
-            Vector3f from = new Vector3f(x, 50f, z);
-            Vector3f to = new Vector3f(x, -50f, z);
-            List<PhysicsRayTestResult> hits = space.rayTest(from, to);
-
-            // 2) Buscamos el primer hit (suelo) con la mayor Y
-            float bestY = Float.NEGATIVE_INFINITY;
-            for (PhysicsRayTestResult hit : hits) {
-                float yHit = hit.getHitFraction();
-                if (yHit > bestY) {
-                    bestY = yHit;
-                }
-            }
-            // si no chocó con nada, lo ponemos a 0.5
-            float y = (bestY == Float.NEGATIVE_INFINITY) ? 0.5f : bestY + halfSize + 0.01f;
-
             LootItem li = new LootItem(am, new Vector3f(x, y, z));
             root.attachChild(li);
             items.add(li);
         }
+
         hud.set(collected, items.size());
     }
 
 
-    public void distributeAcrossRooms(List<Room> rooms, int minTotal, int maxTotal, int maxPerRoom) {
-        // 1) copia de salas válidas
-        List<Room> pool = new ArrayList<>(rooms);
-        // 2) total aleatorio [minTotal…maxTotal]
+    public void distributeAcrossRooms(List<Map.Entry<Room, Integer>> roomsWithFloor, int minTotal, int maxTotal, int maxPerRoom) {
+        // 1) Creamos una copia mutable para extraer al azar
+        List<Map.Entry<Room, Integer>> pool = new ArrayList<>(roomsWithFloor);
+
+        // 2) Elegimos un total aleatorio entre minTotal y maxTotal (inclusive)
         int remaining = ThreadLocalRandom.current().nextInt(minTotal, maxTotal + 1);
-        // 3) conteo por sala
-        Map<Room, Integer> count = new HashMap<>();
+
+        // 3) Contador de ítems asignados por sala
+        Map<Map.Entry<Room, Integer>, Integer> count = new HashMap<>();
+
+        // 4) Mientras queden ítems por asignar y salas disponibles
         while (remaining > 0 && !pool.isEmpty()) {
-            Room r = pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
-            int c = count.getOrDefault(r, 0);
+            int idx = ThreadLocalRandom.current().nextInt(pool.size());
+            Map.Entry<Room, Integer> entry = pool.get(idx);
+            int c = count.getOrDefault(entry, 0);
+
             if (c < maxPerRoom) {
-                count.put(r, c + 1);
+                // Asignamos uno más a esta sala
+                count.put(entry, c + 1);
                 remaining--;
+                // Si alcanza el máximo, la retiramos del pool
                 if (c + 1 == maxPerRoom) {
-                    pool.remove(r);
+                    pool.remove(idx);
                 }
             } else {
-                pool.remove(r);
+                // Ya llenó su cupo, la retiramos
+                pool.remove(idx);
             }
         }
-        // 4) esparcir
-        count.forEach(this::scatter);
+
+        // 5) Finalmente, para cada sala asignada, esparcimos su número de ítems
+        for (var e : count.entrySet()) {
+            Room room = e.getKey().getKey();
+            int floorIdx = e.getKey().getValue();
+            int num = e.getValue();
+            scatter(room, floorIdx, num);
+        }
     }
 
     @Override

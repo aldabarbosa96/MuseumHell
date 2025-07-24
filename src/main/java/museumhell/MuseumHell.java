@@ -19,7 +19,10 @@ import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
 
 import java.awt.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MuseumHell extends SimpleApplication {
@@ -88,7 +91,7 @@ public class MuseumHell extends SimpleApplication {
         Prompt prompt = new Prompt();
         stateManager.attach(prompt);
 
-        LootSystem loot = new LootSystem(assetManager, rootNode, physics.getPhysicsSpace(), player, hud);
+        LootSystem loot = new LootSystem(assetManager, rootNode, physics.getPhysicsSpace(), player, hud, museum.floorHeight());
         stateManager.attach(loot);
         input.setLootManager(loot);
 
@@ -101,7 +104,14 @@ public class MuseumHell extends SimpleApplication {
         world.getLightPlacer().initFlashlight(initEye, smoothDirection);
 
         /* ---------- LOOT SPAWN --------- */
-        List<Room> lootRooms = museum.floors().stream().flatMap(f -> f.rooms().stream()).filter(r -> !r.equals(startRoom)).collect(Collectors.toList());
+        List<Map.Entry<Room, Integer>> lootRooms = new ArrayList<>();
+        for (int f = 0; f < museum.floors().size(); f++) {
+            for (Room r : museum.floors().get(f).rooms()) {
+                if (!r.equals(startRoom)) {
+                    lootRooms.add(new AbstractMap.SimpleEntry<>(r, f));
+                }
+            }
+        }
         loot.distributeAcrossRooms(lootRooms, 17, 33, 5);
 
         // Ajuste de cámara
