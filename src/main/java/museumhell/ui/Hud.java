@@ -58,7 +58,7 @@ public class Hud extends BaseAppState {
         txt.setSize(22);
         root.attachChild(txt);
 
-        root.setLocalTranslation(10, sApp.getCamera().getHeight() - H - 10, 0);
+        root.setLocalTranslation(25, 50, 0);
 
         set(0, 0);
     }
@@ -93,7 +93,7 @@ public class Hud extends BaseAppState {
 
         gIcon.setLocalTranslation(PAD, (H - ICON_SIZE) * .5f, 0.2f);
 
-        txt.setLocalTranslation(PAD + ICON_SIZE + PAD, baseline(txt, H), 0.3f);
+        txt.setLocalTranslation(PAD + ICON_SIZE + PAD, baseline(txt), 0.3f);
     }
 
     private Geometry makeQuad(float w, float h, ColorRGBA color) {
@@ -105,7 +105,7 @@ public class Hud extends BaseAppState {
         return g;
     }
 
-    private float baseline(BitmapText t, float boxH) {
-        return (boxH - t.getLineHeight()) * .5f + t.getLineHeight();
+    private float baseline(BitmapText t) {
+        return (Hud.H - t.getLineHeight()) * .5f + t.getLineHeight();
     }
 }

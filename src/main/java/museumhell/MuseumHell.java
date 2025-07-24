@@ -1,11 +1,15 @@
 package museumhell;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.app.StatsAppState;
+import com.jme3.app.StatsView;
 import com.jme3.bullet.BulletAppState;
+import com.jme3.font.BitmapText;
 import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
 import museumhell.engine.world.WorldBuilder;
 import museumhell.engine.world.builders.LightPlacer;
@@ -51,6 +55,8 @@ public class MuseumHell extends SimpleApplication {
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);
         app.setShowSettings(false);
+        app.setDisplayStatView(false);
+        app.setDisplayFps(true);
         app.start();
     }
 
