@@ -42,22 +42,33 @@ public class LootSystem extends BaseAppState {
 
 
     public void scatter(Room room, int floorIdx, int n) {
-        float halfSize = 0.25f;   // mitad del cubo
-        float wallThickness = 0.33f;   // igual que en WallBuilder
+        float halfSize = 0.25f;
+        float wallThickness = 0.33f;
         float margin = wallThickness + halfSize + 0.05f;
         float baseY = floorIdx * floorHeight;
-        float y = baseY - 0.05f + halfSize;
+        float y = baseY + halfSize + 0.01f; // un pelín por encima del suelo
 
-        // Área XZ dentro de la sala, dejando margen a los muros
+        // Área XZ con margen
         float xMin = room.x() + margin;
         float xMax = room.x() + room.w() - margin;
         float zMin = room.z() + margin;
         float zMax = room.z() + room.h() - margin;
-        if (xMax <= xMin || zMax <= zMin) return;
+
+        boolean hasSpace = xMax > xMin && zMax > zMin;
 
         for (int i = 0; i < n; i++) {
-            float x = ThreadLocalRandom.current().nextFloat() * (xMax - xMin) + xMin;
-            float z = ThreadLocalRandom.current().nextFloat() * (zMax - zMin) + zMin;
+            float x, z;
+
+            if (hasSpace) {
+                x = ThreadLocalRandom.current().nextFloat() * (xMax - xMin) + xMin;
+                z = ThreadLocalRandom.current().nextFloat() * (zMax - zMin) + zMin;
+            } else {
+                // SI NO HAY ESPACIO, caemos al centro de la sala para que algo
+                Vector3f c = room.center3f(baseY);
+                // Opcional: añade un poquitín de jitter para no stackear todo en el mismo punto
+                x = c.x + (ThreadLocalRandom.current().nextFloat() - 0.5f) * 0.2f;
+                z = c.z + (ThreadLocalRandom.current().nextFloat() - 0.5f) * 0.2f;
+            }
 
             LootItem li = new LootItem(am, new Vector3f(x, y, z));
             root.attachChild(li);
