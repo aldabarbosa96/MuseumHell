@@ -9,20 +9,51 @@ import com.jme3.scene.Node;
 
 public class PlayerController {
 
-    private final CharacterControl control;
+    private CharacterControl control;
     private final Node playerNode;
+    private final PhysicsSpace space;
+    private final AssetManager am;
 
+    private static final float CAPSULE_RADIUS = 0.8f;
+    private static final float STAND_HEIGHT = 1.75f;
+    private static final float CROUCH_HEIGHT = 0.5f;
 
-    public PlayerController(AssetManager am, PhysicsSpace space, Vector3f startPos){
+    public PlayerController(AssetManager am, PhysicsSpace space, Vector3f startPos) {
+        this.am = am;
+        this.space = space;
+
         playerNode = new Node("Player");
         playerNode.setLocalTranslation(startPos);
 
-        CapsuleCollisionShape shape = new CapsuleCollisionShape(0.8f, 2f);
-        control = new CharacterControl(shape, 0.05f);
-        control.setGravity(30);
-        control.setJumpSpeed(12);
-        control.setFallSpeed(20);
+        // arrancamos en pie
+        control = makeControl(STAND_HEIGHT);
+        playerNode.addControl(control);
+        space.add(control);
+    }
 
+    // helper para crear un CharacterControl con la altura deseada
+    private CharacterControl makeControl(float capsuleHeight) {
+        CapsuleCollisionShape shape = new CapsuleCollisionShape(CAPSULE_RADIUS, capsuleHeight);
+        CharacterControl cc = new CharacterControl(shape, 0.05f);
+        cc.setGravity(30);
+        cc.setJumpSpeed(12);
+        cc.setFallSpeed(20);
+        return cc;
+    }
+
+    public void setCrouch(boolean crouching) {
+        // guardamos posición actual
+        Vector3f loc = control.getPhysicsLocation();
+
+        // quitamos el viejo control
+        playerNode.removeControl(control);
+        space.remove(control);
+
+        // creamos uno nuevo con la altura adecuada
+        control = makeControl(crouching ? CROUCH_HEIGHT : STAND_HEIGHT);
+        control.setPhysicsLocation(loc);
+
+        // lo añadimos de nuevo
         playerNode.addControl(control);
         space.add(control);
     }
@@ -32,7 +63,7 @@ public class PlayerController {
     }
 
     public void update(float tpf) {
-        // TODO --> Animaciones, salud, estados…
+        // aquí podrías animar el modelo del jugador, etc.
     }
 
     public void move(Vector3f dir) {

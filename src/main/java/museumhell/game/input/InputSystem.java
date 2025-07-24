@@ -19,9 +19,10 @@ public class InputSystem implements ActionListener {
     private PlayerController player;
     private LootSystem lootMgr;
 
-    private boolean up, down, left, right, sprint;
+    private boolean up, down, left, right, sprint, crouch;
 
     private static final float WALK_SPEED = 8f;
+    private static final float CROUCH_SPEED = 4f;
     private static final float SPRINT_MULT = 2f;
 
     public InputSystem(InputManager inMgr, FlyByCamera flyCam) {
@@ -37,9 +38,10 @@ public class InputSystem implements ActionListener {
         inMgr.addMapping("Down", new KeyTrigger(KeyInput.KEY_S));
         inMgr.addMapping("Jump", new KeyTrigger(KeyInput.KEY_SPACE));
         inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
+        inMgr.addMapping("Crouch", new KeyTrigger(KeyInput.KEY_LCONTROL));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
         inMgr.addMapping("Lantern", new KeyTrigger(KeyInput.KEY_F));
-        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern");
+        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
 
         flyCam.setDragToRotate(false);
         flyCam.setRotationSpeed(1.5f);
@@ -75,22 +77,29 @@ public class InputSystem implements ActionListener {
                     world.getLightPlacer().toggleFlashlight();
                 }
             }
+            case "Crouch" -> {
+                crouch = isPressed;
+                if (player != null) {
+                    player.setCrouch(crouch);
+                }
+            }
         }
     }
 
     public void update(float tpf) {
         if (player == null || cam == null) return;
 
+        // movimiento
         Vector3f dir = new Vector3f();
         if (left) dir.addLocal(cam.getLeft());
         if (right) dir.addLocal(cam.getLeft().negate());
         if (up) dir.addLocal(cam.getDirection());
         if (down) dir.addLocal(cam.getDirection().negate());
 
-        float speed = sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED;
-        player.move(dir.multLocal(speed * tpf));
+        // velocidad según estado
+        float baseSpeed = crouch ? CROUCH_SPEED : (sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED);
+        player.move(dir.multLocal(baseSpeed * tpf));
     }
-
 
     public boolean isMovingForwardBack() {
         return up || down;
@@ -106,5 +115,9 @@ public class InputSystem implements ActionListener {
 
     public void setLootManager(LootSystem lm) {
         this.lootMgr = lm;
+    }
+
+    public boolean isCrouching() {
+        return crouch;
     }
 }

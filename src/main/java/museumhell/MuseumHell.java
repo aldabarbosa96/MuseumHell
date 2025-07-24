@@ -73,7 +73,7 @@ public class MuseumHell extends SimpleApplication {
         // Física
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(true);
+        physics.setDebugEnabled(false);
 
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
@@ -145,7 +145,9 @@ public class MuseumHell extends SimpleApplication {
         }
 
         float bobOffsetY = FastMath.sin(bobTime) * bobAmplitude;
-        Vector3f targetEye = player.getLocation().add(0, 1f + bobOffsetY, 0).addLocal(cam.getDirection().mult(-0.25f));
+        float eyeBaseHeight = input.isCrouching() ? 0.8f : 1.75f;
+
+        Vector3f targetEye = player.getLocation().add(0, eyeBaseHeight + bobOffsetY, 0).addLocal(cam.getDirection().mult(-0.25f));
 
         smoothEyePos.interpolateLocal(targetEye, SMOOTH_FACTOR);
         cam.setLocation(smoothEyePos);
