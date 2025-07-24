@@ -213,4 +213,8 @@ public class WorldBuilder {
     private boolean isCorridor(Room r) {
         return Float.compare(r.w(), HOLE_W) == 0 || Float.compare(r.h(), HOLE_W) == 0;
     }
+
+    public LightPlacer getLightPlacer() {
+        return lightPlacer;
+    }
 }

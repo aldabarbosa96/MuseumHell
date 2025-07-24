@@ -3,21 +3,19 @@ package museumhell;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.light.AmbientLight;
-import com.jme3.light.SpotLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.Node;
 import com.jme3.system.AppSettings;
-import museumhell.game.player.PlayerController;
 import museumhell.engine.world.WorldBuilder;
+import museumhell.engine.world.builders.LightPlacer;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
 import museumhell.game.input.InputSystem;
 import museumhell.game.interaction.InteractionSystem;
 import museumhell.game.loot.LootSystem;
+import museumhell.game.player.PlayerController;
 import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
 
@@ -29,7 +27,6 @@ public class MuseumHell extends SimpleApplication {
     private WorldBuilder world;
     private PlayerController player;
     private InputSystem input;
-    private SpotLight flashlight;
 
     private float bobTime = 0f;
     private static final float BOB_SPEED = 15f;
@@ -64,7 +61,7 @@ public class MuseumHell extends SimpleApplication {
 
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(false);
+        physics.setDebugEnabled(true);
 
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
@@ -94,16 +91,10 @@ public class MuseumHell extends SimpleApplication {
         stateManager.attach(new InteractionSystem(player, world, loot, prompt));
 
         // linterna
-        flashlight = new SpotLight();
-        flashlight.setColor(new ColorRGBA(1f, 0.95f, 0.65f, 1f).multLocal(5));
-        flashlight.setSpotRange(50f);
-        flashlight.setSpotInnerAngle(FastMath.DEG_TO_RAD * 5);
-        flashlight.setSpotOuterAngle(FastMath.DEG_TO_RAD * 25f);
-        rootNode.addLight(flashlight);
-
         Vector3f initEye = player.getLocation().add(0, 1f, 0).addLocal(cam.getDirection().mult(-.25f));
         smoothEyePos = initEye.clone();
         smoothDirection = cam.getDirection().clone();
+        world.getLightPlacer().initFlashlight(initEye, smoothDirection);
 
         /* ---------- LOOT SPAWN ---------- */
         museum.floors().forEach(f -> f.rooms().stream().skip(1).filter(r -> Math.random() > .5).forEach(r -> loot.scatter(r, 1 + (int) (Math.random() * 3))));
@@ -118,18 +109,18 @@ public class MuseumHell extends SimpleApplication {
         input.update(tpf);
         world.update(tpf);
 
+        float bobAmplitude = input.isSprinting() ? SPRINT_BOB_AMPLITUDE : BOB_AMPLITUDE;
+        float bobSpeed = input.isSprinting() ? SPRINT_BOB_SPEED : BOB_SPEED;
+
         // 2) Head‑bob solo al avanzar/retroceder
         if (input.isMovingForwardBack()) {
-            // elige parámetros según sprint
-            float bobSpeed = input.isSprinting() ? SPRINT_BOB_SPEED : BOB_SPEED;
-            float bobAmplitude = input.isSprinting() ? SPRINT_BOB_AMPLITUDE : BOB_AMPLITUDE;
             bobTime += tpf * bobSpeed;
         } else {
             bobTime = 0f;
         }
 
         // 3) Calcula offset vertical
-        float bobOffsetY = FastMath.sin(bobTime) * (input.isSprinting() ? SPRINT_BOB_AMPLITUDE : BOB_AMPLITUDE);
+        float bobOffsetY = FastMath.sin(bobTime) * bobAmplitude;
 
         // 4) Posición objetivo de la cámara (incluye bob)
         Vector3f targetEye = player.getLocation().add(0, 1f + bobOffsetY, 0).addLocal(cam.getDirection().mult(-0.25f));
@@ -143,9 +134,6 @@ public class MuseumHell extends SimpleApplication {
         smoothDirection.interpolateLocal(camDir, SMOOTH_FACTOR).normalizeLocal();
 
         // 7) Aplica al SpotLight
-        flashlight.setPosition(smoothEyePos);
-        flashlight.setDirection(smoothDirection);
+        world.getLightPlacer().updateFlashlight(smoothEyePos, smoothDirection);
     }
-
-
 }
