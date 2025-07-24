@@ -15,7 +15,7 @@ public class LootItem extends Node {
 
     public LootItem(AssetManager am, Vector3f pos) {
 
-        Geometry g = new Geometry("LootGeom", new Box(.5f, .5f, .5f));
+        Geometry g = new Geometry("LootGeom", new Box(.25f, .25f, .25f));
         g.setMaterial(makeMat(am, ColorRGBA.Orange));
         attachChild(g);
 

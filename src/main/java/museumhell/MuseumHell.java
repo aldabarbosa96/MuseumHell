@@ -1,18 +1,13 @@
 package museumhell;
 
 import com.jme3.app.SimpleApplication;
-import com.jme3.app.StatsAppState;
-import com.jme3.app.StatsView;
 import com.jme3.bullet.BulletAppState;
-import com.jme3.font.BitmapText;
 import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
 import museumhell.engine.world.WorldBuilder;
-import museumhell.engine.world.builders.LightPlacer;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
@@ -24,6 +19,8 @@ import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
 
 import java.awt.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class MuseumHell extends SimpleApplication {
 
@@ -62,12 +59,13 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
-
+        // Luz ambiental tenue
         rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.002f)));
 
+        // Física
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(true);
+        physics.setDebugEnabled(false);
 
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
@@ -90,22 +88,24 @@ public class MuseumHell extends SimpleApplication {
         Prompt prompt = new Prompt();
         stateManager.attach(prompt);
 
-        LootSystem loot = new LootSystem(assetManager, rootNode, player, hud);
+        LootSystem loot = new LootSystem(assetManager, rootNode, physics.getPhysicsSpace(), player, hud);
         stateManager.attach(loot);
         input.setLootManager(loot);
 
         stateManager.attach(new InteractionSystem(player, world, loot, prompt));
 
-        // linterna
-        Vector3f initEye = player.getLocation().add(0, 1f, 0).addLocal(cam.getDirection().mult(-.25f));
+        // Linterna
+        Vector3f initEye = player.getLocation().add(0, 1f, 0).addLocal(cam.getDirection().mult(-0.25f));
         smoothEyePos = initEye.clone();
         smoothDirection = cam.getDirection().clone();
         world.getLightPlacer().initFlashlight(initEye, smoothDirection);
 
-        /* ---------- LOOT SPAWN ---------- */
-        museum.floors().forEach(f -> f.rooms().stream().skip(1).filter(r -> Math.random() > .5).forEach(r -> loot.scatter(r, 1 + (int) (Math.random() * 3))));
+        /* ---------- LOOT SPAWN --------- */
+        List<Room> lootRooms = museum.floors().stream().flatMap(f -> f.rooms().stream()).filter(r -> !r.equals(startRoom)).collect(Collectors.toList());
+        loot.distributeAcrossRooms(lootRooms, 17, 33, 5);
 
-        cam.setFrustumNear(.55f);
+        // Ajuste de cámara
+        cam.setFrustumNear(0.55f);
     }
 
     @Override
