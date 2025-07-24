@@ -1,11 +1,14 @@
 package museumhell;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.asset.plugins.FileLocator;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
 import museumhell.engine.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
@@ -31,6 +34,7 @@ public class MuseumHell extends SimpleApplication {
     private WorldBuilder world;
     private PlayerController player;
     private InputSystem input;
+    private Spatial cameraBase;
 
     private float bobTime = 0f;
     private static final float BOB_SPEED = 15f;
@@ -62,6 +66,9 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
+        cameraBase = assetManager.loadModel("Models/Camara video_Hector.glb");
+        cameraBase.scale(0.5f);
+
         // Luz ambiental tenue
         rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.002f)));
 
@@ -74,6 +81,9 @@ public class MuseumHell extends SimpleApplication {
         MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
         world.build(museum);
+
+        cameraBase.scale(0.5f);
+        placeCamerasInCorners(museum);
 
         /* ---------- PLAYER ---------- */
         Room startRoom = museum.floors().get(0).rooms().get(0);
@@ -120,7 +130,6 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleUpdate(float tpf) {
-        // 1) Actualiza sistemas
         player.update(tpf);
         input.update(tpf);
         world.update(tpf);
@@ -128,28 +137,63 @@ public class MuseumHell extends SimpleApplication {
         float bobAmplitude = input.isSprinting() ? SPRINT_BOB_AMPLITUDE : BOB_AMPLITUDE;
         float bobSpeed = input.isSprinting() ? SPRINT_BOB_SPEED : BOB_SPEED;
 
-        // 2) Head‑bob solo al avanzar/retroceder
         if (input.isMovingForwardBack()) {
             bobTime += tpf * bobSpeed;
         } else {
             bobTime = 0f;
         }
 
-        // 3) Calcula offset vertical
         float bobOffsetY = FastMath.sin(bobTime) * bobAmplitude;
-
-        // 4) Posición objetivo de la cámara (incluye bob)
         Vector3f targetEye = player.getLocation().add(0, 1f + bobOffsetY, 0).addLocal(cam.getDirection().mult(-0.25f));
 
-        // 5) Suaviza posición (lerp)
         smoothEyePos.interpolateLocal(targetEye, SMOOTH_FACTOR);
         cam.setLocation(smoothEyePos);
 
-        // 6) Suaviza dirección para la linterna
         Vector3f camDir = cam.getDirection();
         smoothDirection.interpolateLocal(camDir, SMOOTH_FACTOR).normalizeLocal();
 
-        // 7) Aplica al SpotLight
         world.getLightPlacer().updateFlashlight(smoothEyePos, smoothDirection);
     }
+
+    private void placeCamerasInCorners(MuseumLayout museum) {
+        float floorH = museum.floorHeight();
+        // cuánto queremos que sobresalgan
+        final float cameraExtrusion = 1f;
+
+        for (int f = 0; f < museum.floors().size(); f++) {
+            for (Room r : museum.floors().get(f).rooms()) {
+                if (Math.random() > 0.5) continue;
+
+                float baseY = f * floorH;
+                float yCam = baseY + floorH - 0.3f;
+
+                float x1 = r.x() + 0.2f, x2 = r.x() + r.w() - 0.2f;
+                float z1 = r.z() + 0.2f, z2 = r.z() + r.h() - 0.2f;
+                Vector3f[] corners = new Vector3f[]{new Vector3f(x1, yCam, z1), new Vector3f(x2, yCam, z1), new Vector3f(x2, yCam, z2), new Vector3f(x1, yCam, z2)};
+
+                for (Vector3f pos0 : corners) {
+                    // calculamos el centro para orientar la cámara
+                    Vector3f center = r.center3f(baseY + floorH * 0.5f);
+                    // dir apunta de la cámara hacia el centro; queremos la normal exterior, así que invertimos
+                    Vector3f dirToCenter = pos0.subtract(center).normalizeLocal();
+                    Vector3f normalOut = dirToCenter.negate();
+
+                    // desplazamos la posición hacia fuera
+                    Vector3f posExtruded = pos0.add(normalOut.mult(cameraExtrusion));
+
+                    // clonamos el modelo y lo colocamos
+                    Spatial cam = cameraBase.clone();
+                    cam.setLocalTranslation(posExtruded);
+
+                    // orientamos la cámara (mirando hacia el centro)
+                    Quaternion q = new Quaternion().lookAt(dirToCenter, Vector3f.UNIT_Y);
+                    cam.setLocalRotation(q);
+
+                    rootNode.attachChild(cam);
+                }
+            }
+        }
+    }
+
+
 }
