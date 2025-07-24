@@ -48,6 +48,12 @@ public class LightPlacer {
         flashlight.setDirection(smoothDir);
     }
 
+    public void toggleFlashlight() {
+        if (flashlight != null) {
+            flashlight.setEnabled(!flashlight.isEnabled());
+        }
+    }
+
     public void placeLights(List<Room> rooms, float baseY, float height) {
         /*for (Room room : rooms) {
             placeRoomLight(room, baseY, height);

@@ -38,7 +38,8 @@ public class InputSystem implements ActionListener {
         inMgr.addMapping("Jump", new KeyTrigger(KeyInput.KEY_SPACE));
         inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
-        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use");
+        inMgr.addMapping("Lantern", new KeyTrigger(KeyInput.KEY_F));
+        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern");
 
         flyCam.setDragToRotate(false);
         flyCam.setRotationSpeed(1.5f);
@@ -65,9 +66,13 @@ public class InputSystem implements ActionListener {
             }
             case "Use" -> {
                 if (isPressed && world != null && player != null) {
-                    world.tryUseDoor(player.getLocation());                // puertas
-                    if (lootMgr != null)                                   // loot
-                        lootMgr.tryPickUp(player.getLocation());
+                    world.tryUseDoor(player.getLocation());
+                    if (lootMgr != null) lootMgr.tryPickUp(player.getLocation());
+                }
+            }
+            case "Lantern" -> {
+                if (isPressed && world != null && world.getLightPlacer() != null) {
+                    world.getLightPlacer().toggleFlashlight();
                 }
             }
         }

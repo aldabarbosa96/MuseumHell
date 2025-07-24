@@ -73,7 +73,7 @@ public class MuseumHell extends SimpleApplication {
         // Física
         physics = new BulletAppState();
         stateManager.attach(physics);
-        physics.setDebugEnabled(false);
+        physics.setDebugEnabled(true);
 
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
