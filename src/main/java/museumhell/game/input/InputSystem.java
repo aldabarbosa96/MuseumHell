@@ -19,11 +19,11 @@ public class InputSystem implements ActionListener {
     private PlayerController player;
     private LootSystem lootMgr;
 
-    private boolean up, down, left, right, sprint, crouch;
+    private boolean up, down, left, right, sprint, crouch, debug;
 
     private static final float WALK_SPEED = 8f;
     private static final float CROUCH_SPEED = 4f;
-    private static final float SPRINT_MULT = 2f;
+    private static final float SPRINT_MULT = 2.5f;
 
     public InputSystem(InputManager inMgr, FlyByCamera flyCam) {
         this.inMgr = inMgr;
@@ -32,6 +32,7 @@ public class InputSystem implements ActionListener {
     }
 
     private void setupMappings() {
+        inMgr.addMapping("Debug", new KeyTrigger(KeyInput.KEY_TAB));
         inMgr.addMapping("Left", new KeyTrigger(KeyInput.KEY_A));
         inMgr.addMapping("Right", new KeyTrigger(KeyInput.KEY_D));
         inMgr.addMapping("Up", new KeyTrigger(KeyInput.KEY_W));
@@ -41,7 +42,7 @@ public class InputSystem implements ActionListener {
         inMgr.addMapping("Crouch", new KeyTrigger(KeyInput.KEY_LCONTROL));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
         inMgr.addMapping("Lantern", new KeyTrigger(KeyInput.KEY_F));
-        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
+        inMgr.addListener(this, "Debug","Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
 
         flyCam.setDragToRotate(false);
         flyCam.setRotationSpeed(1.5f);
@@ -58,6 +59,9 @@ public class InputSystem implements ActionListener {
     @Override
     public void onAction(String name, boolean isPressed, float tpf) {
         switch (name) {
+            case "Debug" -> {
+                debug = isPressed; // todo --> mover lógica de debug aquí en un futuro
+            }
             case "Left" -> left = isPressed;
             case "Right" -> right = isPressed;
             case "Up" -> up = isPressed;

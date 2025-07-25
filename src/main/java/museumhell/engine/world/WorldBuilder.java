@@ -101,7 +101,7 @@ public class WorldBuilder {
 
     public void tryUseDoor(Vector3f playerPos) {
         for (Door d : doors)
-            if (d.getAccessPoint().distance(playerPos) < 2f) {
+            if (d.getAccessPoint().distance(playerPos) < 3.5f) {
                 d.toggle();
                 break;
             }

@@ -63,9 +63,7 @@ public class LootSystem extends BaseAppState {
                 x = ThreadLocalRandom.current().nextFloat() * (xMax - xMin) + xMin;
                 z = ThreadLocalRandom.current().nextFloat() * (zMax - zMin) + zMin;
             } else {
-                // SI NO HAY ESPACIO, caemos al centro de la sala para que algo
                 Vector3f c = room.center3f(baseY);
-                // Opcional: añade un poquitín de jitter para no stackear todo en el mismo punto
                 x = c.x + (ThreadLocalRandom.current().nextFloat() - 0.5f) * 0.2f;
                 z = c.z + (ThreadLocalRandom.current().nextFloat() - 0.5f) * 0.2f;
             }
@@ -123,7 +121,7 @@ public class LootSystem extends BaseAppState {
     }
 
     public void tryPickUp(Vector3f playerPos) {
-        final float MAX2 = 1.2f * 1.2f;
+        final float MAX2 = 1.5f * 1.5f;
         LootItem target = null;
         float best = MAX2;
 

@@ -30,7 +30,7 @@ public class Door {
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
         m.setColor("Diffuse", ColorRGBA.DarkGray);
-        m.setColor("Ambient", ColorRGBA.DarkGray.mult(0.25f));
+        m.setColor("Ambient", ColorRGBA.Black.mult(0.25f));
         geo.setMaterial(m);
         geo.setLocalTranslation(closedPos);
 

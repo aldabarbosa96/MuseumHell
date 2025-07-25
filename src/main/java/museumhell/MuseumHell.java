@@ -2,6 +2,9 @@ package museumhell;
 
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
+import com.jme3.input.KeyInput;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.KeyTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
@@ -37,8 +40,8 @@ public class MuseumHell extends SimpleApplication {
     private float bobTime = 0f;
     private static final float BOB_SPEED = 15f;
     private static final float BOB_AMPLITUDE = 0.12f;
-    private static final float SPRINT_BOB_SPEED = 20f;
-    private static final float SPRINT_BOB_AMPLITUDE = 0.15f;
+    private static final float SPRINT_BOB_SPEED = 25f;
+    private static final float SPRINT_BOB_AMPLITUDE = 0.3f;
 
     private Vector3f smoothEyePos;
     private Vector3f smoothDirection;
@@ -64,16 +67,26 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
-        cameraBase = assetManager.loadModel("Models/camara.glb");
+        cameraBase = assetManager.loadModel("Models/camara.glb"); // todo --> mover a gestor dedicado
         cameraBase.scale(0.5f);
 
         // Luz ambiental tenue
-        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.0005f)));
+        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.00244f)));
 
         // Física
         physics = new BulletAppState();
         stateManager.attach(physics);
         physics.setDebugEnabled(false);
+
+        inputManager.addMapping("ToggleDebug", new KeyTrigger(KeyInput.KEY_TAB)); // todo --> mover a InputSystem
+        inputManager.addListener(new ActionListener() {
+            @Override
+            public void onAction(String name, boolean isPressed, float tpf) {
+                if (name.equals("ToggleDebug") && isPressed) {
+                    physics.setDebugEnabled(!physics.isDebugEnabled());
+                }
+            }
+        }, "ToggleDebug");
 
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
@@ -126,7 +139,7 @@ public class MuseumHell extends SimpleApplication {
         loot.distributeAcrossRooms(lootRooms, 17, 33, 5);
 
         // Ajuste de cámara
-        cam.setFrustumNear(0.55f);
+        cam.setFrustumNear(0.525f);
     }
 
     @Override

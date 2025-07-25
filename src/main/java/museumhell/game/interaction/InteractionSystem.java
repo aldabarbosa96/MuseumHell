@@ -29,14 +29,14 @@ public class InteractionSystem extends BaseAppState {
         Vector3f p = player.getLocation();
 
         // 1) ¿hay loot?
-        LootItem li = loot.nearestLoot(p, 1.2f);
+        LootItem li = loot.nearestLoot(p, 1.5f);
         if (li != null) {
             hud.show("[ E ] Recoger");
             return;
         }
 
         // 2) ¿hay puerta?
-        Door d = world.nearestDoor(p, 2.0f);
+        Door d = world.nearestDoor(p, 3.5f);
         if (d != null) {
             hud.show(d.isOpen() ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta");
             return;
@@ -44,6 +44,7 @@ public class InteractionSystem extends BaseAppState {
 
         hud.hide();
     }
+
 
     @Override
     protected void initialize(Application app) {
