@@ -2,16 +2,9 @@ package museumhell.engine.world;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
-import com.jme3.bullet.control.RigidBodyControl;
-import com.jme3.material.Material;
-import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
-import com.jme3.scene.shape.Box;
 import museumhell.engine.world.builders.*;
 import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
@@ -35,6 +28,7 @@ public class WorldBuilder {
     private final Node root;
     private final PhysicsSpace space;
     private final List<Door> doors = new ArrayList<>();
+    private boolean doorOpen = false;
 
     public record Rect(float x1, float x2, float z1, float z2) {
         public float x1() {
@@ -94,7 +88,6 @@ public class WorldBuilder {
     }
 
 
-
     public void update(float tpf) {
         doors.forEach(d -> d.update(tpf));
     }
@@ -103,8 +96,10 @@ public class WorldBuilder {
         for (Door d : doors)
             if (d.getAccessPoint().distance(playerPos) < 3.5f) {
                 d.toggle();
-                break;
+                doorOpen = true;
+                return;
             }
+        doorOpen = false;
     }
 
     public Door nearestDoor(Vector3f p, float maxDist) {
@@ -213,5 +208,9 @@ public class WorldBuilder {
 
     public LightPlacer getLightPlacer() {
         return lightPlacer;
+    }
+
+    public boolean isDoorOpen() {
+        return doorOpen;
     }
 }

@@ -10,9 +10,11 @@ import com.jme3.renderer.Camera;
 import museumhell.game.player.PlayerController;
 import museumhell.engine.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
+import museumhell.utils.AudioManager;
 
 public class InputSystem implements ActionListener {
     private WorldBuilder world;
+    private AudioManager audio;
     private final InputManager inMgr;
     private final FlyByCamera flyCam;
     private Camera cam;
@@ -42,7 +44,7 @@ public class InputSystem implements ActionListener {
         inMgr.addMapping("Crouch", new KeyTrigger(KeyInput.KEY_LCONTROL));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
         inMgr.addMapping("Lantern", new KeyTrigger(KeyInput.KEY_F));
-        inMgr.addListener(this, "Debug","Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
+        inMgr.addListener(this, "Debug", "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
 
         flyCam.setDragToRotate(false);
         flyCam.setRotationSpeed(1.5f);
@@ -54,6 +56,10 @@ public class InputSystem implements ActionListener {
 
     public void registerPlayerControl(PlayerController pc) {
         this.player = pc;
+    }
+
+    public void setAudioManager(AudioManager audio) {
+        this.audio = audio;
     }
 
     @Override
@@ -74,12 +80,19 @@ public class InputSystem implements ActionListener {
             case "Use" -> {
                 if (isPressed && world != null && player != null) {
                     world.tryUseDoor(player.getLocation());
+                    if (world.isDoorOpen()) {
+                        audio.play("door");
+                    }
                     if (lootMgr != null) lootMgr.tryPickUp(player.getLocation());
                 }
             }
             case "Lantern" -> {
                 if (isPressed && world != null && world.getLightPlacer() != null) {
                     world.getLightPlacer().toggleFlashlight();
+
+                    if (audio != null) {
+                        audio.play("flashlight");
+                    }
                 }
             }
             case "Crouch" -> {
@@ -104,6 +117,10 @@ public class InputSystem implements ActionListener {
         // velocidad según estado
         float baseSpeed = crouch ? CROUCH_SPEED : (sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED);
         player.move(dir.multLocal(baseSpeed * tpf));
+    }
+
+    public boolean isMoving() {
+        return up || down || left || right;
     }
 
     public boolean isMovingForwardBack() {

@@ -16,7 +16,9 @@ public class AssetManager {
 
     private void loadModels() {
         models.put("camera", assetManager.loadModel("Models/camara.glb"));
+        models.put("camera2", assetManager.loadModel("Models/CamaraJUNTAV2.glb"));
         models.get("camera").scale(0.65f);
+        models.get("camera2").scale(0.65f);
     }
 
     public Spatial get(String name) {

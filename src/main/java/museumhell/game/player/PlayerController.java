@@ -63,7 +63,6 @@ public class PlayerController {
     }
 
     public void update(float tpf) {
-        // aquí podrías animar el modelo del jugador, etc.
     }
 
     public void move(Vector3f dir) {

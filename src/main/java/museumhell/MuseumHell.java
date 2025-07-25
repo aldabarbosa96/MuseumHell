@@ -26,10 +26,8 @@ import museumhell.utils.AudioManager;
 import museumhell.utils.AssetManager;
 
 import java.awt.*;
-import java.util.AbstractMap;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 public class MuseumHell extends SimpleApplication {
     private AssetManager visuals;
@@ -50,13 +48,17 @@ public class MuseumHell extends SimpleApplication {
     private Vector3f smoothDirection;
     private static final float SMOOTH_FACTOR = 0.12f;
 
+    private float stepTime = 0f;
+    private int lastStepCount = 0;
+    private final Random random = new Random();
+
     public static void main(String[] args) {
         DisplayMode dm = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
         float scale = .75f;
         AppSettings cfg = new AppSettings(true);
         cfg.setResolution(Math.round(dm.getWidth() * scale), Math.round(dm.getHeight() * scale));
         cfg.setTitle("MuseumHell");
-        cfg.setVSync(true);
+        cfg.setVSync(false);
         cfg.setGammaCorrection(true);
         if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate());
 
@@ -71,8 +73,10 @@ public class MuseumHell extends SimpleApplication {
     @Override
     public void simpleInitApp() {
         visuals = new AssetManager(assetManager);
-        audio = new AudioManager(assetManager);
+        audio = new AudioManager(assetManager, rootNode);
 
+        audio.play("ambient1");
+        audio.play("ambient2");
         cameraBase = visuals.get("camera");
 
         // Luz ambiental tenue
@@ -111,6 +115,7 @@ public class MuseumHell extends SimpleApplication {
 
         /* ---------- SYSTEMS ---------- */
         input = new InputSystem(inputManager, flyCam);
+        input.setAudioManager(audio);
         input.setupCameraFollow(cam);
         input.registerPlayerControl(player);
         input.setWorld(world);
@@ -161,6 +166,19 @@ public class MuseumHell extends SimpleApplication {
             bobTime += tpf * bobSpeed;
         } else {
             bobTime = 0f;
+        }
+
+        if (input.isMoving() && !input.isJump()) {
+            stepTime += tpf * bobSpeed;
+            int currentStep = (int) (stepTime / 8f);
+            if (currentStep > lastStepCount) {
+                lastStepCount = currentStep;
+                int idx = random.nextInt(2) + 1;
+                audio.play("footstep" + idx);
+            }
+        } else {
+            stepTime = 0f;
+            lastStepCount = 0;
         }
 
         float bobOffsetY = FastMath.sin(bobTime) * bobAmplitude;
