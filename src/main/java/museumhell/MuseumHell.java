@@ -89,7 +89,7 @@ public class MuseumHell extends SimpleApplication {
         }, "ToggleDebug");
 
         /* ---------- WORLD ---------- */
-        MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
+        MuseumLayout museum = MuseumGenerator.generate(100, 75, 3, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
         world.build(museum);
 

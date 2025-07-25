@@ -29,6 +29,7 @@ public class LootSystem extends BaseAppState {
     private final float floorHeight;
 
     private final List<LootItem> items = new ArrayList<>();
+    private final Map<LootItem, Integer> itemFloor = new HashMap<>();
     private int collected = 0;
 
     public LootSystem(AssetManager am, Node root, PhysicsSpace space, PlayerController player, Hud hud, float floorHeight) {
@@ -71,6 +72,7 @@ public class LootSystem extends BaseAppState {
             LootItem li = new LootItem(am, new Vector3f(x, y, z));
             root.attachChild(li);
             items.add(li);
+            itemFloor.put(li, floorIdx);
         }
 
         hud.set(collected, items.size());
@@ -121,11 +123,16 @@ public class LootSystem extends BaseAppState {
     }
 
     public void tryPickUp(Vector3f playerPos) {
+        int currentFloor = (int) Math.floor(playerPos.y / floorHeight);
         final float MAX2 = 1.5f * 1.5f;
         LootItem target = null;
         float best = MAX2;
 
         for (LootItem li : items) {
+            // ignoramos ítems de otras plantas
+            if (itemFloor.getOrDefault(li, -1) != currentFloor) {
+                continue;
+            }
             Vector3f w = li.getWorldTranslation();
             float dx = w.x - playerPos.x;
             float dz = w.z - playerPos.z;
@@ -139,15 +146,22 @@ public class LootSystem extends BaseAppState {
         if (target != null) {
             root.detachChild(target);
             items.remove(target);
+            itemFloor.remove(target);
             collected++;
             hud.set(collected, collected + items.size());
         }
     }
 
+
     public LootItem nearestLoot(Vector3f pos, float maxDist) {
+        int currentFloor = (int) Math.floor(pos.y / floorHeight);
         LootItem best = null;
         float best2 = maxDist * maxDist;
         for (LootItem li : items) {
+            // solo consideramos ítems de la misma planta
+            if (itemFloor.getOrDefault(li, -1) != currentFloor) {
+                continue;
+            }
             Vector3f w = li.getWorldTranslation();
             float dx = w.x - pos.x, dz = w.z - pos.z;
             float d2 = dx * dx + dz * dz;

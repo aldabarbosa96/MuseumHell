@@ -59,7 +59,7 @@ public class LightPlacer {
         Random rnd = new Random();
         for (Room room : rooms) {
             // sólo 1 de cada 5 salas
-            if (rnd.nextInt(10) != 0) {
+            if (rnd.nextInt(6) != 0) {
                 continue;
             }
             placeRoomLight(room, baseY, height);
@@ -67,35 +67,36 @@ public class LightPlacer {
     }
 
     private void placeRoomLight(Room room, float baseY, float height) {
-        int w = room.w();
-        int d = room.h();
-        float centerX = room.x() + w * 0.5f;
-        float centerZ = room.z() + d * 0.5f;
-        float y = baseY + height - 0.3f;
-        if (w <= SMALL_SIDE && d <= SMALL_SIDE) {
-            addPointLight(centerX, y, centerZ, Math.max(w, d) * 0.95f);
-        } else {
-            int nx = Math.max(1, Math.round(w / (float) GRID_STEP));
-            int nz = Math.max(1, Math.round(d / (float) GRID_STEP));
-            int lamps = Math.min(nx * nz, MAX_LAMPS);
-            float stepX = w / (float) (nx + 1);
-            float stepZ = d / (float) (nz + 1);
-            int placed = 0;
-            for (int ix = 1; ix <= nx && placed < lamps; ix++) {
-                for (int iz = 1; iz <= nz && placed < lamps; iz++, placed++) {
-                    float x = room.x() + ix * stepX;
-                    float z = room.z() + iz * stepZ;
-                    addPointLight(x, y, z, Math.max(stepX, stepZ) * 1.8f);
-                }
-            }
-        }
+        float ceilingY = baseY + height - 0.05f; // un poco por debajo del techo
+
+        float x1 = room.x() + 0.75f;
+        float x2 = room.x() + room.w() - 0.75f;
+        float z1 = room.z() + 0.75f;
+        float z2 = room.z() + room.h() - 0.75f;
+
+        float range = 10f;
+        float angle = FastMath.DEG_TO_RAD * 40f;
+        ColorRGBA color = new ColorRGBA(1f, 0.85f, 0.6f, 1f).multLocal(2.5f);
+
+        // 4 focos de techo hacia abajo
+        addSpot(x1, ceilingY, z1, Vector3f.UNIT_Y.negate(), range, angle, color);
+        addSpot(x2, ceilingY, z1, Vector3f.UNIT_Y.negate(), range, angle, color);
+        addSpot(x1, ceilingY, z2, Vector3f.UNIT_Y.negate(), range, angle, color);
+        addSpot(x2, ceilingY, z2, Vector3f.UNIT_Y.negate(), range, angle, color);
     }
 
-    private void addPointLight(float x, float y, float z, float radius) {
-        PointLight pl = new PointLight();
-        pl.setRadius(radius);
-        pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1f).multLocal(1));
-        pl.setPosition(new Vector3f(x, y, z));
-        root.addLight(pl);
+
+
+    private void addSpot(float x, float y, float z, Vector3f direction, float range, float angle, ColorRGBA color) {
+        SpotLight sl = new SpotLight();
+        sl.setSpotRange(range);
+        sl.setSpotInnerAngle(angle * 0.5f);
+        sl.setSpotOuterAngle(angle);
+        sl.setDirection(direction.normalize());
+        sl.setPosition(new Vector3f(x, y, z));
+        sl.setColor(color);
+        root.addLight(sl);
     }
+
+
 }
