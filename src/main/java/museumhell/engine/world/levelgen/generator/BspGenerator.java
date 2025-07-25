@@ -1,7 +1,6 @@
 package museumhell.engine.world.levelgen.generator;
 
 import museumhell.engine.world.levelgen.Connection;
-import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
 import museumhell.engine.world.levelgen.LevelLayout;
 import museumhell.engine.world.levelgen.Room;
 

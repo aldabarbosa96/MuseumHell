@@ -15,7 +15,7 @@ public class CorridorBuilder {
     private final AssetManager assetManager;
     private final PhysicsSpace space;
     private final Node root;
-    private static final float CORRIDOR_WALL_T = 0.33f * 3f;
+    private static final float CORRIDOR_WALL_T = 0.33f * 5f;
 
     public CorridorBuilder(AssetManager am, Node root, PhysicsSpace space) {
         this.assetManager = am;
@@ -28,7 +28,7 @@ public class CorridorBuilder {
         float cx = x + w * .5f, cz = z + d * .5f;
 
         makePatch(x, z, w, d, y0 - .1f, .1f, "CorrFloor", ColorRGBA.Brown);
-        makePatch(x, z, w, d, y0 + h, .1f, "CorrCeil", ColorRGBA.Blue);
+        makePatch(x, z, w, d, y0 + h, .1f, "CorrCeil", ColorRGBA.Red);
 
         buildWallSlice("CorrN", w, h, CORRIDOR_WALL_T, cx, y0 + h * .5f, z);
         buildWallSlice("CorrS", w, h, CORRIDOR_WALL_T, cx, y0 + h * .5f, z + d);

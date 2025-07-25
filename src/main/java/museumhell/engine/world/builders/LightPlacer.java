@@ -9,16 +9,17 @@ import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.Room;
 
 import java.util.List;
+import java.util.Random;
 
 public class LightPlacer {
     private final Node root;
     private SpotLight flashlight;
     private Vector3f smoothPos;
     private Vector3f smoothDir;
-    private static final ColorRGBA FLASHLIGHT_COLOR = new ColorRGBA(1f, 0.95f, 0.65f, 1f).multLocal(5f);
+    private static final ColorRGBA FLASHLIGHT_COLOR = new ColorRGBA(1f, 0.95f, 0.65f, 1f).multLocal(2.5f);
     private static final float SPOT_RANGE = 50f;
-    private static final float INNER_ANGLE = FastMath.DEG_TO_RAD * 5;
-    private static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 20f;
+    private static final float INNER_ANGLE = FastMath.DEG_TO_RAD * 8;
+    private static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 28f;
     private static final float SMOOTH_FACTOR = 0.12f;
     private static final int SMALL_SIDE = 8;
     private static final int GRID_STEP = 12;
@@ -55,9 +56,14 @@ public class LightPlacer {
     }
 
     public void placeLights(List<Room> rooms, float baseY, float height) {
-        /*for (Room room : rooms) {
+        Random rnd = new Random();
+        for (Room room : rooms) {
+            // sólo 1 de cada 5 salas
+            if (rnd.nextInt(10) != 0) {
+                continue;
+            }
             placeRoomLight(room, baseY, height);
-        }*/
+        }
     }
 
     private void placeRoomLight(Room room, float baseY, float height) {
@@ -88,7 +94,7 @@ public class LightPlacer {
     private void addPointLight(float x, float y, float z, float radius) {
         PointLight pl = new PointLight();
         pl.setRadius(radius);
-        pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1f).multLocal(0.1f));
+        pl.setColor(new ColorRGBA(1f, 0.75f, 0.45f, 1f).multLocal(1));
         pl.setPosition(new Vector3f(x, y, z));
         root.addLight(pl);
     }

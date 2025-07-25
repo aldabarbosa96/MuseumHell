@@ -16,7 +16,7 @@ public class DoorBuilder {
     private final PhysicsSpace space;
     private final Node root;
     private final List<Door> doors;
-    private static final float DOOR_W = 2.5f;
+    private static final float DOOR_W = 3f;
     private static final float WALL_T = 0.33f;
 
     public DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors) {
