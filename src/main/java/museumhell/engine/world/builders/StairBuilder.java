@@ -113,7 +113,8 @@ public class StairBuilder {
             float zMax = iz2 - runD + Stairs.STEP_DEPTH * .5f - STAIR_FOOT_GAP;
             float sz = (zMax > zMin) ? FastMath.interpolateLinear(rnd.nextFloat(), zMin, zMax) : zMin;
 
-            Rect hole = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * .5f, sz + runD - Stairs.STEP_DEPTH * .5f);
+            float pad = 0.05f;
+            Rect hole = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * .5f - pad, sz + runD - Stairs.STEP_DEPTH * .5f + pad);
             holes.computeIfAbsent(f, k -> new ArrayList<>()).add(hole);
             holes.computeIfAbsent(f + 1, k -> new ArrayList<>()).add(hole);
 

@@ -28,7 +28,7 @@ public class ConnectionGenerator {
                     continue;
                 }
                 double p = rnd.nextDouble();
-                ConnectionType type = (p < 0.7) ? ConnectionType.DOOR : (p < 0.8) ? ConnectionType.OPENING : ConnectionType.CORRIDOR;
+                ConnectionType type = (p < 0.5) ? ConnectionType.DOOR : (p < 0.75) ? ConnectionType.OPENING : ConnectionType.CORRIDOR;
                 if (type != ConnectionType.CORRIDOR) {
                     // Puerta u opening normales
                     out.add(new Connection(a, b, dir, type));

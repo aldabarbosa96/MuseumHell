@@ -7,11 +7,12 @@ import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 
 public class Door {
-    private static final float SPEED = 3.5f;
+    private static final float SPEED = 4f;
     private static final float PROTRUDE = 0.1f;
 
     private final Geometry geo;
@@ -32,6 +33,7 @@ public class Door {
         m.setColor("Diffuse", ColorRGBA.DarkGray);
         m.setColor("Ambient", ColorRGBA.Black.mult(0.25f));
         geo.setMaterial(m);
+        geo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         geo.setLocalTranslation(closedPos);
 
         body = new RigidBodyControl(0);
