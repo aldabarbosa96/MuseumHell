@@ -10,11 +10,11 @@ import com.jme3.renderer.Camera;
 import museumhell.game.player.PlayerController;
 import museumhell.engine.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
-import museumhell.utils.AudioManager;
+import museumhell.utils.AudioLoader;
 
 public class InputSystem implements ActionListener {
     private WorldBuilder world;
-    private AudioManager audio;
+    private AudioLoader audio;
     private final InputManager inMgr;
     private final FlyByCamera flyCam;
     private Camera cam;
@@ -58,7 +58,7 @@ public class InputSystem implements ActionListener {
         this.player = pc;
     }
 
-    public void setAudioManager(AudioManager audio) {
+    public void setAudioManager(AudioLoader audio) {
         this.audio = audio;
     }
 

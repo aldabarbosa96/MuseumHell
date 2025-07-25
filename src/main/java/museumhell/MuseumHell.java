@@ -22,16 +22,16 @@ import museumhell.game.loot.LootSystem;
 import museumhell.game.player.PlayerController;
 import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
-import museumhell.utils.AudioManager;
-import museumhell.utils.AssetManager;
+import museumhell.utils.AudioLoader;
+import museumhell.utils.AssetLoader;
 
 import java.awt.*;
 import java.util.*;
 import java.util.List;
 
 public class MuseumHell extends SimpleApplication {
-    private AssetManager visuals;
-    private AudioManager audio;
+    private AssetLoader visuals;
+    private AudioLoader audio;
     private BulletAppState physics;
     private WorldBuilder world;
     private PlayerController player;
@@ -72,12 +72,12 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
-        visuals = new AssetManager(assetManager);
-        audio = new AudioManager(assetManager, rootNode);
+        visuals = new AssetLoader(assetManager);
+        audio = new AudioLoader(assetManager, rootNode);
 
         audio.play("ambient1");
         audio.play("ambient2");
-        cameraBase = visuals.get("camera");
+        cameraBase = visuals.get("camera2");
 
         // Luz ambiental tenue
         rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.00244f)));
