@@ -19,7 +19,7 @@ public class InputSystem implements ActionListener {
     private PlayerController player;
     private LootSystem lootMgr;
 
-    private boolean up, down, left, right, sprint, crouch, debug;
+    private boolean up, down, left, right, sprint, crouch, debug, jump;
 
     private static final float WALK_SPEED = 8f;
     private static final float CROUCH_SPEED = 4f;
@@ -68,6 +68,7 @@ public class InputSystem implements ActionListener {
             case "Down" -> down = isPressed;
             case "Sprint" -> sprint = isPressed;
             case "Jump" -> {
+                jump = isPressed;
                 if (isPressed && player != null) player.jump();
             }
             case "Use" -> {
@@ -123,5 +124,9 @@ public class InputSystem implements ActionListener {
 
     public boolean isCrouching() {
         return crouch;
+    }
+
+    public boolean isJump() {
+        return jump;
     }
 }

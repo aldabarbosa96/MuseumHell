@@ -22,6 +22,8 @@ import museumhell.game.loot.LootSystem;
 import museumhell.game.player.PlayerController;
 import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
+import museumhell.utils.AudioManager;
+import museumhell.utils.AssetManager;
 
 import java.awt.*;
 import java.util.AbstractMap;
@@ -30,7 +32,8 @@ import java.util.List;
 import java.util.Map;
 
 public class MuseumHell extends SimpleApplication {
-
+    private AssetManager visuals;
+    private AudioManager audio;
     private BulletAppState physics;
     private WorldBuilder world;
     private PlayerController player;
@@ -59,7 +62,7 @@ public class MuseumHell extends SimpleApplication {
 
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);
-        app.setShowSettings(false);
+        app.setShowSettings(true);
         app.setDisplayStatView(false);
         app.setDisplayFps(true);
         app.start();
@@ -67,8 +70,10 @@ public class MuseumHell extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
-        cameraBase = assetManager.loadModel("Models/camara.glb"); // todo --> mover a gestor dedicado
-        cameraBase.scale(0.5f);
+        visuals = new AssetManager(assetManager);
+        audio = new AudioManager(assetManager);
+
+        cameraBase = visuals.get("camera");
 
         // Luz ambiental tenue
         rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.00244f)));
@@ -95,7 +100,7 @@ public class MuseumHell extends SimpleApplication {
 
         cameraBase.scale(0.5f);
 
-        float cameraExtrusion = 1f;
+        float cameraExtrusion = 1.25f;
         var camBuilder = new Camera(rootNode, cameraBase, cameraExtrusion);
         camBuilder.build(museum);
 
@@ -140,6 +145,7 @@ public class MuseumHell extends SimpleApplication {
 
         // Ajuste de cámara
         cam.setFrustumNear(0.525f);
+
     }
 
     @Override
@@ -151,7 +157,7 @@ public class MuseumHell extends SimpleApplication {
         float bobAmplitude = input.isSprinting() ? SPRINT_BOB_AMPLITUDE : BOB_AMPLITUDE;
         float bobSpeed = input.isSprinting() ? SPRINT_BOB_SPEED : BOB_SPEED;
 
-        if (input.isMovingForwardBack()) {
+        if (input.isMovingForwardBack() && !input.isJump()) {
             bobTime += tpf * bobSpeed;
         } else {
             bobTime = 0f;
