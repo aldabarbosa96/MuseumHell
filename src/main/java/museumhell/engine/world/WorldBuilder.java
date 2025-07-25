@@ -18,9 +18,6 @@ import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
 
 import java.util.*;
 
-/**
- * Construye el contenido físico y gráfico del museo a partir de un {@link MuseumLayout}.
- */
 public class WorldBuilder {
     private static final float DOOR_W = 2.5f, WALL_T = .33f, MARGIN = 1f;
     private static final float HOLE_W = DOOR_W * 2f;
@@ -137,7 +134,7 @@ public class WorldBuilder {
                 continue;
             }
             floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, y0 - 0.1f, 0.1f, "Floor", ColorRGBA.Brown);
-            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, y0 + h, 0.1f, "Ceil", ColorRGBA.Blue);
+            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, y0 + h, 0.1f, "Ceil", ColorRGBA.Red);
 
             // 3) Muros y aberturas
             for (Direction dir : List.of(Direction.NORTH, Direction.WEST, Direction.SOUTH, Direction.EAST)) {

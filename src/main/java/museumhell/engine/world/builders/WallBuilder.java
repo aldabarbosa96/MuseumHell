@@ -6,6 +6,7 @@ import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector2f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
@@ -15,9 +16,6 @@ import museumhell.engine.world.levelgen.Room;
 
 import java.util.List;
 
-/**
- * Encapsula la construcción de muros para salas (convencionales y con hueco).
- */
 public class WallBuilder {
     private static final int DOOR_MIN_OVERLAP = 3;
     private static final float WALL_T = 0.33f;
@@ -31,26 +29,21 @@ public class WallBuilder {
         this.space = space;
     }
 
-    /**
-     * Construye un muro sólido en la dirección indicada.
-     */
+
     public void buildSolid(Room r, Direction dir, float y0, float h) {
         if (dir == Direction.NORTH || dir == Direction.SOUTH) {
             float z = dir == Direction.NORTH ? r.z() : r.z() + r.h();
-            Geometry g = makeGeometry("Wall" + dir, new Box(r.w() * .5f, h * .5f, WALL_T), ColorRGBA.Gray);
+            Geometry g = makeGeometry("Wall" + dir, new Box(r.w() * .5f, h * .5f, WALL_T), ColorRGBA.White);
             g.setLocalTranslation(r.x() + r.w() * .5f, y0 + h * .5f, z);
             addStatic(g);
         } else {
             float x = dir == Direction.WEST ? r.x() : r.x() + r.w();
-            Geometry g = makeGeometry("Wall" + dir, new Box(WALL_T, h * .5f, r.h() * .5f), ColorRGBA.DarkGray);
+            Geometry g = makeGeometry("Wall" + dir, new Box(WALL_T, h * .5f, r.h() * .5f), ColorRGBA.White);
             g.setLocalTranslation(x, y0 + h * .5f, r.z() + r.h() * .5f);
             addStatic(g);
         }
     }
 
-    /**
-     * Construye un muro con un hueco de ancho holeWidth y grosor thickness.
-     */
     public void buildOpening(Room r, Direction dir, float y0, float h, List<Room> rooms, float holeWidth, float thickness) {
         float[] ov = getOverlapRange(r, rooms, dir);
         float center = (ov[0] + ov[1]) * .5f;
@@ -112,21 +105,22 @@ public class WallBuilder {
     }
 
 
-
     private void addWallSlice(float x, float y, float z, float sx, float sy, float sz) {
-        Geometry g = makeGeometry("WallSlice", new Box(sx, sy, sz), ColorRGBA.Gray);
+        Box mesh = new Box(sx, sy, sz);
+        mesh.scaleTextureCoordinates(new Vector2f(4, 4));
+        Geometry g = makeGeometry("WallSlice", mesh, ColorRGBA.Yellow);
         g.setLocalTranslation(x, y, z);
         addStatic(g);
     }
 
+
     public Geometry makeGeometry(String name, Mesh mesh, ColorRGBA base) {
         Geometry g = new Geometry(name, mesh);
-        ColorRGBA dark = base.mult(0.05f + (float) Math.random() * 0.07f);
         Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
-        m.setColor("Ambient", dark);
-        m.setColor("Diffuse", dark);
-        m.setColor("Specular", ColorRGBA.Black);
+        m.setColor("Ambient", ColorRGBA.LightGray);
+        m.setColor("Diffuse", ColorRGBA.LightGray);
+        m.setColor("Specular", ColorRGBA.LightGray);
         m.setFloat("Shininess", 1);
         m.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
         g.setMaterial(m);

@@ -68,7 +68,7 @@ public class MuseumHell extends SimpleApplication {
         cameraBase.scale(0.5f);
 
         // Luz ambiental tenue
-        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.002f)));
+        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.0005f)));
 
         // Física
         physics = new BulletAppState();

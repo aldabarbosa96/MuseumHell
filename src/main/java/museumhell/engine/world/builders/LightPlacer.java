@@ -18,7 +18,7 @@ public class LightPlacer {
     private static final ColorRGBA FLASHLIGHT_COLOR = new ColorRGBA(1f, 0.95f, 0.65f, 1f).multLocal(5f);
     private static final float SPOT_RANGE = 50f;
     private static final float INNER_ANGLE = FastMath.DEG_TO_RAD * 5;
-    private static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 25f;
+    private static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 20f;
     private static final float SMOOTH_FACTOR = 0.12f;
     private static final int SMALL_SIDE = 8;
     private static final int GRID_STEP = 12;

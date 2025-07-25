@@ -24,10 +24,8 @@ public class FloorBuilder {
     }
 
     public void buildPatches(int x, int z, int w, int d, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
-        // Material “oscuro” idéntico al antiguo makeGeometry para suelos
         Material mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         mat.setBoolean("UseMaterialColors", true);
-        // Generamos el “dark” que tenías antes:
         ColorRGBA dark = col.mult(0.05f + (float) Math.random() * 0.07f);
         mat.setColor("Ambient", dark);
         mat.setColor("Diffuse", dark);
@@ -47,14 +45,13 @@ public class FloorBuilder {
                 return;
             }
         }
-        // sin hueco → parche completo
         makePatch(x, z, w, d, y, t, tag, mat);
     }
 
     private void makePatch(float x, float z, float w, float d, float y, float t, String name, Material mat) {
         Box shape = new Box(w * .5f, t * .5f, d * .5f);
         Geometry g = new Geometry(name, shape);
-        g.setMaterial(mat.clone()); // clonar para que cada parche sea independiente
+        g.setMaterial(mat.clone());
         g.setLocalTranslation(x + w * .5f, y, z + d * .5f);
         g.addControl(new RigidBodyControl(0));
         root.attachChild(g);

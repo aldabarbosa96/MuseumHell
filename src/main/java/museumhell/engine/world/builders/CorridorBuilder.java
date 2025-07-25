@@ -15,7 +15,7 @@ public class CorridorBuilder {
     private final AssetManager assetManager;
     private final PhysicsSpace space;
     private final Node root;
-    private static final float CORRIDOR_WALL_T = 0.33f * 3f;  // igual que en WB
+    private static final float CORRIDOR_WALL_T = 0.33f * 3f;
 
     public CorridorBuilder(AssetManager am, Node root, PhysicsSpace space) {
         this.assetManager = am;
@@ -27,11 +27,9 @@ public class CorridorBuilder {
         float x = r.x(), z = r.z(), w = r.w(), d = r.h();
         float cx = x + w * .5f, cz = z + d * .5f;
 
-        // Suelo y techo — podrías reusar FloorBuilder, pero para mantenerlo simple:
         makePatch(x, z, w, d, y0 - .1f, .1f, "CorrFloor", ColorRGBA.Brown);
         makePatch(x, z, w, d, y0 + h, .1f, "CorrCeil", ColorRGBA.Blue);
 
-        // Muros con grosor CORRIDOR_WALL_T
         buildWallSlice("CorrN", w, h, CORRIDOR_WALL_T, cx, y0 + h * .5f, z);
         buildWallSlice("CorrS", w, h, CORRIDOR_WALL_T, cx, y0 + h * .5f, z + d);
         buildWallSlice("CorrW", CORRIDOR_WALL_T, h, d, x, y0 + h * .5f, cz);
