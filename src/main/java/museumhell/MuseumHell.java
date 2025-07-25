@@ -58,9 +58,9 @@ public class MuseumHell extends SimpleApplication {
         AppSettings cfg = new AppSettings(true);
         cfg.setResolution(Math.round(dm.getWidth() * scale), Math.round(dm.getHeight() * scale));
         cfg.setTitle("MuseumHell");
-        cfg.setVSync(false);
+        cfg.setVSync(true);
         cfg.setGammaCorrection(true);
-        if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate());
+        //if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate()); **NO** establecemos límite si no desfasa con VSync
 
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);
@@ -83,8 +83,13 @@ public class MuseumHell extends SimpleApplication {
         rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.00244f)));
 
         // Física
-        physics = new BulletAppState();
+        Vector3f worldMin = new Vector3f(-150f, -10f, -150f);
+        Vector3f worldMax = new Vector3f(150f, 50f, 150f);
+
+        // Instanciamos BulletAppState usando AxisSweep3 internamente
+        physics = new BulletAppState(worldMin, worldMax);
         stateManager.attach(physics);
+
         physics.setDebugEnabled(false);
 
         inputManager.addMapping("ToggleDebug", new KeyTrigger(KeyInput.KEY_TAB)); // todo --> mover a InputSystem
@@ -146,7 +151,7 @@ public class MuseumHell extends SimpleApplication {
                 }
             }
         }
-        loot.distributeAcrossRooms(lootRooms, 17, 33, 5);
+        loot.distributeAcrossRooms(lootRooms, 20, 35, 5);
 
         // Ajuste de cámara
         cam.setFrustumNear(0.525f);
@@ -178,6 +183,7 @@ public class MuseumHell extends SimpleApplication {
             }
         } else {
             stepTime = 0f;
+
             lastStepCount = 0;
         }
 
