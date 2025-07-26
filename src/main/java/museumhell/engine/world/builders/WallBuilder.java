@@ -1,21 +1,26 @@
 package museumhell.engine.world.builders;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.control.RigidBodyControl;
+import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Vector2f;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import museumhell.engine.world.levelgen.Direction;
 import museumhell.engine.world.levelgen.Room;
+import museumhell.utils.AssetLoader;
 
 import java.util.List;
+
+import static museumhell.engine.world.levelgen.Direction.*;
 
 public class WallBuilder {
 
@@ -26,11 +31,13 @@ public class WallBuilder {
     private final Node root;
     private final PhysicsSpace space;
     private final Material wallMat;
+    private final Spatial wallModel;
 
-    public WallBuilder(AssetManager assetManager, Node root, PhysicsSpace space) {
+    public WallBuilder(AssetManager assetManager, Node root, PhysicsSpace space, AssetLoader assetLoader) {
         this.assetManager = assetManager;
         this.root = root;
         this.space = space;
+        this.wallModel = assetLoader.get("wall1");
 
         wallMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         wallMat.setBoolean("UseMaterialColors", true);
@@ -44,25 +51,60 @@ public class WallBuilder {
     }
 
     public void buildSolid(Room r, Direction dir, float y0, float h) {
-        Box mesh;
-        float tx, ty, tz;
+        // 1) Calcula dimensiones deseadas
+        float length = (dir == Direction.NORTH || dir == Direction.SOUTH) ? r.w() : r.h();
+        float sx = (dir == Direction.NORTH || dir == Direction.SOUTH) ? length : WALL_T;
+        float sy = h;
+        float sz = (dir == Direction.NORTH || dir == Direction.SOUTH) ? WALL_T : length;
 
-        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
-            mesh = new Box(r.w() * .5f, h * .5f, WALL_T);
-            tz = (dir == Direction.NORTH) ? r.z() : r.z() + r.h();
-            tx = r.x() + r.w() * .5f;
-            ty = y0 + h * .5f;
-        } else {
-            mesh = new Box(WALL_T, h * .5f, r.h() * .5f);
-            tx = (dir == Direction.WEST) ? r.x() : r.x() + r.w();
-            ty = y0 + h * .5f;
-            tz = r.z() + r.h() * .5f;
+
+        // 2) Clona el modelo y extrae su tamaño original
+        Spatial wall = wallModel.clone();
+        BoundingBox bb = (BoundingBox) wall.getWorldBound();
+        float origW = bb.getXExtent() * 2f;
+        float origH = bb.getYExtent() * 2f;
+        float origT = bb.getZExtent() * 2f;
+
+        // 3) Escálalo justo a (sx,sy,sz)
+        wall.setLocalScale(sx / origW, sy / origH, sz / origT);
+        wall.setShadowMode(ShadowMode.CastAndReceive);
+
+        // 4) Posición centrada según la dirección
+        float halfThickness = (dir == Direction.NORTH || dir == Direction.SOUTH) ? sz * 0.5f   // grosor en Z
+                : sx * 0.5f;  // grosor en X
+
+        float tx = 0, tz = 0;
+        switch (dir) {
+            case NORTH:
+                tx = r.x() + r.w() * 0.5f;
+                tz = r.z() - halfThickness;
+                break;
+            case SOUTH:
+                tx = r.x() + r.w() * 0.5f;
+                tz = r.z() + r.h() + halfThickness;
+                break;
+            case WEST:
+                tx = r.x() - halfThickness;
+                tz = r.z() + r.h() * 0.5f;
+                break;
+            case EAST:
+                tx = r.x() + r.w() + halfThickness;
+                tz = r.z() + r.h() * 0.5f;
+                break;
         }
 
-        Geometry g = makeWallGeometry("Wall" + dir, mesh);
-        g.setLocalTranslation(tx, ty, tz);
-        addStatic(g);
+        wall.setLocalTranslation(tx, y0, tz);
+
+        // 5) Añádelo a la escena
+        root.attachChild(wall);
+
+        // 6) Física: colisión exacta de malla
+        var shape = CollisionShapeFactory.createMeshShape(wall);
+        var body = new RigidBodyControl(shape, 0);
+        wall.addControl(body);
+        space.add(body);
     }
+
 
     public void buildOpening(Room r, Direction dir, float y0, float h, List<Room> rooms, float holeWidth, float thickness) {
 
@@ -70,7 +112,7 @@ public class WallBuilder {
         float center = (ov[0] + ov[1]) * .5f;
         float halfHole = holeWidth * .5f;
 
-        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+        if (dir == Direction.NORTH || dir == SOUTH) {
             float z = (dir == Direction.NORTH) ? r.z() : r.z() + r.h();
             float leftW = center - halfHole - r.x();
             float rightW = (r.x() + r.w()) - (center + halfHole);
@@ -112,13 +154,13 @@ public class WallBuilder {
     public float[] getOverlapRange(Room r, List<Room> rooms, Direction dir) {
         int a1, a2, b1, b2;
 
-        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+        if (dir == Direction.NORTH || dir == SOUTH) {
             a1 = r.x();
             a2 = r.x() + r.w();
             int zEdge = (dir == Direction.NORTH) ? r.z() : r.z() + r.h();
 
             for (Room o : rooms) {
-                boolean match = (dir == Direction.NORTH && o.z() + o.h() == zEdge) || (dir == Direction.SOUTH && o.z() == zEdge);
+                boolean match = (dir == Direction.NORTH && o.z() + o.h() == zEdge) || (dir == SOUTH && o.z() == zEdge);
                 if (match) {
                     b1 = o.x();
                     b2 = o.x() + o.w();

@@ -7,20 +7,23 @@ import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.Direction;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.levelgen.Room;
+import museumhell.utils.AssetLoader;
 
 import java.util.List;
 
 
 public class DoorBuilder {
     private final AssetManager assetManager;
+    private final AssetLoader assetLoader;
     private final PhysicsSpace space;
     private final Node root;
     private final List<Door> doors;
     private static final float DOOR_W = 3f;
     private static final float WALL_T = 0.33f;
 
-    public DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors) {
+    public DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, AssetLoader assetLoader) {
         this.assetManager = assetManager;
+        this.assetLoader = assetLoader;
         this.space = space;
         this.root = root;
         this.doors = doors;
@@ -28,7 +31,7 @@ public class DoorBuilder {
 
 
     public void build(Room r, Direction dir, float y0, float h, List<Room> rooms) {
-        WallBuilder helper = new WallBuilder(assetManager, root, space);
+        WallBuilder helper = new WallBuilder(assetManager, root, space, assetLoader);
         helper.buildOpening(r, dir, y0, h, rooms, DOOR_W, WALL_T);
 
         float[] ov = helper.getOverlapRange(r, rooms, dir);

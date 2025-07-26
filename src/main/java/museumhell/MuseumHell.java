@@ -104,7 +104,7 @@ public class MuseumHell extends SimpleApplication {
 
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(125, 100, 3, System.nanoTime());
-        world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
+        world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace(), visuals);
         world.build(museum);
 
         cameraBase.scale(0.5f);

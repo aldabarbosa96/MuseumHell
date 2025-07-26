@@ -8,6 +8,7 @@ import com.jme3.scene.Node;
 import museumhell.engine.world.builders.*;
 import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
+import museumhell.utils.AssetLoader;
 
 import java.util.*;
 
@@ -48,14 +49,14 @@ public class WorldBuilder {
         }
     }
 
-    public WorldBuilder(AssetManager am, Node root, PhysicsSpace space) {
+    public WorldBuilder(AssetManager am, Node root, PhysicsSpace space, AssetLoader assetLoader) {
         this.am = am;
         this.root = root;
         this.space = space;
         this.lightPlacer = new LightPlacer(root);
         this.floorBuilder = new FloorBuilder(root, space, am);
-        this.wallBuilder = new WallBuilder(am, root, space);
-        this.doorBuilder = new DoorBuilder(am, space, root, doors);
+        this.wallBuilder = new WallBuilder(am,root, space, assetLoader);
+        this.doorBuilder = new DoorBuilder(am, space, root, doors, assetLoader);
         this.corridorBuilder = new CorridorBuilder(am, root, space);
         this.stairBuilder = new StairBuilder(am, space, root);
     }
