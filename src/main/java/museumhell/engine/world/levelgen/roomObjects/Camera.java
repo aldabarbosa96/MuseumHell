@@ -33,7 +33,7 @@ public class Camera {
 
     private void placeInRoom(int floorIdx, Room r, float floorH) {
         float baseY = floorIdx * floorH;
-        float yCam = baseY + floorH - 0.3f;
+        float yCam = baseY + floorH - 0.5f;
 
         float x1 = r.x() + 0.2f, x2 = r.x() + r.w() - 0.2f;
         float z1 = r.z() + 0.2f, z2 = r.z() + r.h() - 0.2f;
