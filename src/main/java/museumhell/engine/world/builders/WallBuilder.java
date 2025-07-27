@@ -8,6 +8,9 @@ import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
+import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
@@ -33,11 +36,21 @@ public class WallBuilder {
     private final Material wallMat;
     private final Spatial wallModel;
 
+    private final float modelLength;
+    private final float modelHeight;
+    private final float modelThickness;
+
     public WallBuilder(AssetManager assetManager, Node root, PhysicsSpace space, AssetLoader assetLoader) {
         this.assetManager = assetManager;
         this.root = root;
         this.space = space;
         this.wallModel = assetLoader.get("wall1");
+
+        wallModel.updateGeometricState();
+        BoundingBox bb = (BoundingBox) wallModel.getWorldBound();
+        modelLength = bb.getXExtent() * 2f;
+        modelHeight = bb.getYExtent() * 2f;
+        modelThickness = bb.getZExtent() * 2f;
 
         wallMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         wallMat.setBoolean("UseMaterialColors", true);
@@ -51,56 +64,61 @@ public class WallBuilder {
     }
 
     public void buildSolid(Room r, Direction dir, float y0, float h) {
-        // 1) Calcula dimensiones deseadas
-        float length = (dir == Direction.NORTH || dir == Direction.SOUTH) ? r.w() : r.h();
-        float sx = (dir == Direction.NORTH || dir == Direction.SOUTH) ? length : WALL_T;
+        // 1) Dimensiones deseadas en mundo (longitud sobre X o Z, altura, grosor)
+        float length = (dir == NORTH || dir == SOUTH) ? r.w() : r.h();
+        float sx = (dir == NORTH || dir == SOUTH) ? length : WALL_T;
         float sy = h;
-        float sz = (dir == Direction.NORTH || dir == Direction.SOUTH) ? WALL_T : length;
+        float sz = (dir == NORTH || dir == SOUTH) ? WALL_T  : length;
 
-
-        // 2) Clona el modelo y extrae su tamaño original
+        // 2) Clona el modelo y saca sus dimensiones originales
         Spatial wall = wallModel.clone();
+        wall.updateGeometricState();
         BoundingBox bb = (BoundingBox) wall.getWorldBound();
-        float origW = bb.getXExtent() * 2f;
-        float origH = bb.getYExtent() * 2f;
-        float origT = bb.getZExtent() * 2f;
+        float origW = bb.getXExtent()*2f;
+        float origH = bb.getYExtent()*2f;
+        float origT = bb.getZExtent()*2f;
 
-        // 3) Escálalo justo a (sx,sy,sz)
-        wall.setLocalScale(sx / origW, sy / origH, sz / origT);
-        wall.setShadowMode(ShadowMode.CastAndReceive);
-
-        // 4) Posición centrada según la dirección
-        float halfThickness = (dir == Direction.NORTH || dir == Direction.SOUTH) ? sz * 0.5f   // grosor en Z
-                : sx * 0.5f;  // grosor en X
-
-        float tx = 0, tz = 0;
-        switch (dir) {
-            case NORTH:
-                tx = r.x() + r.w() * 0.5f;
-                tz = r.z() - halfThickness;
-                break;
-            case SOUTH:
-                tx = r.x() + r.w() * 0.5f;
-                tz = r.z() + r.h() + halfThickness;
-                break;
-            case WEST:
-                tx = r.x() - halfThickness;
-                tz = r.z() + r.h() * 0.5f;
-                break;
-            case EAST:
-                tx = r.x() + r.w() + halfThickness;
-                tz = r.z() + r.h() * 0.5f;
-                break;
+        // 3) Rotación para Norte/Sur
+        if (dir == NORTH || dir == SOUTH) {
+            // gira 90° (PI/2) sobre Y
+            Quaternion rot = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
+            wall.setLocalRotation(rot);
+            // al rotar, el eje X del modelo pasa a Z, y viceversa:
+            wall.setLocalScale(sz/origW, sy/origH, sx/origT);
+        } else {
+            // Este es el caso Este/Oeste, usa escala normal
+            wall.setLocalScale(sx/origW, sy/origH, sz/origT);
         }
 
+        wall.setShadowMode(ShadowMode.CastAndReceive);
+
+        // 4) Cálculo de posición igual que antes
+        float halfThick = (dir == NORTH || dir == SOUTH) ? sz*0.5f : sx*0.5f;
+        float tx=0, tz=0;
+        switch(dir){
+            case NORTH:
+                tx = r.x()+r.w()*0.5f;
+                tz = r.z() - halfThick;
+                break;
+            case SOUTH:
+                tx = r.x()+r.w()*0.5f;
+                tz = r.z()+r.h() + halfThick;
+                break;
+            case WEST:
+                tx = r.x() - halfThick;
+                tz = r.z()+r.h()*0.5f;
+                break;
+            case EAST:
+                tx = r.x()+r.w() + halfThick;
+                tz = r.z()+r.h()*0.5f;
+                break;
+        }
         wall.setLocalTranslation(tx, y0, tz);
 
-        // 5) Añádelo a la escena
+        // 5) Añádelo a la escena y física (igual que antes)
         root.attachChild(wall);
-
-        // 6) Física: colisión exacta de malla
         var shape = CollisionShapeFactory.createMeshShape(wall);
-        var body = new RigidBodyControl(shape, 0);
+        var body  = new RigidBodyControl(shape, 0);
         wall.addControl(body);
         space.add(body);
     }

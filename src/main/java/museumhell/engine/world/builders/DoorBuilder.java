@@ -29,7 +29,6 @@ public class DoorBuilder {
         this.doors = doors;
     }
 
-
     public void build(Room r, Direction dir, float y0, float h, List<Room> rooms) {
         WallBuilder helper = new WallBuilder(assetManager, root, space, assetLoader);
         helper.buildOpening(r, dir, y0, h, rooms, DOOR_W, WALL_T);

@@ -22,11 +22,12 @@ public class Hud extends BaseAppState {
     private static final ColorRGBA BORDER = new ColorRGBA(.1f, .1f, .1f, .9f);
     private static final ColorRGBA BG = new ColorRGBA(.0f, .0f, .0f, .55f);
     private static final ColorRGBA ICON = ColorRGBA.Orange;
+
     private Node root;
     private BitmapText txt;
+    private BitmapText dirTxt;
     private Geometry gBorder, gBg, gIcon;
     private float pop = 0;
-
 
     public void set(int collected, int total) {
         if (txt == null) return;
@@ -35,9 +36,18 @@ public class Hud extends BaseAppState {
         pop = 1f;
     }
 
+    public void setDirection(String dir) {
+        if (dirTxt == null) return;
+        dirTxt.setText(dir);
+        SimpleApplication sa = (SimpleApplication) getApplication();
+        int w = sa.getCamera().getWidth();
+        int h = sa.getCamera().getHeight();
+        float textW = dirTxt.getLineWidth();
+        dirTxt.setLocalTranslation(w - textW - 25, h - 25, 0.3f);
+    }
+
     @Override
     protected void initialize(Application app) {
-
         SimpleApplication sApp = (SimpleApplication) app;
         root = new Node("HUD");
         sApp.getGuiNode().attachChild(root);
@@ -53,14 +63,21 @@ public class Hud extends BaseAppState {
         root.attachChild(gIcon);
 
         BitmapFont font = app.getAssetManager().loadFont("Interface/Fonts/Default.fnt");
+
         txt = new BitmapText(font);
         txt.setColor(ColorRGBA.White);
         txt.setSize(22);
         root.attachChild(txt);
 
+        dirTxt = new BitmapText(font);
+        dirTxt.setColor(ColorRGBA.Red);
+        dirTxt.setSize(22);
+        sApp.getGuiNode().attachChild(dirTxt);
+
         root.setLocalTranslation(25, 50, 0);
 
         set(0, 0);
+        setDirection("NORTE");
     }
 
     @Override
@@ -74,6 +91,9 @@ public class Hud extends BaseAppState {
     @Override
     protected void cleanup(Application app) {
         root.removeFromParent();
+        if (dirTxt != null) {
+            dirTxt.removeFromParent();
+        }
     }
 
     @Override
@@ -106,6 +126,6 @@ public class Hud extends BaseAppState {
     }
 
     private float baseline(BitmapText t) {
-        return (Hud.H - t.getLineHeight()) * .5f + t.getLineHeight();
+        return (H - t.getLineHeight()) * .5f + t.getLineHeight();
     }
 }

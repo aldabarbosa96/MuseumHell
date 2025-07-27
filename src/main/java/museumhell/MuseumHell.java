@@ -30,6 +30,7 @@ import java.util.*;
 import java.util.List;
 
 public class MuseumHell extends SimpleApplication {
+    private Hud hud;
     private AssetLoader visuals;
     private AudioLoader audio;
     private BulletAppState physics;
@@ -125,7 +126,7 @@ public class MuseumHell extends SimpleApplication {
         input.registerPlayerControl(player);
         input.setWorld(world);
 
-        Hud hud = new Hud();
+        hud = new Hud();
         stateManager.attach(hud);
         Prompt prompt = new Prompt();
         stateManager.attach(prompt);
@@ -163,6 +164,15 @@ public class MuseumHell extends SimpleApplication {
         player.update(tpf);
         input.update(tpf);
         world.update(tpf);
+
+        Vector3f look = cam.getDirection().clone().setY(0).normalizeLocal();
+        String compass;
+        if (FastMath.abs(look.z) > FastMath.abs(look.x)) {
+            compass = (look.z < 0) ? "NORTE" : "SUR";
+        } else {
+            compass = (look.x > 0) ? "ESTE" : "OESTE";
+        }
+        hud.setDirection(compass);
 
         float bobAmplitude = input.isSprinting() ? SPRINT_BOB_AMPLITUDE : BOB_AMPLITUDE;
         float bobSpeed = input.isSprinting() ? SPRINT_BOB_SPEED : BOB_SPEED;
