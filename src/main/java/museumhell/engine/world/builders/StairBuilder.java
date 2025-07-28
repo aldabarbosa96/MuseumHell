@@ -6,15 +6,13 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.WorldBuilder.Rect;
-import museumhell.engine.world.levelgen.LevelLayout;
-import museumhell.engine.world.levelgen.MuseumLayout;
-import museumhell.engine.world.levelgen.Room;
-import museumhell.engine.world.levelgen.Stairs;
+import museumhell.engine.world.levelgen.*;
 
 import java.util.*;
 
 public class StairBuilder {
     private static final float DOOR_W = 2.5f;
+    private static final float WALL_T = 2f;
     private static final float MARGIN = 1f;
     private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     private static final float STAIR_WALL_GAP = 0.20f;
@@ -54,7 +52,7 @@ public class StairBuilder {
         Random rnd = new Random(floors.size() * 73L);
         int steps = (int) Math.ceil(floorHeight / Stairs.STEP_H);
         float runD = steps * Stairs.STEP_DEPTH;
-        float hxPad = Stairs.WIDTH * .5f + 0.05f;
+        float hxPad = Stairs.WIDTH * 0.5f + 0.05f;
 
         for (int f = 0; f < floors.size() - 1; f++) {
             LevelLayout A = floors.get(f);
@@ -92,8 +90,10 @@ public class StairBuilder {
     }
 
     private boolean tryPlaceStair(Random rnd, LevelLayout A, LevelLayout B, int f, float runD, float hxPad, Map<Integer, List<Rect>> holes, List<StairPlacement> placements, Room ra, boolean respectDoors) {
+
         List<Room> roomsB = new ArrayList<>(B.rooms());
         Collections.shuffle(roomsB, rnd);
+
         for (Room rb : roomsB) {
             int ix1 = Math.max(ra.x(), rb.x());
             int ix2 = Math.min(ra.x() + ra.w(), rb.x() + rb.w());
@@ -102,27 +102,36 @@ public class StairBuilder {
             if (ix2 - ix1 < Stairs.WIDTH + STAIR_WALL_GAP * 2) continue;
             if (iz2 - iz1 < runD + STAIR_FOOT_GAP * 2) continue;
 
-            boolean left = rnd.nextBoolean();
-            if (respectDoors) {
-                if (left && doorWest(ra, A)) return false;
-                if (!left && doorEast(ra, A)) return false;
-            }
+            boolean westBlocked = !doorSpans(ra, Direction.WEST, A).isEmpty();
+            boolean eastBlocked = !doorSpans(ra, Direction.EAST, A).isEmpty();
+            if (westBlocked && eastBlocked) continue;
+            if (respectDoors && (westBlocked || eastBlocked)) continue;
 
-            float sx = left ? ix1 + STAIR_WALL_GAP + Stairs.WIDTH * .5f : ix2 - STAIR_WALL_GAP - Stairs.WIDTH * .5f;
-            float zMin = iz1 + Stairs.STEP_DEPTH * .5f + STAIR_FOOT_GAP;
-            float zMax = iz2 - runD + Stairs.STEP_DEPTH * .5f - STAIR_FOOT_GAP;
+            boolean left = eastBlocked || (!westBlocked && rnd.nextBoolean());
+            float innerOffset = WALL_T + STAIR_WALL_GAP + Stairs.WIDTH * 0.5f;
+            float sx = left ? ix1 + innerOffset : ix2 - innerOffset;
+
+            float zMin = iz1 + Stairs.STEP_DEPTH * 0.5f + STAIR_FOOT_GAP;
+            float zMax = iz2 - runD + Stairs.STEP_DEPTH * 0.5f - STAIR_FOOT_GAP;
             float sz = (zMax > zMin) ? FastMath.interpolateLinear(rnd.nextFloat(), zMin, zMax) : zMin;
 
+            float topFront = sz + runD + Stairs.STEP_DEPTH * 0.5f + STAIR_FOOT_GAP;
+            if (topFront > rb.z() + rb.h() - WALL_T) continue;   // sin espacio arriba
+
             float pad = 0.05f;
-            Rect hole = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * .5f - pad, sz + runD - Stairs.STEP_DEPTH * .5f + pad);
+            Rect hole = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * 0.5f - pad, sz + runD - Stairs.STEP_DEPTH * 0.5f + pad);
+
+            if (intersectsAny(hole, holes.getOrDefault(f, List.of()))) continue;
+            if (intersectsAny(hole, holes.getOrDefault(f + 1, List.of()))) continue;
+
             holes.computeIfAbsent(f, k -> new ArrayList<>()).add(hole);
             holes.computeIfAbsent(f + 1, k -> new ArrayList<>()).add(hole);
-
             placements.add(new StairPlacement(f, sx, sz));
             return true;
         }
         return false;
     }
+
 
     public void place(Plan plan, MuseumLayout museum) {
         float floorHeight = museum.floorHeight();
@@ -133,27 +142,47 @@ public class StairBuilder {
         }
     }
 
-    private boolean doorWest(Room a, LevelLayout L) {
-        int az1 = a.z(), az2 = a.z() + a.h(), ax = a.x();
-        for (Room b : L.rooms()) {
-            if (b != a && b.x() + b.w() == ax && overlap(az1, az2, b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR) {
-                return true;
+    private record Span(float a, float b) {
+        boolean overlaps(float x1, float x2) {
+            return Math.min(b, x2) - Math.max(a, x1) > 0;
+        }
+    }
+
+    private List<Span> doorSpans(Room r, Direction dir, LevelLayout L) {
+        List<Span> list = new ArrayList<>();
+        for (Connection c : L.conns()) {
+            if (c.type() == ConnectionType.CORRIDOR) continue;   // ignoramos corredores
+            boolean match = (c.a() == r && c.dir() == dir) || (c.b() == r && opposite(c.dir()) == dir);
+            if (!match) continue;
+
+            // proyectamos la solapa
+            if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+                Room o = c.a() == r ? c.b() : c.a();
+                float x1 = Math.max(r.x(), o.x()), x2 = Math.min(r.x() + r.w(), o.x() + o.w());
+                list.add(new Span(x1, x2));
+            } else {
+                Room o = c.a() == r ? c.b() : c.a();
+                float z1 = Math.max(r.z(), o.z()), z2 = Math.min(r.z() + r.h(), o.z() + o.h());
+                list.add(new Span(z1, z2));
             }
+        }
+        return list;
+    }
+
+    private static Direction opposite(Direction d) {
+        return switch (d) {
+            case NORTH -> Direction.SOUTH;
+            case SOUTH -> Direction.NORTH;
+            case EAST -> Direction.WEST;
+            case WEST -> Direction.EAST;
+        };
+    }
+
+    private static boolean intersectsAny(Rect r, List<Rect> list) {
+        for (Rect o : list) {
+            if (r.x1() < o.x2() && r.x2() > o.x1() && r.z1() < o.z2() && r.z2() > o.z1()) return true;
         }
         return false;
     }
 
-    private boolean doorEast(Room a, LevelLayout L) {
-        int az1 = a.z(), az2 = a.z() + a.h(), ax = a.x() + a.w();
-        for (Room b : L.rooms()) {
-            if (b != a && b.x() == ax && overlap(az1, az2, b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private int overlap(int a1, int a2, int b1, int b2) {
-        return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
-    }
 }
