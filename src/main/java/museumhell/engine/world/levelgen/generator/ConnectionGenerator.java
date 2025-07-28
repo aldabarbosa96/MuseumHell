@@ -5,6 +5,7 @@ import museumhell.engine.world.levelgen.ConnectionType;
 import museumhell.engine.world.levelgen.Direction;
 import museumhell.engine.world.levelgen.LevelLayout;
 import museumhell.engine.world.levelgen.Room;
+import museumhell.utils.GeoUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,27 +106,23 @@ public class ConnectionGenerator {
         for (Room o : rooms) {
             switch (dir) {
                 case NORTH:
-                    if (o.z() + o.h() == r.z() && overlap(r.x(), r.x() + r.w(), o.x(), o.x() + o.w()) >= HOLE_W)
+                    if (o.z() + o.h() == r.z() && GeoUtil.overlap(r.x(), r.x() + r.w(), o.x(), o.x() + o.w()) >= HOLE_W)
                         return o;
                     break;
                 case SOUTH:
-                    if (o.z() == r.z() + r.h() && overlap(r.x(), r.x() + r.w(), o.x(), o.x() + o.w()) >= HOLE_W)
+                    if (o.z() == r.z() + r.h() && GeoUtil.overlap(r.x(), r.x() + r.w(), o.x(), o.x() + o.w()) >= HOLE_W)
                         return o;
                     break;
                 case WEST:
-                    if (o.x() + o.w() == r.x() && overlap(r.z(), r.z() + r.h(), o.z(), o.z() + o.h()) >= HOLE_W)
+                    if (o.x() + o.w() == r.x() && GeoUtil.overlap(r.z(), r.z() + r.h(), o.z(), o.z() + o.h()) >= HOLE_W)
                         return o;
                     break;
                 case EAST:
-                    if (o.x() == r.x() + r.w() && overlap(r.z(), r.z() + r.h(), o.z(), o.z() + o.h()) >= HOLE_W)
+                    if (o.x() == r.x() + r.w() && GeoUtil.overlap(r.z(), r.z() + r.h(), o.z(), o.z() + o.h()) >= HOLE_W)
                         return o;
                     break;
             }
         }
         return null;
-    }
-
-    private static int overlap(int a1, int a2, int b1, int b2) {
-        return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
     }
 }

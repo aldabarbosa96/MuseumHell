@@ -8,7 +8,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.PhysicsSpace;
-import museumhell.engine.world.WorldBuilder.Rect;
+import museumhell.utils.GeoUtil.Rect;
 
 import java.util.List;
 

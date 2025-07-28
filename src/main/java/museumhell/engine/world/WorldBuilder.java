@@ -9,9 +9,12 @@ import museumhell.engine.world.builders.*;
 import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
 import museumhell.utils.AssetLoader;
-import museumhell.utils.GeoUtil;
+import museumhell.utils.GeoUtil.*;
 
 import java.util.*;
+
+import static museumhell.utils.GeoUtil.opposite;
+import static museumhell.utils.GeoUtil.overlap;
 
 public class WorldBuilder {
     private static final float DOOR_W = 2.5f, WALL_T = 2f, MARGIN = 1f;
@@ -31,24 +34,6 @@ public class WorldBuilder {
     private final PhysicsSpace space;
     private final List<Door> doors = new ArrayList<>();
     private boolean doorOpen = false;
-
-    public record Rect(float x1, float x2, float z1, float z2) {
-        public float x1() {
-            return x1;
-        }
-
-        public float x2() {
-            return x2;
-        }
-
-        public float z1() {
-            return z1;
-        }
-
-        public float z2() {
-            return z2;
-        }
-    }
 
     public WorldBuilder(AssetManager am, Node root, PhysicsSpace space, AssetLoader assetLoader) {
         this.am = am;
@@ -157,19 +142,19 @@ public class WorldBuilder {
         for (Room b : rooms) {
             switch (dir) {
                 case NORTH -> {
-                    if (b.z() + b.h() == a.z() && GeoUtil.overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.z() + b.h() == a.z() && overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
                 case SOUTH -> {
-                    if (b.z() == a.z() + a.h() && GeoUtil.overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.z() == a.z() + a.h() && overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
                 case WEST -> {
-                    if (b.x() + b.w() == a.x() && GeoUtil.overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.x() + b.w() == a.x() && overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
                 case EAST -> {
-                    if (b.x() == a.x() + a.w() && GeoUtil.overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.x() == a.x() + a.w() && overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
             }
@@ -184,7 +169,7 @@ public class WorldBuilder {
                 return c;
             }
             // o si room es el destino y la dir opuesta coincide
-            if (c.b() == room && GeoUtil.opposite(c.dir()) == dir) {
+            if (c.b() == room && opposite(c.dir()) == dir) {
                 return c;
             }
         }

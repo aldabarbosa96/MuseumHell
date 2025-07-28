@@ -5,17 +5,17 @@ import com.jme3.bullet.PhysicsSpace;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
-import museumhell.engine.world.WorldBuilder.Rect;
 import museumhell.engine.world.levelgen.*;
 import museumhell.utils.GeoUtil;
+import museumhell.utils.GeoUtil.*;
 
 import java.util.*;
+
 
 public class StairBuilder {
     private static final float DOOR_W = 2.5f;
     private static final float WALL_T = 2f;
     private static final float MARGIN = 1f;
-    private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     private static final float STAIR_WALL_GAP = 0.20f;
     private static final float STAIR_FOOT_GAP = 1.5f;
     private static final int MAX_STAIRS = 3;
