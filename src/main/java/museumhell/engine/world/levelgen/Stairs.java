@@ -38,7 +38,7 @@ public final class Stairs {
         }
     }
 
-    private static Material makeMat(AssetManager am) {
+    public static Material makeMat(AssetManager am) {
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
         m.setColor("Diffuse", ColorRGBA.Brown);
