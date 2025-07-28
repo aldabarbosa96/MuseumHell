@@ -7,6 +7,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.WorldBuilder.Rect;
 import museumhell.engine.world.levelgen.*;
+import museumhell.utils.GeoUtil;
 
 import java.util.*;
 
@@ -121,8 +122,8 @@ public class StairBuilder {
             float pad = 0.05f;
             Rect hole = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * 0.5f - pad, sz + runD - Stairs.STEP_DEPTH * 0.5f + pad);
 
-            if (intersectsAny(hole, holes.getOrDefault(f, List.of()))) continue;
-            if (intersectsAny(hole, holes.getOrDefault(f + 1, List.of()))) continue;
+            if (GeoUtil.intersectsAny(hole, holes.getOrDefault(f, List.of()))) continue;
+            if (GeoUtil.intersectsAny(hole, holes.getOrDefault(f + 1, List.of()))) continue;
 
             holes.computeIfAbsent(f, k -> new ArrayList<>()).add(hole);
             holes.computeIfAbsent(f + 1, k -> new ArrayList<>()).add(hole);
@@ -152,37 +153,19 @@ public class StairBuilder {
         List<Span> list = new ArrayList<>();
         for (Connection c : L.conns()) {
             if (c.type() == ConnectionType.CORRIDOR) continue;   // ignoramos corredores
-            boolean match = (c.a() == r && c.dir() == dir) || (c.b() == r && opposite(c.dir()) == dir);
+            boolean match = (c.a() == r && c.dir() == dir) || (c.b() == r && GeoUtil.opposite(c.dir()) == dir);
             if (!match) continue;
 
             // proyectamos la solapa
+            Room room = c.a() == r ? c.b() : c.a();
             if (dir == Direction.NORTH || dir == Direction.SOUTH) {
-                Room o = c.a() == r ? c.b() : c.a();
-                float x1 = Math.max(r.x(), o.x()), x2 = Math.min(r.x() + r.w(), o.x() + o.w());
+                float x1 = Math.max(r.x(), room.x()), x2 = Math.min(r.x() + r.w(), room.x() + room.w());
                 list.add(new Span(x1, x2));
             } else {
-                Room o = c.a() == r ? c.b() : c.a();
-                float z1 = Math.max(r.z(), o.z()), z2 = Math.min(r.z() + r.h(), o.z() + o.h());
+                float z1 = Math.max(r.z(), room.z()), z2 = Math.min(r.z() + r.h(), room.z() + room.h());
                 list.add(new Span(z1, z2));
             }
         }
         return list;
     }
-
-    private static Direction opposite(Direction d) {
-        return switch (d) {
-            case NORTH -> Direction.SOUTH;
-            case SOUTH -> Direction.NORTH;
-            case EAST -> Direction.WEST;
-            case WEST -> Direction.EAST;
-        };
-    }
-
-    private static boolean intersectsAny(Rect r, List<Rect> list) {
-        for (Rect o : list) {
-            if (r.x1() < o.x2() && r.x2() > o.x1() && r.z1() < o.z2() && r.z2() > o.z1()) return true;
-        }
-        return false;
-    }
-
 }

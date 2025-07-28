@@ -9,6 +9,7 @@ import museumhell.engine.world.builders.*;
 import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
 import museumhell.utils.AssetLoader;
+import museumhell.utils.GeoUtil;
 
 import java.util.*;
 
@@ -156,33 +157,24 @@ public class WorldBuilder {
         for (Room b : rooms) {
             switch (dir) {
                 case NORTH -> {
-                    if (b.z() + b.h() == a.z() && overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.z() + b.h() == a.z() && GeoUtil.overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
                 case SOUTH -> {
-                    if (b.z() == a.z() + a.h() && overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.z() == a.z() + a.h() && GeoUtil.overlap(a.x(), a.x() + a.w(), b.x(), b.x() + b.w()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
                 case WEST -> {
-                    if (b.x() + b.w() == a.x() && overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.x() + b.w() == a.x() && GeoUtil.overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
                 case EAST -> {
-                    if (b.x() == a.x() + a.w() && overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
+                    if (b.x() == a.x() + a.w() && GeoUtil.overlap(a.z(), a.z() + a.h(), b.z(), b.z() + b.h()) >= MIN_OVERLAP_FOR_DOOR)
                         return true;
                 }
             }
         }
         return false;
-    }
-
-    private Direction opposite(Direction d) {
-        return switch (d) {
-            case NORTH -> Direction.SOUTH;
-            case SOUTH -> Direction.NORTH;
-            case EAST -> Direction.WEST;
-            case WEST -> Direction.EAST;
-        };
     }
 
     private Connection findConnection(List<Connection> conns, Room room, Direction dir) {
@@ -192,15 +184,11 @@ public class WorldBuilder {
                 return c;
             }
             // o si room es el destino y la dir opuesta coincide
-            if (c.b() == room && opposite(c.dir()) == dir) {
+            if (c.b() == room && GeoUtil.opposite(c.dir()) == dir) {
                 return c;
             }
         }
         return null;
-    }
-
-    private int overlap(int a1, int a2, int b1, int b2) {
-        return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
     }
 
     private boolean isCorridor(Room r) {

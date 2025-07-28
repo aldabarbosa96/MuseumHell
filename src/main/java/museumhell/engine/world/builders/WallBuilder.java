@@ -248,23 +248,7 @@ public class WallBuilder {
         throw new IllegalStateException("No vecino válido para dir=" + dir + " en sala " + r);
     }
 
-
-    private Geometry makeWallGeometry(String name, Mesh mesh) {
-        Geometry g = new Geometry(name, mesh);
-        g.setMaterial(wallMat);
-        g.setShadowMode(ShadowMode.CastAndReceive);
-        return g;
-    }
-
-
-    private void addStatic(Geometry g) {
-        g.addControl(new RigidBodyControl(0));
-        root.attachChild(g);
-        space.add(g);
-    }
-
     private void addStaticModel(Spatial s) {
-        // asume que 's' ya viene escalado, rotado y posicionado
         var shape = CollisionShapeFactory.createMeshShape(s);
         var body = new RigidBodyControl(shape, 0);
         s.addControl(body);

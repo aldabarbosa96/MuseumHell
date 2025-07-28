@@ -21,9 +21,6 @@ public class LightPlacer {
     private static final float INNER_ANGLE = FastMath.DEG_TO_RAD * 8;
     private static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 28f;
     private static final float SMOOTH_FACTOR = 0.12f;
-    private static final int SMALL_SIDE = 8;
-    private static final int GRID_STEP = 12;
-    private static final int MAX_LAMPS = 4;
 
     public LightPlacer(Node root) {
         this.root = root;
