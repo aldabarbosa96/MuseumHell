@@ -16,8 +16,8 @@ import static museumhell.engine.world.levelgen.Direction.*;
 public class StairBuilder {
 
     private static final float WALL_T = 2f;
-    private static final float STAIR_WALL_GAP = 0.20f;
-    private static final float STAIR_FOOT_GAP = 1.5f;
+    private static final float STAIR_WALL_GAP = -2f;
+    private static final float STAIR_FOOT_GAP = 2f;
     private static final int MAX_STAIRS = 3;
 
     private enum Orientation {EW, NS}

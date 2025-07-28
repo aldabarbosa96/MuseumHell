@@ -11,7 +11,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 
 public final class Stairs {
-    public static final float WIDTH = 2.5f;
+    public static final float WIDTH = 3.5f;
     public static final float STEP_H = 0.3f;
     public static final float STEP_DEPTH = 0.45f;
 
