@@ -26,10 +26,12 @@ public class FloorBuilder {
     public void buildPatches(int x, int z, int w, int d, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
         Material mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         mat.setBoolean("UseMaterialColors", true);
-        ColorRGBA dark = col.mult(0.05f + (float) Math.random() * 0.07f);
+
+        float brightness = tag.toLowerCase().contains("ceil") ? 0.05f : 0.1f;
+        ColorRGBA dark = col.mult(brightness);
         mat.setColor("Ambient", dark);
         mat.setColor("Diffuse", dark);
-        mat.setColor("Specular", ColorRGBA.Black);
+        mat.setColor("Specular", ColorRGBA.Brown);
         mat.setFloat("Shininess", 1f);
 
         for (Rect v : holes) {

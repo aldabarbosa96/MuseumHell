@@ -15,7 +15,7 @@ public class PlayerController {
     private final AssetManager am;
 
     private static final float CAPSULE_RADIUS = 0.8f;
-    private static final float STAND_HEIGHT = 1.75f;
+    private static final float STAND_HEIGHT = 2f;
     private static final float CROUCH_HEIGHT = 0.5f;
 
     public PlayerController(AssetManager am, PhysicsSpace space, Vector3f startPos) {

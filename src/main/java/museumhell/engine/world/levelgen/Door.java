@@ -30,7 +30,7 @@ public class Door {
         geo = new Geometry("Door", new Box(w * .5f, h * .5f, t * .5f));
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
-        m.setColor("Diffuse", ColorRGBA.DarkGray);
+        m.setColor("Diffuse", ColorRGBA.White);
         m.setColor("Ambient", ColorRGBA.Black.mult(0.25f));
         geo.setMaterial(m);
         geo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);

@@ -13,7 +13,7 @@ import museumhell.utils.AssetLoader;
 import java.util.*;
 
 public class WorldBuilder {
-    private static final float DOOR_W = 2.5f, WALL_T = .33f, MARGIN = 1f;
+    private static final float DOOR_W = 2.5f, WALL_T = 2f, MARGIN = 1f;
     private static final float HOLE_W = DOOR_W * 2f;
     private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     private static final float CORRIDOR_WALL_T = WALL_T * 3f;

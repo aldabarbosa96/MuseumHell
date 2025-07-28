@@ -17,11 +17,11 @@ public class AssetLoader {
 
     private void loadModels() {
         //models.put("camera", assetManager.loadModel("Models/camara.glb"));
-        models.put("camera2", assetManager.loadModel("Models/CamaraJUNTAV2.glb"));
+        models.put("camera1", assetManager.loadModel("Models/CAMARAMIRRORV2.glb"));
         models.put("wall1", assetManager.loadModel("Models/Wall1.glb"));
         models.put("wall2", assetManager.loadModel("Models/Wall2.glb"));
         //models.get("camera").scale(0.65f);
-        models.get("camera2").scale(0.75f);
+        models.get("camera1").scale(0.85f);
     }
 
     public Spatial get(String name) {

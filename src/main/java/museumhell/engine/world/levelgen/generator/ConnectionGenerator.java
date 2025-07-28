@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Random;
 
 public class ConnectionGenerator {
-    private static final float DOOR_W = 2f;
+    private static final float DOOR_W = 2.5f;
     private static final float HOLE_W = DOOR_W * 2f;
     private static final float PENETRATION = 0.5f;
 

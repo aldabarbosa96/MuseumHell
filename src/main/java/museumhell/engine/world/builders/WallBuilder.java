@@ -34,7 +34,7 @@ public class WallBuilder {
     private final Node root;
     private final PhysicsSpace space;
     private final Material wallMat;
-    private final Spatial wallModel;
+    private final Spatial wallModel, wall2Model;
 
     private final float modelLength;
     private final float modelHeight;
@@ -45,6 +45,7 @@ public class WallBuilder {
         this.root = root;
         this.space = space;
         this.wallModel = assetLoader.get("wall1");
+        this.wall2Model = assetLoader.get("wall2");
 
         wallModel.updateGeometricState();
         BoundingBox bb = (BoundingBox) wallModel.getWorldBound();
@@ -68,15 +69,15 @@ public class WallBuilder {
         float length = (dir == NORTH || dir == SOUTH) ? r.w() : r.h();
         float sx = (dir == NORTH || dir == SOUTH) ? length : WALL_T;
         float sy = h;
-        float sz = (dir == NORTH || dir == SOUTH) ? WALL_T  : length;
+        float sz = (dir == NORTH || dir == SOUTH) ? WALL_T : length;
 
         // 2) Clona el modelo y saca sus dimensiones originales
         Spatial wall = wallModel.clone();
         wall.updateGeometricState();
         BoundingBox bb = (BoundingBox) wall.getWorldBound();
-        float origW = bb.getXExtent()*2f;
-        float origH = bb.getYExtent()*2f;
-        float origT = bb.getZExtent()*2f;
+        float origW = bb.getXExtent() * 2f;
+        float origH = bb.getYExtent() * 2f;
+        float origT = bb.getZExtent() * 2f;
 
         // 3) Rotación para Norte/Sur
         if (dir == NORTH || dir == SOUTH) {
@@ -84,86 +85,123 @@ public class WallBuilder {
             Quaternion rot = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
             wall.setLocalRotation(rot);
             // al rotar, el eje X del modelo pasa a Z, y viceversa:
-            wall.setLocalScale(sz/origW, sy/origH, sx/origT);
+            wall.setLocalScale(sz / origW, sy / origH, sx / origT);
         } else {
             // Este es el caso Este/Oeste, usa escala normal
-            wall.setLocalScale(sx/origW, sy/origH, sz/origT);
+            wall.setLocalScale(sx / origW, sy / origH, sz / origT);
         }
 
         wall.setShadowMode(ShadowMode.CastAndReceive);
 
         // 4) Cálculo de posición igual que antes
-        float halfThick = (dir == NORTH || dir == SOUTH) ? sz*0.5f : sx*0.5f;
-        float tx=0, tz=0;
-        switch(dir){
-            case NORTH:
-                tx = r.x()+r.w()*0.5f;
-                tz = r.z() - halfThick;
-                break;
-            case SOUTH:
-                tx = r.x()+r.w()*0.5f;
-                tz = r.z()+r.h() + halfThick;
-                break;
-            case WEST:
+        float halfThick = (dir == NORTH || dir == SOUTH) ? sz * 0.5f : sx * 0.5f;
+        float tx, tz;
+        final float tx1 = r.x() + r.w() * 0.5f;
+        final float v = r.z() + r.h() * 0.5f;
+        tz = switch (dir) {
+            case NORTH -> {
+                tx = tx1;
+                yield r.z() - halfThick;
+            }
+            case SOUTH -> {
+                tx = tx1;
+                yield r.z() + r.h() + halfThick;
+            }
+            case WEST -> {
                 tx = r.x() - halfThick;
-                tz = r.z()+r.h()*0.5f;
-                break;
-            case EAST:
-                tx = r.x()+r.w() + halfThick;
-                tz = r.z()+r.h()*0.5f;
-                break;
-        }
+                yield v;
+            }
+            case EAST -> {
+                tx = r.x() + r.w() + halfThick;
+                yield v;
+            }
+        };
         wall.setLocalTranslation(tx, y0, tz);
 
         // 5) Añádelo a la escena y física (igual que antes)
         root.attachChild(wall);
         var shape = CollisionShapeFactory.createMeshShape(wall);
-        var body  = new RigidBodyControl(shape, 0);
+        var body = new RigidBodyControl(shape, 0);
         wall.addControl(body);
         space.add(body);
     }
 
 
     public void buildOpening(Room r, Direction dir, float y0, float h, List<Room> rooms, float holeWidth, float thickness) {
-
+        // 1) Calcula el rango de solapamiento y el centro del hueco
         float[] ov = getOverlapRange(r, rooms, dir);
-        float center = (ov[0] + ov[1]) * .5f;
-        float halfHole = holeWidth * .5f;
+        float center = (ov[0] + ov[1]) * 0.5f;
+        float halfHole = holeWidth * 0.5f;
 
-        if (dir == Direction.NORTH || dir == SOUTH) {
-            float z = (dir == Direction.NORTH) ? r.z() : r.z() + r.h();
+        // 2) Lee dimensiones originales de wall2Model
+        wall2Model.updateGeometricState();
+        BoundingBox bb2 = (BoundingBox) wall2Model.getWorldBound();
+        float origW = bb2.getXExtent() * 2f;
+        float origH = bb2.getYExtent() * 2f;
+        float origT = bb2.getZExtent() * 2f;
+
+        if (dir == NORTH || dir == SOUTH) {
+            // borde en Z
+            float zEdge = (dir == NORTH) ? r.z() : r.z() + r.h();
             float leftW = center - halfHole - r.x();
             float rightW = (r.x() + r.w()) - (center + halfHole);
+            float halfT = thickness * 0.5f;
+            // misma rotación que buildSolid para N/S
+            Quaternion rot = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
 
+            // Slice izquierdo
+            float v = (dir == NORTH) ? zEdge - halfT : zEdge + halfT;
             if (leftW > 0) {
-                Box mesh = new Box(leftW * .5f, h * .5f, thickness);
-                Geometry g = makeWallGeometry("WallSlice_L", mesh);
-                g.setLocalTranslation(r.x() + leftW * .5f, y0 + h * .5f, z);
-                addStatic(g);
+                Spatial slice = wall2Model.clone();
+                slice.setLocalRotation(rot);
+                slice.setLocalScale(thickness / origW, h / origH, leftW / origT);
+                float tx = r.x() + leftW * 0.5f;
+                float tz = v;
+                slice.setLocalTranslation(tx, y0, tz);
+                addStaticModel(slice);
             }
+
+            // Slice derecho
             if (rightW > 0) {
-                Box mesh = new Box(rightW * .5f, h * .5f, thickness);
-                Geometry g = makeWallGeometry("WallSlice_R", mesh);
-                g.setLocalTranslation(r.x() + r.w() - rightW * .5f, y0 + h * .5f, z);
-                addStatic(g);
+                Spatial slice = wall2Model.clone();
+                slice.setLocalRotation(rot);
+                slice.setLocalScale(thickness / origW, h / origH, rightW / origT);
+                float tx = r.x() + r.w() - rightW * 0.5f;
+                float tz = v;
+                slice.setLocalTranslation(tx, y0, tz);
+                addStaticModel(slice);
             }
 
         } else {
-            float x = (dir == Direction.WEST) ? r.x() : r.x() + r.w();
+            // borde en X
+            float xEdge = (dir == WEST) ? r.x() : r.x() + r.w();
             float backD = center - halfHole - r.z();
             float frontD = (r.z() + r.h()) - (center + halfHole);
+            float halfT = thickness * 0.5f;
+            // sin rotación para O/E
+            Quaternion rot = new Quaternion();
 
+            // Slice trasero (hacia -Z)
+            float v = (dir == WEST) ? xEdge - halfT : xEdge + halfT;
             if (backD > 0) {
-                Box mesh = new Box(thickness, h * .5f, backD * .5f);
-                Geometry g = makeWallGeometry("WallSlice_B", mesh);
-                g.setLocalTranslation(x, y0 + h * .5f, r.z() + backD * .5f);
-                addStatic(g);
+                Spatial slice = wall2Model.clone();
+                slice.setLocalRotation(rot);
+                slice.setLocalScale(thickness / origW, h / origH, backD / origT);
+                float tx = v;
+                float tz = r.z() + backD * 0.5f;
+                slice.setLocalTranslation(tx, y0, tz);
+                addStaticModel(slice);
             }
+
+            // Slice frontal (hacia +Z)
             if (frontD > 0) {
-                Box mesh = new Box(thickness, h * .5f, frontD * .5f);
-                Geometry g = makeWallGeometry("WallSlice_F", mesh);
-                g.setLocalTranslation(x, y0 + h * .5f, r.z() + r.h() - frontD * .5f);
-                addStatic(g);
+                Spatial slice = wall2Model.clone();
+                slice.setLocalRotation(rot);
+                slice.setLocalScale(thickness / origW, h / origH, frontD / origT);
+                float tx = v;
+                float tz = r.z() + r.h() - frontD * 0.5f;
+                slice.setLocalTranslation(tx, y0, tz);
+                addStaticModel(slice);
             }
         }
     }
@@ -224,4 +262,14 @@ public class WallBuilder {
         root.attachChild(g);
         space.add(g);
     }
+
+    private void addStaticModel(Spatial s) {
+        // asume que 's' ya viene escalado, rotado y posicionado
+        var shape = CollisionShapeFactory.createMeshShape(s);
+        var body = new RigidBodyControl(shape, 0);
+        s.addControl(body);
+        root.attachChild(s);
+        space.add(body);
+    }
+
 }

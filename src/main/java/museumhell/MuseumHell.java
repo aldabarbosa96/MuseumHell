@@ -61,7 +61,7 @@ public class MuseumHell extends SimpleApplication {
         cfg.setTitle("MuseumHell");
         cfg.setVSync(true);
         cfg.setGammaCorrection(true);
-        //if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate()); **NO** establecemos límite si no desfasa con VSync
+        if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate()); // todo --> revisar si se capan los fps
 
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);
@@ -78,7 +78,7 @@ public class MuseumHell extends SimpleApplication {
 
         audio.play("ambient1");
         audio.play("ambient2");
-        cameraBase = visuals.get("camera2");
+        cameraBase = visuals.get("camera1");
 
         // Luz ambiental tenue
         rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.00244f)));

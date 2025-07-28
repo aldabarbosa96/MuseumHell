@@ -19,7 +19,8 @@ public class DoorBuilder {
     private final Node root;
     private final List<Door> doors;
     private static final float DOOR_W = 3f;
-    private static final float WALL_T = 0.33f;
+    private static final float WALL_T = 2f;
+    private static final float DOOR_T = .33f;
 
     public DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, AssetLoader assetLoader) {
         this.assetManager = assetManager;
@@ -30,31 +31,49 @@ public class DoorBuilder {
     }
 
     public void build(Room r, Direction dir, float y0, float h, List<Room> rooms) {
+        // 1) Abrimos el hueco con WallBuilder
         WallBuilder helper = new WallBuilder(assetManager, root, space, assetLoader);
         helper.buildOpening(r, dir, y0, h, rooms, DOOR_W, WALL_T);
 
+        // 2) Calculamos el centro del hueco
         float[] ov = helper.getOverlapRange(r, rooms, dir);
         float holeCenter = (ov[0] + ov[1]) * 0.5f;
-        Vector3f center, offset;
-        if (dir == Direction.NORTH) {
-            center = new Vector3f(holeCenter, y0 + h * 0.5f, r.z());
-            offset = new Vector3f(DOOR_W + 0.05f, 0, 0);
-        } else if (dir == Direction.SOUTH) {
-            center = new Vector3f(holeCenter, y0 + h * 0.5f, r.z() + r.h());
-            offset = new Vector3f(DOOR_W + 0.05f, 0, 0);
-        } else if (dir == Direction.WEST) {
-            center = new Vector3f(r.x(), y0 + h * 0.5f, holeCenter);
-            offset = new Vector3f(0, 0, DOOR_W + 0.05f);
-        } else {
-            center = new Vector3f(r.x() + r.w(), y0 + h * 0.5f, holeCenter);
-            offset = new Vector3f(0, 0, DOOR_W + 0.05f);
+        float yCenter = y0 + h * 0.5f;
+        // Media pared vs media puerta
+        float wallHalf = WALL_T * 0.5f;
+        float doorHalf = DOOR_T * 0.5f;
+
+        Vector3f center;
+        Vector3f offset;
+
+        // 3) Posicionamiento centrado en el grosor de la pared
+        switch (dir) {
+            case NORTH -> {
+                center = new Vector3f(holeCenter, yCenter, r.z() - wallHalf + doorHalf);
+                offset = new Vector3f(DOOR_W + 0.05f, 0, 0);
+            }
+            case SOUTH -> {
+                center = new Vector3f(holeCenter, yCenter, r.z() + r.h() + wallHalf - doorHalf);
+                offset = new Vector3f(-(DOOR_W + 0.05f), 0, 0);
+            }
+            case WEST -> {
+                center = new Vector3f(r.x() - wallHalf + doorHalf, yCenter, holeCenter);
+                offset = new Vector3f(0, 0, DOOR_W + 0.05f);
+            }
+            default -> { // EAST
+                center = new Vector3f(r.x() + r.w() + wallHalf - doorHalf, yCenter, holeCenter);
+                offset = new Vector3f(0, 0, -(DOOR_W + 0.05f));
+            }
         }
 
-        float w = (dir == Direction.NORTH || dir == Direction.SOUTH) ? DOOR_W : WALL_T;
-        float t = (dir == Direction.NORTH || dir == Direction.SOUTH) ? WALL_T : DOOR_W;
+        // 4) Dimensiones de la puerta (ancho x grosor)
+        float w = (dir == Direction.NORTH || dir == Direction.SOUTH) ? DOOR_W : DOOR_T;
+        float t = (dir == Direction.NORTH || dir == Direction.SOUTH) ? DOOR_T : DOOR_W;
 
+        // 5) Construcción y registro
         Door d = new Door(assetManager, space, center, w, h, t, offset);
         root.attachChild(d.getSpatial());
         doors.add(d);
     }
+
 }
