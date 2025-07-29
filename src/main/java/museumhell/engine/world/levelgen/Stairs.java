@@ -25,7 +25,7 @@ public final class Stairs {
             float yCenter = base.y + h * .5f + i * STEP_H;
             float zCenter = base.z + STEP_DEPTH * .5f + i * STEP_DEPTH;
 
-            Box shape = new Box(WIDTH * .5f, h * .5f, STEP_DEPTH * .5f);
+            Box shape = new Box(STAIR_WIDTH * .5f, h * .5f, STEP_DEPTH * .5f);
             Geometry g = new Geometry("StairStep_" + i, shape);
             g.setMaterial(mat.clone());
 

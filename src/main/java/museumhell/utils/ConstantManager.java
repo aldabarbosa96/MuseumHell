@@ -39,7 +39,7 @@ public class ConstantManager {
     public static final float CORRIDOR_WALL_T = WALL_T * 3f;
     public static final float FLOOR_T = 0.1f;
     public static final float CEIL_T = 0.1f;
-    public static final float WIDTH = 3.5f;
+    public static final float STAIR_WIDTH = 4.5f;
     public static final float STEP_H = 0.3f;
     public static final float STEP_DEPTH = 0.45f;
     public static final float SPEED = 4f;

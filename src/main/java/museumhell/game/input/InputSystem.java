@@ -5,6 +5,7 @@ import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import museumhell.game.player.PlayerController;
@@ -40,7 +41,7 @@ public class InputSystem implements ActionListener {
         inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
         inMgr.addMapping("Crouch", new KeyTrigger(KeyInput.KEY_LCONTROL));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
-        inMgr.addMapping("Lantern", new KeyTrigger(KeyInput.KEY_F));
+        inMgr.addMapping("Lantern", new MouseButtonTrigger(1));
         inMgr.addListener(this, "Debug", "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
 
         flyCam.setDragToRotate(false);

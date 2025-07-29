@@ -54,10 +54,10 @@ public class _1FloorBuilder extends _0HorizontalBuilder {
     private void buildRegion(int x, int z, int w, int d, List<Rect> holes, float y, float thickness) {
         for (Rect h : holes) {
             if (!intersects(h, x, z, w, d)) continue;
-            int hx1 = Math.max((int) h.x1(), x);
-            int hx2 = Math.min((int) h.x2(), x + w);
-            int hz1 = Math.max((int) h.z1(), z);
-            int hz2 = Math.min((int) h.z2(), z + d);
+            int hx1 = Math.max((int) Math.floor(h.x1()), x);
+            int hx2 = Math.min((int) Math.ceil (h.x2()), x + w);
+            int hz1 = Math.max((int) Math.floor(h.z1()), z);
+            int hz2 = Math.min((int) Math.ceil (h.z2()), z + d);
             if (hx1 < hx2 && hz1 < hz2) {
                 if (hx1 > x) buildRegion(x, z, hx1 - x, d, holes, y, thickness);
                 if (hx2 < x + w) buildRegion(hx2, z, x + w - hx2, d, holes, y, thickness);

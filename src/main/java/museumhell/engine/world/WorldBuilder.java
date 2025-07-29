@@ -89,7 +89,7 @@ public class WorldBuilder {
 
         int steps = (int) Math.ceil(floorH / STEP_H);
         float runD = steps * STEP_DEPTH;
-        float hxPad = WIDTH * 0.5f + 0.05f;
+        float hxPad = STAIR_WIDTH * 0.5f + RAIL_T + STAIR_CLEAR;
         float pad = 0.05f;
 
         Enum<?> orient = (Enum<?>) sp.orientation();

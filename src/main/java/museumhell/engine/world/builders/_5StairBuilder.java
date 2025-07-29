@@ -52,7 +52,7 @@ public class _5StairBuilder {
         float floorH = museum.floorHeight();
         int steps = (int) Math.ceil(floorH / STEP_H);
         float runD = steps * STEP_DEPTH;
-        float hxPad = WIDTH * 0.5f;
+        float hxPad = STAIR_WIDTH * 0.5f;
 
         Random rnd = new Random(floors.size() * 73L);
 
@@ -102,10 +102,10 @@ public class _5StairBuilder {
 
             /* ---------- hueco mínimo ---------- */
             if (orientation == Orientation.EW) {
-                if (ix2 - ix1 < WIDTH + STAIR_WALL_GAP * 2) continue;
+                if (ix2 - ix1 < STAIR_WIDTH + STAIR_WALL_GAP * 2) continue;
                 if (iz2 - iz1 < runD + STAIR_FOOT_GAP * 2) continue;
             } else {
-                if (iz2 - iz1 < WIDTH + STAIR_WALL_GAP * 2) continue;
+                if (iz2 - iz1 < STAIR_WIDTH + STAIR_WALL_GAP * 2) continue;
                 if (ix2 - ix1 < runD + STAIR_FOOT_GAP * 2) continue;
             }
 
@@ -123,7 +123,7 @@ public class _5StairBuilder {
 
             /* ---------- posición ---------- */
             boolean nearS1 = s2Blocked || (!s1Blocked && rnd.nextBoolean());
-            float innerOff = WALL_T + STAIR_WALL_GAP + WIDTH * 0.5f;
+            float innerOff = WALL_T + STAIR_WALL_GAP + STAIR_WIDTH * 0.5f;
 
             float sx, sz;
             if (orientation == Orientation.EW) {
@@ -219,7 +219,7 @@ public class _5StairBuilder {
             float yC = foot.y + STEP_H * .5f + i * STEP_H;
             float xC = foot.x + STEP_DEPTH * .5f + i * STEP_DEPTH;
 
-            var shape = new com.jme3.scene.shape.Box(STEP_DEPTH * .5f, STEP_H * .5f, WIDTH * .5f);
+            var shape = new com.jme3.scene.shape.Box(STEP_DEPTH * .5f, STEP_H * .5f, STAIR_WIDTH * .5f);
             var g = new com.jme3.scene.Geometry("StepNS_" + i, shape);
             g.setMaterial(mat.clone());
             g.setLocalTranslation(xC, yC, foot.z);
@@ -272,7 +272,7 @@ public class _5StairBuilder {
         int steps = (int) Math.ceil(floorH / STEP_H);
         float runD = steps * STEP_DEPTH;
 
-        float hxPad = WIDTH * 0.5f + STAIR_CLEAR;
+        float hxPad = STAIR_WIDTH * 0.5f + RAIL_T + STAIR_CLEAR;
         float pad = STAIR_CLEAR;
 
         boolean ew = (sp.orientation() == Orientation.EW);
