@@ -11,6 +11,8 @@ import museumhell.utils.AssetLoader;
 
 import java.util.List;
 
+import static museumhell.utils.ConstantManager.*;
+
 
 public class DoorBuilder {
     private final AssetManager assetManager;
@@ -18,9 +20,6 @@ public class DoorBuilder {
     private final PhysicsSpace space;
     private final Node root;
     private final List<Door> doors;
-    private static final float DOOR_W = 3f;
-    private static final float WALL_T = 2f;
-    private static final float DOOR_T = .33f;
 
     public DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, AssetLoader assetLoader) {
         this.assetManager = assetManager;
@@ -33,7 +32,7 @@ public class DoorBuilder {
     public void build(Room r, Direction dir, float y0, float h, List<Room> rooms) {
         // 1) Abrimos el hueco con WallBuilder
         WallBuilder helper = new WallBuilder(assetManager, root, space, assetLoader);
-        helper.buildOpening(r, dir, y0, h, rooms, DOOR_W, WALL_T);
+        helper.buildOpening(r, dir, y0, h + 0.2f, rooms, DOOR_W, WALL_T);
 
         // 2) Calculamos el centro del hueco
         float[] ov = helper.getOverlapRange(r, rooms, dir);

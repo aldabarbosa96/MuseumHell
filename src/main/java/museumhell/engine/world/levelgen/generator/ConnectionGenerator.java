@@ -11,12 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class ConnectionGenerator {
-    private static final float DOOR_W = 2.5f;
-    private static final float HOLE_W = DOOR_W * 2f;
-    private static final float PENETRATION = 0.5f;
+import static museumhell.utils.ConstantManager.*;
 
-    public static List<Connection> build(LevelLayout layout, long seed) {
+public class ConnectionGenerator {
+
+     public static List<Connection> build(LevelLayout layout, long seed) {
         Random rnd = new Random(seed);
         List<Room> rooms = new ArrayList<>(layout.rooms());
         List<Connection> out = new ArrayList<>();

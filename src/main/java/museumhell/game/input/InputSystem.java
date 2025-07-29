@@ -12,6 +12,8 @@ import museumhell.engine.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
 import museumhell.utils.AudioLoader;
 
+import static museumhell.utils.ConstantManager.*;
+
 public class InputSystem implements ActionListener {
     private WorldBuilder world;
     private AudioLoader audio;
@@ -20,12 +22,7 @@ public class InputSystem implements ActionListener {
     private Camera cam;
     private PlayerController player;
     private LootSystem lootMgr;
-
     private boolean up, down, left, right, sprint, crouch, debug, jump;
-
-    private static final float WALK_SPEED = 8f;
-    private static final float CROUCH_SPEED = 4f;
-    private static final float SPRINT_MULT = 2.5f;
 
     public InputSystem(InputManager inMgr, FlyByCamera flyCam) {
         this.inMgr = inMgr;

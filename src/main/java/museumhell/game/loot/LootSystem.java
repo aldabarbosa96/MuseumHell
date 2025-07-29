@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 
 public class LootSystem extends BaseAppState {
-
     private final AssetManager am;
     private final Node root;
     private final PhysicsSpace space;

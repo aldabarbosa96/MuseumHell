@@ -8,7 +8,6 @@ import com.jme3.font.BitmapText;
 import com.jme3.math.ColorRGBA;
 
 public class Prompt extends BaseAppState {
-
     private BitmapText txt;
 
     @Override

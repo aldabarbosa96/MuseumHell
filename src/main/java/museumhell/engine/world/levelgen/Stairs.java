@@ -10,10 +10,9 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 
+import static museumhell.utils.ConstantManager.*;
+
 public final class Stairs {
-    public static final float WIDTH = 3.5f;
-    public static final float STEP_H = 0.3f;
-    public static final float STEP_DEPTH = 0.45f;
 
     public static void add(Node root, PhysicsSpace ps, AssetManager am, Vector3f base, float floorHeight) {
 

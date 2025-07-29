@@ -11,7 +11,6 @@ import museumhell.game.loot.LootItem;
 import museumhell.game.loot.LootSystem;
 
 public class InteractionSystem extends BaseAppState {
-
     private final PlayerController player;
     private final WorldBuilder world;
     private final LootSystem loot;
@@ -28,14 +27,14 @@ public class InteractionSystem extends BaseAppState {
     public void update(float tpf) {
         Vector3f p = player.getLocation();
 
-        // 1) ¿hay loot?
+        // Loot
         LootItem li = loot.nearestLoot(p, 1.5f);
         if (li != null) {
             hud.show("[ E ] Recoger");
             return;
         }
 
-        // 2) ¿hay puerta?
+        // Puerta
         Door d = world.nearestDoor(p, 3.5f);
         if (d != null) {
             hud.show(d.isOpen() ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta");

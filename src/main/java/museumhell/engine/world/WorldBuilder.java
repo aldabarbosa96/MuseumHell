@@ -2,7 +2,6 @@ package museumhell.engine.world;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.builders.*;
@@ -13,17 +12,14 @@ import museumhell.utils.GeoUtil.*;
 
 import java.util.*;
 
+import static museumhell.utils.ConstantManager.*;
 import static museumhell.utils.GeoUtil.opposite;
 import static museumhell.utils.GeoUtil.overlap;
 
 public class WorldBuilder {
-    private static final float DOOR_W = 2.5f, WALL_T = 2f, MARGIN = 1f;
-    private static final float HOLE_W = DOOR_W * 2f;
-    private static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
-    private static final float CORRIDOR_WALL_T = WALL_T * 3f;
-
     private final LightPlacer lightPlacer;
     private final FloorBuilder floorBuilder;
+    private final CeilBuilder ceilBuilder;
     private final WallBuilder wallBuilder;
     private final DoorBuilder doorBuilder;
     private final CorridorBuilder corridorBuilder;
@@ -41,9 +37,10 @@ public class WorldBuilder {
         this.space = space;
         this.lightPlacer = new LightPlacer(root);
         this.floorBuilder = new FloorBuilder(root, space, am);
-        this.wallBuilder = new WallBuilder(am,root, space, assetLoader);
+        this.ceilBuilder = new CeilBuilder(root, space, am);
+        this.wallBuilder = new WallBuilder(am, root, space, assetLoader);
         this.doorBuilder = new DoorBuilder(am, space, root, doors, assetLoader);
-        this.corridorBuilder = new CorridorBuilder(am, root, space);
+        this.corridorBuilder = new CorridorBuilder(am, root, space, floorBuilder, ceilBuilder);
         this.stairBuilder = new StairBuilder(am, space, root);
     }
 
@@ -115,8 +112,10 @@ public class WorldBuilder {
                 corridorBuilder.build(r, y0, h);
                 continue;
             }
-            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, y0 - 0.1f, 0.1f, "Floor", ColorRGBA.Brown);
-            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, y0 + h, 0.1f, "Ceil", ColorRGBA.Red);
+            float floorCenterY = y0 - FLOOR_T * 0.5f;
+            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, floorCenterY, FLOOR_T);
+            float ceilCenterY = y0 + h - CEIL_T * 1.5f;
+            ceilBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, ceilCenterY, CEIL_T);
 
             // 3) Muros y aberturas
             for (Direction dir : List.of(Direction.NORTH, Direction.WEST, Direction.SOUTH, Direction.EAST)) {
@@ -131,8 +130,8 @@ public class WorldBuilder {
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     wallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
-                } else { // Connection.Type.DOOR
-                    doorBuilder.build(r, dir, y0, h, rooms);
+                } else {
+                    doorBuilder.build(r, dir, y0, h - 0.2f, rooms);
                 }
             }
         }

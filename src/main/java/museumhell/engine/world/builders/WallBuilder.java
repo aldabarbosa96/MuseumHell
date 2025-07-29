@@ -21,12 +21,9 @@ import museumhell.utils.AssetLoader;
 import java.util.List;
 
 import static museumhell.engine.world.levelgen.Direction.*;
+import static museumhell.utils.ConstantManager.*;
 
 public class WallBuilder {
-
-    private static final int DOOR_MIN_OVERLAP = 3;
-    private static final float WALL_T = 0.33f;
-
     private final Node root;
     private final PhysicsSpace space;
     private final Material wallMat;

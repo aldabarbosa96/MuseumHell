@@ -11,10 +11,9 @@ import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 
-public class Door {
-    private static final float SPEED = 4f;
-    private static final float PROTRUDE = 0.1f;
+import static museumhell.utils.ConstantManager.*;
 
+public class Door {
     private final Geometry geo;
     private final RigidBodyControl body;
     private final Vector3f closedPos;

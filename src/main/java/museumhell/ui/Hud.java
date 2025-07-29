@@ -13,16 +13,9 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Quad;
 
+import static museumhell.utils.ConstantManager.*;
+
 public class Hud extends BaseAppState {
-
-    private static final float H = 60;
-    private static final float PAD = 8;
-    private static final float ICON_SIZE = 28;
-
-    private static final ColorRGBA BORDER = new ColorRGBA(.1f, .1f, .1f, .9f);
-    private static final ColorRGBA BG = new ColorRGBA(.0f, .0f, .0f, .55f);
-    private static final ColorRGBA ICON = ColorRGBA.Orange;
-
     private Node root;
     private BitmapText txt;
     private BitmapText dirTxt;

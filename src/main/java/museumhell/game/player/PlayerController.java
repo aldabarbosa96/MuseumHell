@@ -7,16 +7,13 @@ import com.jme3.bullet.control.CharacterControl;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 
-public class PlayerController {
+import static museumhell.utils.ConstantManager.*;
 
+public class PlayerController {
     private CharacterControl control;
     private final Node playerNode;
     private final PhysicsSpace space;
     private final AssetManager am;
-
-    private static final float CAPSULE_RADIUS = 0.8f;
-    private static final float STAND_HEIGHT = 2f;
-    private static final float CROUCH_HEIGHT = 0.5f;
 
     public PlayerController(AssetManager am, PhysicsSpace space, Vector3f startPos) {
         this.am = am;

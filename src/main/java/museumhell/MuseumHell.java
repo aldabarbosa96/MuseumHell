@@ -29,6 +29,8 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 
+import static museumhell.utils.ConstantManager.*;
+
 public class MuseumHell extends SimpleApplication {
     private Hud hud;
     private AssetLoader visuals;
@@ -38,17 +40,9 @@ public class MuseumHell extends SimpleApplication {
     private PlayerController player;
     private InputSystem input;
     private Spatial cameraBase;
-
     private float bobTime = 0f;
-    private static final float BOB_SPEED = 15f;
-    private static final float BOB_AMPLITUDE = 0.12f;
-    private static final float SPRINT_BOB_SPEED = 25f;
-    private static final float SPRINT_BOB_AMPLITUDE = 0.3f;
-
     private Vector3f smoothEyePos;
     private Vector3f smoothDirection;
-    private static final float SMOOTH_FACTOR = 0.12f;
-
     private float stepTime = 0f;
     private int lastStepCount = 0;
     private final Random random = new Random();

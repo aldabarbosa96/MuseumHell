@@ -12,13 +12,9 @@ import museumhell.utils.GeoUtil.*;
 import java.util.*;
 
 import static museumhell.engine.world.levelgen.Direction.*;
+import static museumhell.utils.ConstantManager.*;
 
 public class StairBuilder {
-
-    private static final float WALL_T = 2f;
-    private static final float STAIR_WALL_GAP = -2f;
-    private static final float STAIR_FOOT_GAP = 2f;
-    private static final int MAX_STAIRS = 3;
 
     private enum Orientation {EW, NS}
 
@@ -54,9 +50,9 @@ public class StairBuilder {
         if (floors.size() < 2) return new Plan(holes, out);
 
         float floorH = museum.floorHeight();
-        int steps = (int) Math.ceil(floorH / Stairs.STEP_H);
-        float runD = steps * Stairs.STEP_DEPTH;
-        float hxPad = Stairs.WIDTH * 0.5f + 0.05f;
+        int steps = (int) Math.ceil(floorH / STEP_H);
+        float runD = steps * STEP_DEPTH;
+        float hxPad = WIDTH * 0.5f + 0.05f;
 
         Random rnd = new Random(floors.size() * 73L);
 
@@ -107,10 +103,10 @@ public class StairBuilder {
 
             /* comprobaciones de espacio */
             if (orientation == Orientation.EW) {
-                if (ix2 - ix1 < Stairs.WIDTH + STAIR_WALL_GAP * 2) continue;
+                if (ix2 - ix1 < WIDTH + STAIR_WALL_GAP * 2) continue;
                 if (iz2 - iz1 < runD + STAIR_FOOT_GAP * 2) continue;
             } else {
-                if (iz2 - iz1 < Stairs.WIDTH + STAIR_WALL_GAP * 2) continue;
+                if (iz2 - iz1 < WIDTH + STAIR_WALL_GAP * 2) continue;
                 if (ix2 - ix1 < runD + STAIR_FOOT_GAP * 2) continue;
             }
 
@@ -128,30 +124,30 @@ public class StairBuilder {
 
             /* posición lateral (pegada a una pared) */
             boolean nearS1 = s2Blocked || (!s1Blocked && rnd.nextBoolean());
-            float innerOff = WALL_T + STAIR_WALL_GAP + Stairs.WIDTH * 0.5f;
+            float innerOff = WALL_T + STAIR_WALL_GAP + WIDTH * 0.5f;
 
             float sx, sz;
             if (orientation == Orientation.EW) {
                 sx = nearS1 ? ix1 + innerOff : ix2 - innerOff;
-                float zMin = iz1 + Stairs.STEP_DEPTH * 0.5f + STAIR_FOOT_GAP;
-                float zMax = iz2 - runD + Stairs.STEP_DEPTH * 0.5f - STAIR_FOOT_GAP;
+                float zMin = iz1 + STEP_DEPTH * 0.5f + STAIR_FOOT_GAP;
+                float zMax = iz2 - runD + STEP_DEPTH * 0.5f - STAIR_FOOT_GAP;
                 sz = (zMax > zMin) ? FastMath.interpolateLinear(rnd.nextFloat(), zMin, zMax) : zMin;
-                if (sz + runD + Stairs.STEP_DEPTH * 0.5f + STAIR_FOOT_GAP > rb.z() + rb.h() - WALL_T) continue;
+                if (sz + runD + STEP_DEPTH * 0.5f + STAIR_FOOT_GAP > rb.z() + rb.h() - WALL_T) continue;
             } else {
                 sz = nearS1 ? iz1 + innerOff : iz2 - innerOff;
-                float xMin = ix1 + Stairs.STEP_DEPTH * 0.5f + STAIR_FOOT_GAP;
-                float xMax = ix2 - runD + Stairs.STEP_DEPTH * 0.5f - STAIR_FOOT_GAP;
+                float xMin = ix1 + STEP_DEPTH * 0.5f + STAIR_FOOT_GAP;
+                float xMax = ix2 - runD + STEP_DEPTH * 0.5f - STAIR_FOOT_GAP;
                 sx = (xMax > xMin) ? FastMath.interpolateLinear(rnd.nextFloat(), xMin, xMax) : xMin;
-                if (sx + runD + Stairs.STEP_DEPTH * 0.5f + STAIR_FOOT_GAP > rb.x() + rb.w() - WALL_T) continue;
+                if (sx + runD + STEP_DEPTH * 0.5f + STAIR_FOOT_GAP > rb.x() + rb.w() - WALL_T) continue;
             }
 
             /* ---------- HUECO (para N‑S) ---------- */
             float pad = 0.05f;
             Rect hole;
             if (orientation == Orientation.EW) {
-                hole = new Rect(sx - hxPad, sx + hxPad, sz - Stairs.STEP_DEPTH * 0.5f - pad, sz + runD - Stairs.STEP_DEPTH * 0.5f + pad);
+                hole = new Rect(sx - hxPad, sx + hxPad, sz - STEP_DEPTH * 0.5f - pad, sz + runD - STEP_DEPTH * 0.5f + pad);
             } else { /* ★ corrección de signo en x1/x2 ★ */
-                hole = new Rect(sx - Stairs.STEP_DEPTH * 0.5f - pad, sx + runD - Stairs.STEP_DEPTH * 0.5f + pad, sz - hxPad, sz + hxPad);
+                hole = new Rect(sx - STEP_DEPTH * 0.5f - pad, sx + runD - STEP_DEPTH * 0.5f + pad, sz - hxPad, sz + hxPad);
             }
 
             /* colisiones con huecos existentes */
@@ -184,15 +180,15 @@ public class StairBuilder {
     /* ---------- versión rotada 90° ---------- */
     private void addStairsNS(Vector3f foot, float floorH) {
 
-        int steps = (int) Math.ceil(floorH / Stairs.STEP_H);
+        int steps = (int) Math.ceil(floorH / STEP_H);
 
         var mat = Stairs.makeMat(am);
 
         for (int i = 0; i < steps; i++) {
-            float yC = foot.y + Stairs.STEP_H * .5f + i * Stairs.STEP_H;
-            float xC = foot.x + Stairs.STEP_DEPTH * .5f + i * Stairs.STEP_DEPTH;
+            float yC = foot.y + STEP_H * .5f + i * STEP_H;
+            float xC = foot.x + STEP_DEPTH * .5f + i * STEP_DEPTH;
 
-            var shape = new com.jme3.scene.shape.Box(Stairs.STEP_DEPTH * .5f, Stairs.STEP_H * .5f, Stairs.WIDTH * .5f);
+            var shape = new com.jme3.scene.shape.Box(STEP_DEPTH * .5f, STEP_H * .5f, WIDTH * .5f);
             var g = new com.jme3.scene.Geometry("StepNS_" + i, shape);
             g.setMaterial(mat.clone());
             g.setLocalTranslation(xC, yC, foot.z);

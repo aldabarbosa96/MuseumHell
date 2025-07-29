@@ -1,6 +1,5 @@
 package museumhell.engine.world.builders;
 
-import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
@@ -11,16 +10,13 @@ import museumhell.engine.world.levelgen.Room;
 import java.util.List;
 import java.util.Random;
 
+import static museumhell.utils.ConstantManager.*;
+
 public class LightPlacer {
     private final Node root;
     private SpotLight flashlight;
     private Vector3f smoothPos;
     private Vector3f smoothDir;
-    private static final ColorRGBA FLASHLIGHT_COLOR = new ColorRGBA(1f, 0.95f, 0.65f, 1f).multLocal(2.5f);
-    private static final float SPOT_RANGE = 50f;
-    private static final float INNER_ANGLE = FastMath.DEG_TO_RAD * 8;
-    private static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 28f;
-    private static final float SMOOTH_FACTOR = 0.12f;
 
     public LightPlacer(Node root) {
         this.root = root;

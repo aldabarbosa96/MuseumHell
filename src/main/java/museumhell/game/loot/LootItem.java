@@ -9,7 +9,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 
 /**
- * Cubo naranja que hace de loot. No usa física: lo detectamos por distancia.
+ * Cubo naranja que hace de loot. No usa física: lo detectamos por distancia X.
  */
 public class LootItem extends Node {
 

@@ -1,62 +1,40 @@
 package museumhell.engine.world.builders;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.bullet.PhysicsSpace;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
-import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
-import com.jme3.scene.shape.Box;
-import com.jme3.bullet.control.RigidBodyControl;
-import com.jme3.bullet.PhysicsSpace;
 import museumhell.utils.GeoUtil.Rect;
 
 import java.util.List;
 
-public class FloorBuilder {
-    private final Node root;
-    private final PhysicsSpace space;
-    private final AssetManager assetManager;
 
-    public FloorBuilder(Node root, PhysicsSpace space, AssetManager assetManager) {
-        this.root = root;
-        this.space = space;
-        this.assetManager = assetManager;
+public class FloorBuilder extends HorizontalBuilder {
+
+    public FloorBuilder(Node root, PhysicsSpace space, AssetManager am) {
+        super(root, space, am);
     }
 
-    public void buildPatches(int x, int z, int w, int d, List<Rect> holes, float y, float t, String tag, ColorRGBA col) {
-        Material mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        mat.setBoolean("UseMaterialColors", true);
 
-        float brightness = tag.toLowerCase().contains("ceil") ? 0.05f : 0.1f;
-        ColorRGBA dark = col.mult(brightness);
-        mat.setColor("Ambient", dark);
-        mat.setColor("Diffuse", dark);
-        mat.setColor("Specular", ColorRGBA.Brown);
-        mat.setFloat("Shininess", 1f);
+    @Override
+    protected Material makeMaterial() {
+        Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
+        m.setBoolean("UseMaterialColors", true);
 
-        for (Rect v : holes) {
-            float hx1 = Math.max(v.x1(), x);
-            float hx2 = Math.min(v.x2(), x + w);
-            float hz1 = Math.max(v.z1(), z);
-            float hz2 = Math.min(v.z2(), z + d);
-            if (hx1 < hx2 && hz1 < hz2) {
-                if (hx1 > x) makePatch(x, z, hx1 - x, d, y, t, tag + "_L", mat);
-                if (hx2 < x + w) makePatch(hx2, z, x + w - hx2, d, y, t, tag + "_R", mat);
-                if (hz1 > z) makePatch(hx1, z, hx2 - hx1, hz1 - z, y, t, tag + "_F", mat);
-                if (hz2 < z + d) makePatch(hx1, hz2, hx2 - hx1, z + d - hz2, y, t, tag + "_B", mat);
-                return;
-            }
-        }
-        makePatch(x, z, w, d, y, t, tag, mat);
+        // Marrón madera, con una leve variación aleatoria para evitar uniformidad.
+        float k = 0.08f + (float) Math.random() * 0.05f;
+        ColorRGBA base = ColorRGBA.White.mult(k);
+
+        m.setColor("Ambient", base);
+        m.setColor("Diffuse", base);
+        m.setColor("Specular", ColorRGBA.White.mult(0.3f));
+        m.setFloat("Shininess", 1);
+
+        return m;
     }
 
-    private void makePatch(float x, float z, float w, float d, float y, float t, String name, Material mat) {
-        Box shape = new Box(w * .5f, t * .5f, d * .5f);
-        Geometry g = new Geometry(name, shape);
-        g.setMaterial(mat.clone());
-        g.setLocalTranslation(x + w * .5f, y, z + d * .5f);
-        g.addControl(new RigidBodyControl(0));
-        root.attachChild(g);
-        space.add(g);
+    public void buildPatches(int x, int z, int w, int d, List<Rect> holes, float y, float thickness) {
+        super.build(x, z, w, d, holes, y, thickness);
     }
 }

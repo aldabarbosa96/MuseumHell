@@ -8,10 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import static museumhell.utils.ConstantManager.*;
+
 public final class BspGenerator {
-    private static final int MIN_ROOM = 12;
-    private static final int MIN_SPLIT = MIN_ROOM * 2 + 2;
-    private static final int MAX_DEPTH = 6;
 
     private record Node(int x, int z, int w, int h, int depth) { }
 
