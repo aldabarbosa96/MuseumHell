@@ -14,7 +14,7 @@ import java.util.*;
 import static museumhell.engine.world.levelgen.Direction.*;
 import static museumhell.utils.ConstantManager.*;
 
-public class StairBuilder {
+public class _5StairBuilder {
 
     private enum Orientation {EW, NS}
 
@@ -35,7 +35,7 @@ public class StairBuilder {
     private final PhysicsSpace ps;
     private final Node root;
 
-    public StairBuilder(AssetManager am, PhysicsSpace space, Node root) {
+    public _5StairBuilder(AssetManager am, PhysicsSpace space, Node root) {
         this.am = am;
         this.ps = space;
         this.root = root;

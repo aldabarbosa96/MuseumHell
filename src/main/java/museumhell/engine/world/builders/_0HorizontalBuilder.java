@@ -10,12 +10,12 @@ import museumhell.utils.GeoUtil.Rect;
 
 import java.util.List;
 
-abstract class HorizontalBuilder {
+abstract class _0HorizontalBuilder {
     protected final Node root;
     protected final PhysicsSpace space;
     protected final AssetManager am;
 
-    protected HorizontalBuilder(Node root, PhysicsSpace space, AssetManager am) {
+    protected _0HorizontalBuilder(Node root, PhysicsSpace space, AssetManager am) {
         this.root = root;
         this.space = space;
         this.am = am;

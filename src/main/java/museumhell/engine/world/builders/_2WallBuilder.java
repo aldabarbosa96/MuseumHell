@@ -23,7 +23,7 @@ import java.util.List;
 import static museumhell.engine.world.levelgen.Direction.*;
 import static museumhell.utils.ConstantManager.*;
 
-public class WallBuilder {
+public class _2WallBuilder {
     private final Node root;
     private final PhysicsSpace space;
     private final Material wallMat;
@@ -35,7 +35,7 @@ public class WallBuilder {
     private final Quaternion rotNS = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
     private final Quaternion rotEW = new Quaternion();
 
-    public WallBuilder(AssetManager assetManager, Node root, PhysicsSpace space, AssetLoader assetLoader) {
+    public _2WallBuilder(AssetManager assetManager, Node root, PhysicsSpace space, AssetLoader assetLoader) {
         this.root = root;
         this.space = space;
 

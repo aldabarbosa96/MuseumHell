@@ -14,14 +14,14 @@ import java.util.List;
 import static museumhell.utils.ConstantManager.*;
 
 
-public class DoorBuilder {
+public class _4DoorBuilder {
     private final AssetManager assetManager;
     private final AssetLoader assetLoader;
     private final PhysicsSpace space;
     private final Node root;
     private final List<Door> doors;
 
-    public DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, AssetLoader assetLoader) {
+    public _4DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, AssetLoader assetLoader) {
         this.assetManager = assetManager;
         this.assetLoader = assetLoader;
         this.space = space;
@@ -31,7 +31,7 @@ public class DoorBuilder {
 
     public void build(Room r, Direction dir, float y0, float h, List<Room> rooms) {
         // 1) Abrimos el hueco con WallBuilder
-        WallBuilder helper = new WallBuilder(assetManager, root, space, assetLoader);
+        _2WallBuilder helper = new _2WallBuilder(assetManager, root, space, assetLoader);
         helper.buildOpening(r, dir, y0, h + 0.2f, rooms, DOOR_W, WALL_T);
 
         // 2) Calculamos el centro del hueco

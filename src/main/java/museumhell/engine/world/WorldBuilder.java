@@ -17,13 +17,13 @@ import static museumhell.utils.GeoUtil.opposite;
 import static museumhell.utils.GeoUtil.overlap;
 
 public class WorldBuilder {
-    private final LightPlacer lightPlacer;
-    private final FloorBuilder floorBuilder;
-    private final CeilBuilder ceilBuilder;
-    private final WallBuilder wallBuilder;
-    private final DoorBuilder doorBuilder;
-    private final CorridorBuilder corridorBuilder;
-    private final StairBuilder stairBuilder;
+    private final _7LightPlacer a7LightPlacer;
+    private final _1FloorBuilder0 a1FloorBuilder;
+    private final _6CeilBuilder0 a6CeilBuilder;
+    private final _2WallBuilder a2WallBuilder;
+    private final _4DoorBuilder a4DoorBuilder;
+    private final _3CorridorBuilder a3CorridorBuilder;
+    private final _5StairBuilder a5StairBuilder;
 
     private final AssetManager am;
     private final Node root;
@@ -35,15 +35,14 @@ public class WorldBuilder {
         this.am = am;
         this.root = root;
         this.space = space;
-        this.lightPlacer = new LightPlacer(root);
-        this.floorBuilder = new FloorBuilder(root, space, am);
-        this.ceilBuilder = new CeilBuilder(root, space, am);
-        this.wallBuilder = new WallBuilder(am, root, space, assetLoader);
-        this.doorBuilder = new DoorBuilder(am, space, root, doors, assetLoader);
-        this.corridorBuilder = new CorridorBuilder(am, root, space, floorBuilder, ceilBuilder);
-        this.stairBuilder = new StairBuilder(am, space, root);
+        this.a7LightPlacer = new _7LightPlacer(root);
+        this.a1FloorBuilder = new _1FloorBuilder0(root, space, am);
+        this.a6CeilBuilder = new _6CeilBuilder0(root, space, am);
+        this.a2WallBuilder = new _2WallBuilder(am, root, space, assetLoader);
+        this.a3CorridorBuilder = new _3CorridorBuilder(am, root, space, a1FloorBuilder, a6CeilBuilder);
+        this.a4DoorBuilder = new _4DoorBuilder(am, space, root, doors, assetLoader);
+        this.a5StairBuilder = new _5StairBuilder(am, space, root);
     }
-
 
     // 1) build: genera conexiones y las pasa a buildSingleFloor
     public void build(MuseumLayout museum) {
@@ -57,7 +56,7 @@ public class WorldBuilder {
         }
 
         // 2) Planificar escaleras (huecos + posiciones)
-        StairBuilder.Plan plan = stairBuilder.plan(museum);
+        _5StairBuilder.Plan plan = a5StairBuilder.plan(museum);
 
         // 3) Construir cada planta, recortando con plan.holes
         for (int i = 0; i < museum.floors().size(); i++) {
@@ -68,7 +67,7 @@ public class WorldBuilder {
         }
 
         // 4) Colocar las escaleras en la escena
-        stairBuilder.place(plan, museum);
+        a5StairBuilder.place(plan, museum);
     }
 
 
@@ -104,18 +103,18 @@ public class WorldBuilder {
         List<Room> rooms = layout.rooms();
 
         // 1) Iluminación
-        lightPlacer.placeLights(rooms, y0, h);
+        a7LightPlacer.placeLights(rooms, y0, h);
 
         // 2) Suelo y techo
         for (Room r : rooms) {
             if (isCorridor(r)) {
-                corridorBuilder.build(r, y0, h);
+                a3CorridorBuilder.build(r, y0, h);
                 continue;
             }
             float floorCenterY = y0 - FLOOR_T * 0.5f;
-            floorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, floorCenterY, FLOOR_T);
+            a1FloorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, floorCenterY, FLOOR_T);
             float ceilCenterY = y0 + h - CEIL_T * 1.5f;
-            ceilBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, ceilCenterY, CEIL_T);
+            a6CeilBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, ceilCenterY, CEIL_T);
 
             // 3) Muros y aberturas
             for (Direction dir : List.of(Direction.NORTH, Direction.WEST, Direction.SOUTH, Direction.EAST)) {
@@ -126,12 +125,12 @@ public class WorldBuilder {
 
                 Connection c = findConnection(conns, r, dir);
                 if (c == null) {
-                    wallBuilder.buildSolid(r, dir, y0, h);
+                    a2WallBuilder.buildSolid(r, dir, y0, h);
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
-                    wallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
+                    a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
                 } else {
-                    doorBuilder.build(r, dir, y0, h - 0.2f, rooms);
+                    a4DoorBuilder.build(r, dir, y0, h - 0.2f, rooms);
                 }
             }
         }
@@ -179,8 +178,8 @@ public class WorldBuilder {
         return Float.compare(r.w(), HOLE_W) == 0 || Float.compare(r.h(), HOLE_W) == 0;
     }
 
-    public LightPlacer getLightPlacer() {
-        return lightPlacer;
+    public _7LightPlacer getLightPlacer() {
+        return a7LightPlacer;
     }
 
     public boolean isDoorOpen() {

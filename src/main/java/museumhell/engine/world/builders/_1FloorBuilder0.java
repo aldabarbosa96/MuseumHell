@@ -10,29 +10,29 @@ import museumhell.utils.GeoUtil.Rect;
 import java.util.List;
 
 
-public class CeilBuilder extends HorizontalBuilder {
+public class _1FloorBuilder0 extends _0HorizontalBuilder {
 
-    public CeilBuilder(Node root, PhysicsSpace space, AssetManager am) {
+    public _1FloorBuilder0(Node root, PhysicsSpace space, AssetManager am) {
         super(root, space, am);
     }
+
 
     @Override
     protected Material makeMaterial() {
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
 
-        // Gris muy tenue con ligera variación aleatoria
-        float k = 0.04f + (float) Math.random() * 0.03f;
-        ColorRGBA base = ColorRGBA.Brown.mult(k);
+        // Marrón madera, con una leve variación aleatoria para evitar uniformidad.
+        float k = 0.08f + (float) Math.random() * 0.05f;
+        ColorRGBA base = ColorRGBA.White.mult(k);
 
         m.setColor("Ambient", base);
         m.setColor("Diffuse", base);
-        m.setColor("Specular", ColorRGBA.Brown.mult(0.1f));
-        m.setFloat("Shininess", 1f);
+        m.setColor("Specular", ColorRGBA.White.mult(0.3f));
+        m.setFloat("Shininess", 1);
 
         return m;
     }
-
 
     public void buildPatches(int x, int z, int w, int d, List<Rect> holes, float y, float thickness) {
         super.build(x, z, w, d, holes, y, thickness);

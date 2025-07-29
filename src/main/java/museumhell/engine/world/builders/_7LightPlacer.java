@@ -12,13 +12,13 @@ import java.util.Random;
 
 import static museumhell.utils.ConstantManager.*;
 
-public class LightPlacer {
+public class _7LightPlacer {
     private final Node root;
     private SpotLight flashlight;
     private Vector3f smoothPos;
     private Vector3f smoothDir;
 
-    public LightPlacer(Node root) {
+    public _7LightPlacer(Node root) {
         this.root = root;
     }
 
