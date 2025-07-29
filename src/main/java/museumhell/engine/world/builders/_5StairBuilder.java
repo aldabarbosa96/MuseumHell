@@ -52,7 +52,7 @@ public class _5StairBuilder {
         float floorH = museum.floorHeight();
         int steps = (int) Math.ceil(floorH / STEP_H);
         float runD = steps * STEP_DEPTH;
-        float hxPad = WIDTH * 0.5f + 0.05f;
+        float hxPad = WIDTH * 0.5f;
 
         Random rnd = new Random(floors.size() * 73L);
 
@@ -83,22 +83,24 @@ public class _5StairBuilder {
     }
 
     private boolean tryPlace(Random rnd, LevelLayout A, LevelLayout B, int f, float runD, float hxPad, Map<Integer, List<Rect>> holes, List<StairPlacement> out, Room ra, boolean respectDoors) {
+
         /* probamos ambas orientaciones */
         return attempt(rnd, A, B, f, runD, hxPad, holes, out, ra, respectDoors, Orientation.EW) || attempt(rnd, A, B, f, runD, hxPad, holes, out, ra, respectDoors, Orientation.NS);
     }
 
     private boolean attempt(Random rnd, LevelLayout A, LevelLayout B, int f, float runD, float hxPad, Map<Integer, List<Rect>> holes, List<StairPlacement> out, Room ra, boolean respectDoors, Orientation orientation) {
+
         List<Room> roomsB = new ArrayList<>(B.rooms());
         Collections.shuffle(roomsB, rnd);
 
         for (Room rb : roomsB) {
-            /* intersección planta A/B */
+            /* ---------- intersección horizontal ---------- */
             int ix1 = Math.max(ra.x(), rb.x());
             int ix2 = Math.min(ra.x() + ra.w(), rb.x() + rb.w());
             int iz1 = Math.max(ra.z(), rb.z());
             int iz2 = Math.min(ra.z() + ra.h(), rb.z() + rb.h());
 
-            /* comprobaciones de espacio */
+            /* ---------- hueco mínimo ---------- */
             if (orientation == Orientation.EW) {
                 if (ix2 - ix1 < WIDTH + STAIR_WALL_GAP * 2) continue;
                 if (iz2 - iz1 < runD + STAIR_FOOT_GAP * 2) continue;
@@ -107,7 +109,7 @@ public class _5StairBuilder {
                 if (ix2 - ix1 < runD + STAIR_FOOT_GAP * 2) continue;
             }
 
-            /* puertas bloqueando */
+            /* ---------- puertas laterales ---------- */
             boolean s1Blocked, s2Blocked;
             if (orientation == Orientation.EW) {
                 s1Blocked = !doorSpans(ra, WEST, A).isEmpty() || !doorSpans(rb, WEST, B).isEmpty();
@@ -119,7 +121,7 @@ public class _5StairBuilder {
             if (s1Blocked && s2Blocked) continue;
             if (respectDoors && (s1Blocked || s2Blocked)) continue;
 
-            /* posición lateral (pegada a una pared) */
+            /* ---------- posición ---------- */
             boolean nearS1 = s2Blocked || (!s1Blocked && rnd.nextBoolean());
             float innerOff = WALL_T + STAIR_WALL_GAP + WIDTH * 0.5f;
 
@@ -138,20 +140,20 @@ public class _5StairBuilder {
                 if (sx + runD + STEP_DEPTH * 0.5f + STAIR_FOOT_GAP > rb.x() + rb.w() - WALL_T) continue;
             }
 
-            /* ---------- HUECO (para N‑S) ---------- */
+
             float pad = 0.05f;
             Rect hole;
             if (orientation == Orientation.EW) {
-                hole = new Rect(sx - hxPad, sx + hxPad, sz - STEP_DEPTH * 0.5f - pad, sz + runD - STEP_DEPTH * 0.5f + pad);
-            } else { /* ★ corrección de signo en x1/x2 ★ */
-                hole = new Rect(sx - STEP_DEPTH * 0.5f - pad, sx + runD - STEP_DEPTH * 0.5f + pad, sz - hxPad, sz + hxPad);
+                hole = new Rect(sx - hxPad, sx + hxPad, sz - STEP_DEPTH * 0.5f - pad, sz + runD + pad);
+            } else { /* N‑S */
+                hole = new Rect(sx - STEP_DEPTH * 0.5f - pad, sx + runD + pad, sz - hxPad, sz + hxPad);
             }
 
-            /* colisiones con huecos existentes */
+            /* ---------- colisiones ---------- */
             if (GeoUtil.intersectsAny(hole, holes.getOrDefault(f, List.of()))) continue;
             if (GeoUtil.intersectsAny(hole, holes.getOrDefault(f + 1, List.of()))) continue;
 
-            /* registramos */
+            /* ---------- registrar ---------- */
             holes.computeIfAbsent(f, k -> new ArrayList<>()).add(hole);
             holes.computeIfAbsent(f + 1, k -> new ArrayList<>()).add(hole);
             out.add(new StairPlacement(f, sx, sz, orientation));
@@ -160,19 +162,51 @@ public class _5StairBuilder {
         return false;
     }
 
+
     public void place(Plan plan, MuseumLayout museum) {
-        float h = museum.floorHeight();
+
+        float floorH = museum.floorHeight();
+
         for (StairPlacement sp : plan.placements) {
+
+            /* ---------- escalones ---------- */
             float y0 = museum.yOf(sp.floor());
-            Vector3f p = new Vector3f(sp.x(), y0, sp.z());
+            Vector3f f = new Vector3f(sp.x(), y0, sp.z());
 
             if (sp.orientation() == Orientation.EW) {
-                Stairs.add(root, ps, am, p, h);
+                Stairs.add(root, ps, am, f, floorH);
             } else {
-                addStairsNS(p, h);
+                addStairsNS(f, floorH);
+            }
+
+            /* ---------- barandilla en la planta superior ---------- */
+            Rect hole = computeHole(sp, floorH);
+            float yTop = y0 + floorH;
+
+            float x1 = hole.x1(), x2 = hole.x2();
+            float z1 = hole.z1(), z2 = hole.z2();
+            float w = x2 - x1;                         // ancho   (eje X)
+            float d = z2 - z1;                         // profundo(eje Z)
+
+            /* lado que queda ABIERTO (por donde llegas a la planta) */
+            enum Side {N, S, W, E}
+            Side open = (sp.orientation() == Orientation.EW) ? Side.S : Side.E;
+
+            /* --- N (z1) --- */
+            addRail(new Vector3f((x1 + x2) * .5f, 0, z1 - RAIL_T * .5f), w, RAIL_T, yTop);
+            /* --- S (z2) --- */
+            if (open != Side.S) {
+                addRail(new Vector3f((x1 + x2) * .5f, 0, z2 + RAIL_T * .5f), w, RAIL_T, yTop);
+            }
+            /* --- W (x1) --- */
+            addRail(new Vector3f(x1 - RAIL_T * .5f, 0, (z1 + z2) * .5f), RAIL_T, d, yTop);
+            /* --- E (x2) --- */
+            if (open != Side.E) {
+                addRail(new Vector3f(x2 + RAIL_T * .5f, 0, (z1 + z2) * .5f), RAIL_T, d, yTop);
             }
         }
     }
+
 
     /* ---------- versión rotada 90° ---------- */
     private void addStairsNS(Vector3f foot, float floorH) {
@@ -219,4 +253,32 @@ public class _5StairBuilder {
         }
         return list;
     }
+
+    private void addRail(Vector3f center, float sx, float sz, float yBase) {
+
+        var shape = new com.jme3.scene.shape.Box(sx * .5f, RAIL_H * .5f, sz * .5f);
+        var g = new com.jme3.scene.Geometry("Rail", shape);
+
+        g.setMaterial(Stairs.makeMat(am));
+        g.setLocalTranslation(center.x, yBase + RAIL_H * .5f, center.z);
+
+        g.addControl(new com.jme3.bullet.control.RigidBodyControl(0));
+        root.attachChild(g);
+        ps.add(g);
+    }
+
+    private Rect computeHole(StairPlacement sp, float floorH) {
+
+        int steps = (int) Math.ceil(floorH / STEP_H);
+        float runD = steps * STEP_DEPTH;
+
+        float hxPad = WIDTH * 0.5f + STAIR_CLEAR;
+        float pad = STAIR_CLEAR;
+
+        boolean ew = (sp.orientation() == Orientation.EW);
+
+        return ew ? new Rect(sp.x() - hxPad, sp.x() + hxPad, sp.z() - STEP_DEPTH * .5f - pad, sp.z() + runD + pad) : new Rect(sp.x() - STEP_DEPTH * .5f - pad, sp.x() + runD + pad, sp.z() - hxPad, sp.z() + hxPad);
+    }
+
+
 }

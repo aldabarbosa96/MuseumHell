@@ -24,7 +24,6 @@ public class WorldBuilder {
     private final _4DoorBuilder a4DoorBuilder;
     private final _3CorridorBuilder a3CorridorBuilder;
     private final _5StairBuilder a5StairBuilder;
-
     private final AssetManager am;
     private final Node root;
     private final PhysicsSpace space;
@@ -48,26 +47,59 @@ public class WorldBuilder {
     public void build(MuseumLayout museum) {
         float h = museum.floorHeight();
 
-        // 1) Generar conexiones por planta
+        /* ---------- 1) conexiones por planta ---------- */
         List<List<Connection>> floorConns = new ArrayList<>();
         long seed = System.nanoTime();
         for (LevelLayout lvl : museum.floors()) {
             floorConns.add(ConnectionGenerator.build(lvl, seed++));
         }
 
-        // 2) Planificar escaleras (huecos + posiciones)
+        /* ---------- 2) planificación de escaleras ---------- */
         _5StairBuilder.Plan plan = a5StairBuilder.plan(museum);
 
-        // 3) Construir cada planta, recortando con plan.holes
-        for (int i = 0; i < museum.floors().size(); i++) {
-            LevelLayout lvl = museum.floors().get(i);
-            List<Connection> conns = floorConns.get(i);
-            List<Rect> holes = plan.holes.getOrDefault(i, List.of());
-            buildSingleFloor(lvl, conns, museum.yOf(i), h, holes, i == 0);
+        /* ---------- 2.1) huecos‑base de escalera por planta ---------- */
+        Map<Integer, List<Rect>> baseHoles = new HashMap<>();
+        for (var sp : plan.placements) {
+            Rect hole = computeHoleFromPlacement(sp, museum.floorHeight());
+            baseHoles.computeIfAbsent(sp.floor(), k -> new ArrayList<>()).add(hole);
         }
 
-        // 4) Colocar las escaleras en la escena
+        /* ---------- 3) construir cada planta ---------- */
+        for (int i = 0; i < museum.floors().size(); i++) {
+            LevelLayout lvl = museum.floors().get(i);
+            List<Connection> cns = floorConns.get(i);
+
+            List<Rect> ceilHoles = plan.holes.getOrDefault(i, List.of());
+
+            /*– huecos que SÍ perforan el suelo (llegada escalera) */
+            List<Rect> floorHoles = new ArrayList<>(ceilHoles);
+            floorHoles.removeAll(baseHoles.getOrDefault(i, List.of()));
+
+            /* planta0: nunca perforamos el suelo */
+            if (i == 0) floorHoles = List.of();
+
+            buildSingleFloor(lvl, cns, museum.yOf(i), h, ceilHoles, floorHoles);
+        }
+
+        /* ---------- 4) colocar las escaleras ---------- */
         a5StairBuilder.place(plan, museum);
+    }
+
+    private Rect computeHoleFromPlacement(_5StairBuilder.StairPlacement sp, float floorH) {
+
+        int steps = (int) Math.ceil(floorH / STEP_H);
+        float runD = steps * STEP_DEPTH;
+        float hxPad = WIDTH * 0.5f + 0.05f;
+        float pad = 0.05f;
+
+        Enum<?> orient = (Enum<?>) sp.orientation();
+        boolean eastWest = orient.name().equals("EW");
+
+        if (eastWest) {
+            return new Rect(sp.x() - hxPad, sp.x() + hxPad, sp.z() - STEP_DEPTH * 0.5f - pad, sp.z() + runD + pad);
+        } else {
+            return new Rect(sp.x() - STEP_DEPTH * 0.5f - pad, sp.x() + runD + pad, sp.z() - hxPad, sp.z() + hxPad);
+        }
     }
 
 
@@ -98,27 +130,28 @@ public class WorldBuilder {
         return best;
     }
 
-    private void buildSingleFloor(LevelLayout layout, List<Connection> conns, float y0, float h, List<Rect> holes, boolean skipFloorHoles) {
-        List<Rect> floorHoles = skipFloorHoles ? List.of() : holes;
+    private void buildSingleFloor(LevelLayout layout, List<Connection> conns, float y0, float h, List<Rect> ceilHoles, List<Rect> floorHoles) {
+
         List<Room> rooms = layout.rooms();
 
-        // 1) Iluminación
+        /* 1) iluminación */
         a7LightPlacer.placeLights(rooms, y0, h);
 
-        // 2) Suelo y techo
+        /* 2) suelo y techo */
         for (Room r : rooms) {
             if (isCorridor(r)) {
                 a3CorridorBuilder.build(r, y0, h);
                 continue;
             }
+
             float floorCenterY = y0 - FLOOR_T * 0.5f;
             a1FloorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, floorCenterY, FLOOR_T);
-            float ceilCenterY = y0 + h - CEIL_T * 1.5f;
-            a6CeilBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), holes, ceilCenterY, CEIL_T);
 
-            // 3) Muros y aberturas
+            float ceilCenterY = y0 + h - CEIL_T * 1.5f;
+            a6CeilBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), ceilHoles, ceilCenterY, CEIL_T);
+
+            /* 3) muros y aberturas */
             for (Direction dir : List.of(Direction.NORTH, Direction.WEST, Direction.SOUTH, Direction.EAST)) {
-                // No pintamos muros interiores
                 if ((dir == Direction.SOUTH || dir == Direction.EAST) && hasNeighbor(r, rooms, dir)) {
                     continue;
                 }
@@ -129,12 +162,13 @@ public class WorldBuilder {
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
-                } else {
+                } else { /* puerta */
                     a4DoorBuilder.build(r, dir, y0, h - 0.2f, rooms);
                 }
             }
         }
     }
+
 
     private boolean hasNeighbor(Room a, List<Room> rooms, Direction dir) {
         for (Room b : rooms) {

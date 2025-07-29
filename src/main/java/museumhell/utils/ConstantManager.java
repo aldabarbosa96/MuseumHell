@@ -52,6 +52,9 @@ public class ConstantManager {
     public static final float STAIR_WALL_GAP = -2f;
     public static final float STAIR_FOOT_GAP = 2f;
     public static final int MAX_STAIRS = 3;
+    public static final float RAIL_H = 2.5f;
+    public static final float RAIL_T = 0.2f;
+    public static final float STAIR_CLEAR = 0.04f;
 
 
     // ITEMS
