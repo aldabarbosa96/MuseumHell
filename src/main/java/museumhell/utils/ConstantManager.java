@@ -37,8 +37,8 @@ public class ConstantManager {
     public static final float DOOR_T = .33f;
     public static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     public static final float CORRIDOR_WALL_T = WALL_T * 3f;
-    public static final float FLOOR_T = 0.25f;
-    public static final float CEIL_T = 0.25f;
+    public static final float FLOOR_T = 0.1f;
+    public static final float CEIL_T = 0.1f;
     public static final float WIDTH = 3.5f;
     public static final float STEP_H = 0.3f;
     public static final float STEP_DEPTH = 0.45f;

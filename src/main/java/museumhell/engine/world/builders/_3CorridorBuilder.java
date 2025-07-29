@@ -16,13 +16,13 @@ import java.util.List;
 import static museumhell.utils.ConstantManager.*;
 
 public class _3CorridorBuilder {
-    private final _1FloorBuilder0 floor;
+    private final _1FloorBuilder floor;
     private final _6CeilBuilder0 ceil;
     private final AssetManager assetManager;
     private final PhysicsSpace space;
     private final Node root;
 
-    public _3CorridorBuilder(AssetManager am, Node root, PhysicsSpace space, _1FloorBuilder0 floor, _6CeilBuilder0 ceil) {
+    public _3CorridorBuilder(AssetManager am, Node root, PhysicsSpace space, _1FloorBuilder floor, _6CeilBuilder0 ceil) {
         this.assetManager = am;
         this.space = space;
         this.root = root;

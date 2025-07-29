@@ -18,7 +18,7 @@ import static museumhell.utils.GeoUtil.overlap;
 
 public class WorldBuilder {
     private final _7LightPlacer a7LightPlacer;
-    private final _1FloorBuilder0 a1FloorBuilder;
+    private final _1FloorBuilder a1FloorBuilder;
     private final _6CeilBuilder0 a6CeilBuilder;
     private final _2WallBuilder a2WallBuilder;
     private final _4DoorBuilder a4DoorBuilder;
@@ -36,7 +36,7 @@ public class WorldBuilder {
         this.root = root;
         this.space = space;
         this.a7LightPlacer = new _7LightPlacer(root);
-        this.a1FloorBuilder = new _1FloorBuilder0(root, space, am);
+        this.a1FloorBuilder = new _1FloorBuilder(root, space, am, assetLoader);
         this.a6CeilBuilder = new _6CeilBuilder0(root, space, am);
         this.a2WallBuilder = new _2WallBuilder(am, root, space, assetLoader);
         this.a3CorridorBuilder = new _3CorridorBuilder(am, root, space, a1FloorBuilder, a6CeilBuilder);

@@ -83,18 +83,15 @@ public class _5StairBuilder {
     }
 
     private boolean tryPlace(Random rnd, LevelLayout A, LevelLayout B, int f, float runD, float hxPad, Map<Integer, List<Rect>> holes, List<StairPlacement> out, Room ra, boolean respectDoors) {
-
         /* probamos ambas orientaciones */
         return attempt(rnd, A, B, f, runD, hxPad, holes, out, ra, respectDoors, Orientation.EW) || attempt(rnd, A, B, f, runD, hxPad, holes, out, ra, respectDoors, Orientation.NS);
     }
 
     private boolean attempt(Random rnd, LevelLayout A, LevelLayout B, int f, float runD, float hxPad, Map<Integer, List<Rect>> holes, List<StairPlacement> out, Room ra, boolean respectDoors, Orientation orientation) {
-
         List<Room> roomsB = new ArrayList<>(B.rooms());
         Collections.shuffle(roomsB, rnd);
 
         for (Room rb : roomsB) {
-
             /* intersección planta A/B */
             int ix1 = Math.max(ra.x(), rb.x());
             int ix2 = Math.min(ra.x() + ra.w(), rb.x() + rb.w());
