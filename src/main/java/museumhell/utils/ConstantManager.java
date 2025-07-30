@@ -45,7 +45,7 @@ public class ConstantManager {
     public static final float SPEED = 4f;
     public static final float PROTRUDE = 0.1f;
     public static final float PENETRATION = 0.5f;
-    public static final int MIN_ROOM = 12;
+    public static final int MIN_ROOM = 20;
     public static final int MIN_SPLIT = MIN_ROOM * 2 + 2;
     public static final int MAX_DEPTH = 6;
     public static final int DOOR_MIN_OVERLAP = 3;

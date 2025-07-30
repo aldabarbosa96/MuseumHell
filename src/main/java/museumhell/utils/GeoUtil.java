@@ -1,5 +1,8 @@
 package museumhell.utils;
 
+import com.jme3.asset.AssetManager;
+import com.jme3.material.Material;
+import com.jme3.math.ColorRGBA;
 import museumhell.engine.world.levelgen.Direction;
 
 import java.util.List;
@@ -29,6 +32,24 @@ public final class GeoUtil {
     public static boolean intersectsAny(Rect r, List<Rect> list) {
         for (Rect o : list) if (intersects(r, o)) return true;
         return false;
+    }
+
+
+    public static Material makeMat(AssetManager am) {
+        Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
+        m.setBoolean("UseMaterialColors", true);
+        m.setColor("Diffuse", ColorRGBA.Brown);
+        m.setColor("Ambient", ColorRGBA.Brown.mult(0.35f));
+        return m;
+    }
+
+    public static Material makeRailMat(AssetManager am) {
+        Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
+        m.setBoolean("UseMaterialColors", true);
+        ColorRGBA c = new ColorRGBA(0.8f, 0.8f, 0.8f, 1f);
+        m.setColor("Diffuse", c);
+        m.setColor("Ambient", c.mult(0.35f));
+        return m;
     }
 
     public record Rect(float x1,float x2,float z1,float z2){}

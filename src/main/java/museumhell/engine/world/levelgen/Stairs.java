@@ -4,11 +4,11 @@ import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.material.Material;
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
+import museumhell.utils.GeoUtil;
 
 import static museumhell.utils.ConstantManager.*;
 
@@ -17,7 +17,7 @@ public final class Stairs {
     public static void add(Node root, PhysicsSpace ps, AssetManager am, Vector3f base, float floorHeight) {
 
         int steps = (int) Math.ceil(floorHeight / STEP_H);
-        Material mat = makeMat(am);
+        Material mat = GeoUtil.makeMat(am);
 
         for (int i = 0; i < steps; i++) {
 
@@ -35,14 +35,6 @@ public final class Stairs {
             root.attachChild(g);
             ps.add(g);
         }
-    }
-
-    public static Material makeMat(AssetManager am) {
-        Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
-        m.setBoolean("UseMaterialColors", true);
-        m.setColor("Diffuse", ColorRGBA.Brown);
-        m.setColor("Ambient", ColorRGBA.Brown.mult(0.35f));
-        return m;
     }
 
     private Stairs() {

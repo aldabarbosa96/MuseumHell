@@ -2,9 +2,12 @@ package museumhell.engine.world.builders;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.shape.Box;
 import museumhell.engine.world.levelgen.*;
 import museumhell.utils.GeoUtil;
 import museumhell.utils.GeoUtil.*;
@@ -213,7 +216,7 @@ public class _5StairBuilder {
 
         int steps = (int) Math.ceil(floorH / STEP_H);
 
-        var mat = Stairs.makeMat(am);
+        var mat = GeoUtil.makeMat(am);
 
         for (int i = 0; i < steps; i++) {
             float yC = foot.y + STEP_H * .5f + i * STEP_H;
@@ -255,14 +258,13 @@ public class _5StairBuilder {
     }
 
     private void addRail(Vector3f center, float sx, float sz, float yBase) {
+        var shape = new Box(sx * .5f, RAIL_H * .5f, sz * .5f);
+        var g = new Geometry("Rail", shape);
 
-        var shape = new com.jme3.scene.shape.Box(sx * .5f, RAIL_H * .5f, sz * .5f);
-        var g = new com.jme3.scene.Geometry("Rail", shape);
-
-        g.setMaterial(Stairs.makeMat(am));
+        g.setMaterial(GeoUtil.makeRailMat(am));
         g.setLocalTranslation(center.x, yBase + RAIL_H * .5f, center.z);
 
-        g.addControl(new com.jme3.bullet.control.RigidBodyControl(0));
+        g.addControl(new RigidBodyControl(0));
         root.attachChild(g);
         ps.add(g);
     }
@@ -272,7 +274,7 @@ public class _5StairBuilder {
         int steps = (int) Math.ceil(floorH / STEP_H);
         float runD = steps * STEP_DEPTH;
 
-        float hxPad = STAIR_WIDTH * 0.5f + RAIL_T + STAIR_CLEAR;
+        float hxPad = STAIR_WIDTH * 0.5f + RAIL_T;
         float pad = STAIR_CLEAR;
 
         boolean ew = (sp.orientation() == Orientation.EW);
