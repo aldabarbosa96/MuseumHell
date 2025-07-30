@@ -62,4 +62,10 @@ public class ConstantManager {
     public static final float SPOT_RANGE = 50f;
     public static final float INNER_ANGLE = FastMath.DEG_TO_RAD * 8;
     public static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 28f;
+
+
+    // CAMERA
+    public static final float CAM_ALARM_SECONDS = 3f;
+    public static final float CAM_FOV_DEG = 40f;
+    public static final float CAM_RANGE = 30f;
 }
