@@ -16,6 +16,7 @@ import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
 import museumhell.engine.world.levelgen.roomObjects.Camera;
+import museumhell.game.ai.SecurityCamSystem;
 import museumhell.game.input.InputSystem;
 import museumhell.game.interaction.InteractionSystem;
 import museumhell.game.loot.LootSystem;
@@ -112,6 +113,8 @@ public class MuseumHell extends SimpleApplication {
         Room startRoom = museum.floors().get(0).rooms().get(0);
         player = new PlayerController(physics.getPhysicsSpace(), startRoom.center3f(5f));
         rootNode.attachChild(player.getNode());
+
+        stateManager.attach(new SecurityCamSystem(camBuilder, player, rootNode));
 
         /* ---------- SYSTEMS ---------- */
         input = new InputSystem(inputManager, flyCam);

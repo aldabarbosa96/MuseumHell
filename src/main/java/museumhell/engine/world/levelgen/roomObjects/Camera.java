@@ -7,6 +7,8 @@ import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Camera {
@@ -14,11 +16,16 @@ public class Camera {
     private final Spatial cameraBase;
     private final float extrusion;
     private final Random rnd = new Random();
+    private final List<CameraData> camInfos = new ArrayList<>();
+
 
     public Camera(Node root, Spatial cameraBase, float extrusion) {
         this.root = root;
         this.cameraBase = cameraBase;
         this.extrusion = extrusion;
+    }
+
+    public record CameraData(Spatial spat, Vector3f dir, Room room, float baseY, float floorH) {
     }
 
     public void build(MuseumLayout museum) {
@@ -52,6 +59,13 @@ public class Camera {
             cam.setLocalRotation(q);
 
             root.attachChild(cam);
+
+            Vector3f centerDir = pos0.subtract(r.center3f(baseY + floorH * 0.5f)).normalizeLocal();
+            camInfos.add(new CameraData(cam, centerDir.negate(), r, baseY, floorH));
         }
+    }
+
+    public List<CameraData> getCameraData() {
+        return camInfos;
     }
 }
