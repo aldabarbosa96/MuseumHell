@@ -16,26 +16,24 @@ import static museumhell.utils.ConstantManager.*;
 
 public class _4DoorBuilder {
     private final AssetManager assetManager;
-    private final AssetLoader assetLoader;
+    private final _2WallBuilder wallBuilder;
     private final PhysicsSpace space;
     private final Node root;
     private final List<Door> doors;
 
-    public _4DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, AssetLoader assetLoader) {
+    public _4DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, _2WallBuilder wallBuilder) {
         this.assetManager = assetManager;
-        this.assetLoader = assetLoader;
         this.space = space;
         this.root = root;
         this.doors = doors;
+        this.wallBuilder  = wallBuilder;
     }
 
     public void build(Room r, Direction dir, float y0, float h, List<Room> rooms) {
         // 1) Abrimos el hueco con WallBuilder
-        _2WallBuilder helper = new _2WallBuilder(assetManager, root, space, assetLoader);
-        helper.buildOpening(r, dir, y0, h + 0.2f, rooms, DOOR_W, WALL_T);
+        wallBuilder.buildOpening(r, dir, y0, h + 0.2f, rooms, DOOR_W, WALL_T);
 
-        // 2) Calculamos el centro del hueco
-        float[] ov = helper.getOverlapRange(r, rooms, dir);
+        float[] ov = wallBuilder.getOverlapRange(r, rooms, dir);
         float holeCenter = (ov[0] + ov[1]) * 0.5f;
         float yCenter = y0 + h * 0.5f;
         // Media pared vs media puerta

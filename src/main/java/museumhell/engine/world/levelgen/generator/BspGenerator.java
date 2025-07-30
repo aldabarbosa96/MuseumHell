@@ -12,7 +12,8 @@ import static museumhell.utils.ConstantManager.*;
 
 public final class BspGenerator {
 
-    private record Node(int x, int z, int w, int h, int depth) { }
+    private record Node(int x, int z, int w, int h, int depth) {
+    }
 
     /**
      * Genera un LevelLayout con sus salas y sus conexiones (puertas, huecos, pasillos).
@@ -35,7 +36,7 @@ public final class BspGenerator {
 
     private static void split(Node n, Random rnd, List<Room> out) {
         boolean canSplitHoriz = n.w >= MIN_SPLIT;
-        boolean canSplitVert  = n.h >= MIN_SPLIT;
+        boolean canSplitVert = n.h >= MIN_SPLIT;
 
         // caso hoja
         if (n.depth == MAX_DEPTH || (!canSplitHoriz && !canSplitVert)) {
@@ -49,17 +50,17 @@ public final class BspGenerator {
             // corte vertical → izquierda / derecha
             int cutMin = MIN_ROOM;
             int cutMax = n.w - MIN_ROOM;
-            int cut    = cutMin + rnd.nextInt(cutMax - cutMin);
+            int cut = cutMin + rnd.nextInt(cutMax - cutMin);
 
-            split(new Node(n.x, n.z, cut,        n.h, n.depth + 1), rnd, out);
+            split(new Node(n.x, n.z, cut, n.h, n.depth + 1), rnd, out);
             split(new Node(n.x + cut, n.z, n.w - cut, n.h, n.depth + 1), rnd, out);
         } else {
             // corte horizontal → arriba / abajo
             int cutMin = MIN_ROOM;
             int cutMax = n.h - MIN_ROOM;
-            int cut    = cutMin + rnd.nextInt(cutMax - cutMin);
+            int cut = cutMin + rnd.nextInt(cutMax - cutMin);
 
-            split(new Node(n.x, n.z, n.w, cut,        n.depth + 1), rnd, out);
+            split(new Node(n.x, n.z, n.w, cut, n.depth + 1), rnd, out);
             split(new Node(n.x, n.z + cut, n.w, n.h - cut, n.depth + 1), rnd, out);
         }
     }

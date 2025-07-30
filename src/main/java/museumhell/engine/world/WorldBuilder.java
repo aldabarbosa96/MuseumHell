@@ -24,22 +24,16 @@ public class WorldBuilder {
     private final _4DoorBuilder a4DoorBuilder;
     private final _3CorridorBuilder a3CorridorBuilder;
     private final _5StairBuilder a5StairBuilder;
-    private final AssetManager am;
-    private final Node root;
-    private final PhysicsSpace space;
     private final List<Door> doors = new ArrayList<>();
     private boolean doorOpen = false;
 
     public WorldBuilder(AssetManager am, Node root, PhysicsSpace space, AssetLoader assetLoader) {
-        this.am = am;
-        this.root = root;
-        this.space = space;
         this.a7LightPlacer = new _7LightPlacer(root);
         this.a1FloorBuilder = new _1FloorBuilder(root, space, am, assetLoader);
         this.a6CeilBuilder = new _6CeilBuilder0(root, space, am);
         this.a2WallBuilder = new _2WallBuilder(am, root, space, assetLoader);
         this.a3CorridorBuilder = new _3CorridorBuilder(am, root, space, a1FloorBuilder, a6CeilBuilder);
-        this.a4DoorBuilder = new _4DoorBuilder(am, space, root, doors, assetLoader);
+        this.a4DoorBuilder = new _4DoorBuilder(am, space, root, doors, a2WallBuilder);
         this.a5StairBuilder = new _5StairBuilder(am, space, root);
     }
 
