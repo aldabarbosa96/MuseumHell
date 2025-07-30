@@ -110,7 +110,7 @@ public class MuseumHell extends SimpleApplication {
 
         /* ---------- PLAYER ---------- */
         Room startRoom = museum.floors().get(0).rooms().get(0);
-        player = new PlayerController(assetManager, physics.getPhysicsSpace(), startRoom.center3f(3f));
+        player = new PlayerController(physics.getPhysicsSpace(), startRoom.center3f(5f));
         rootNode.attachChild(player.getNode());
 
         /* ---------- SYSTEMS ---------- */

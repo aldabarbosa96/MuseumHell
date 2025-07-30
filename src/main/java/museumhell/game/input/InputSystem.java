@@ -105,15 +105,20 @@ public class InputSystem implements ActionListener {
     public void update(float tpf) {
         if (player == null || cam == null) return;
 
-        // movimiento
         Vector3f dir = new Vector3f();
         if (left) dir.addLocal(cam.getLeft());
         if (right) dir.addLocal(cam.getLeft().negate());
         if (up) dir.addLocal(cam.getDirection());
         if (down) dir.addLocal(cam.getDirection().negate());
 
-        // velocidad según estado
+        dir.setY(0);
+
+        if (dir.lengthSquared() > 0) {
+            dir.normalizeLocal();
+        }
+
         float baseSpeed = crouch ? CROUCH_SPEED : (sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED);
+
         player.move(dir.multLocal(baseSpeed * tpf));
     }
 

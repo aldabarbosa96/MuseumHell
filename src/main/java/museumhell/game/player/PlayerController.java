@@ -13,10 +13,8 @@ public class PlayerController {
     private CharacterControl control;
     private final Node playerNode;
     private final PhysicsSpace space;
-    private final AssetManager am;
 
-    public PlayerController(AssetManager am, PhysicsSpace space, Vector3f startPos) {
-        this.am = am;
+    public PlayerController( PhysicsSpace space, Vector3f startPos) {
         this.space = space;
 
         playerNode = new Node("Player");
