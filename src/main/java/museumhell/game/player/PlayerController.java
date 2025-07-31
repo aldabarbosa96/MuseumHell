@@ -71,4 +71,8 @@ public class PlayerController {
     public Vector3f getLocation() {
         return control.getPhysicsLocation();
     }
+
+    public CharacterControl getCharacterControl() {
+        return control;
+    }
 }

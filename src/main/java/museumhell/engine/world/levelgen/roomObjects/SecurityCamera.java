@@ -25,14 +25,15 @@ public class SecurityCamera {
         this.extrusion = extrusion;
     }
 
-    public record CameraData(Spatial spat, Vector3f dir, Room room, float baseY, float floorH) {}
+    public record CameraData(Spatial spat, Vector3f dir, Room room, float baseY, float floorH) {
+    }
 
     public void build(MuseumLayout museum) {
         float floorH = museum.floorHeight();
         for (int f = 0; f < museum.floors().size(); f++) {
             List<Room> rooms = museum.floors().get(f).rooms();
             for (Room r : rooms) {
-                if (rnd.nextBoolean()) continue;
+                if (rnd.nextFloat() >= 0.3f) continue;
                 placeInRoom(f, r, floorH, rooms);
             }
         }
@@ -69,12 +70,7 @@ public class SecurityCamera {
         float x2 = r.x() + r.w() - tE * 0.5f;
         float z1 = r.z() + tN * 0.5f;
         float z2 = r.z() + r.h() - tS * 0.5f;
-        return new Vector3f[]{
-                new Vector3f(x1, yCam, z1),
-                new Vector3f(x2, yCam, z1),
-                new Vector3f(x2, yCam, z2),
-                new Vector3f(x1, yCam, z2)
-        };
+        return new Vector3f[]{new Vector3f(x1, yCam, z1), new Vector3f(x2, yCam, z1), new Vector3f(x2, yCam, z2), new Vector3f(x1, yCam, z2)};
     }
 
     private static boolean hasNeighbor(Room r, List<Room> rooms, char side) {

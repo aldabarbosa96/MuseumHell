@@ -56,7 +56,7 @@ public class MuseumHell extends SimpleApplication {
         cameraBase = visuals.get("camera1");
 
         // 2) Luz ambiental tenue
-        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.0025f)));
+        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.003f)));
 
         // 3) Física
         Vector3f worldMin = new Vector3f(-150f, -10f, -150f);
