@@ -14,7 +14,7 @@ import com.jme3.asset.AssetManager;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
-import museumhell.engine.world.levelgen.roomObjects.SecurityCamera;
+import museumhell.game.ai.SecurityCamera;
 import museumhell.game.ai.SecurityCamSystem;
 import museumhell.game.input.InputSystem;
 import museumhell.game.input.InteractionSystem;
@@ -96,12 +96,17 @@ public class GameSystemState extends BaseAppState {
         // 5) InteractionSystem
         getStateManager().attach(new InteractionSystem(player, world, lootSystem, prompt));
 
-        // 6) MoveEffectState
+        // 6) Sistema de guardias
+        BulletAppState bullet = getStateManager().getState(BulletAppState.class);
+        getStateManager().attach(new museumhell.game.ai.EnemySystem(assetManager, bullet, rootNode, layout, player));
+
+        // 7) MoveEffectState
         getStateManager().attach(new MoveEffectState(player, input, audio, hud, camera, world.getLightPlacer()));
 
-        // 7) Inicialización de la linterna para evitar NPE en el primer update
+        // 8) Inicialización de la linterna para evitar NPE en el primer update
         Vector3f initEye = player.getLocation().add(0, 1f, 0).addLocal(camera.getDirection().mult(-0.25f));
         world.getLightPlacer().initFlashlight(initEye, camera.getDirection().clone());
+
     }
 
     @Override

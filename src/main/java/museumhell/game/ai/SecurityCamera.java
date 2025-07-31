@@ -1,4 +1,4 @@
-package museumhell.engine.world.levelgen.roomObjects;
+package museumhell.game.ai;
 
 import com.jme3.math.Vector3f;
 import com.jme3.math.Quaternion;

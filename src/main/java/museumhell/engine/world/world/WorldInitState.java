@@ -4,17 +4,14 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.BulletAppState;
-import com.jme3.light.SpotLight;
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
-import museumhell.engine.world.levelgen.roomObjects.SecurityCamera;
+import museumhell.game.ai.SecurityCamera;
 import museumhell.utils.AssetLoader;
-import museumhell.utils.ConstantManager;
 
 import java.util.List;
 

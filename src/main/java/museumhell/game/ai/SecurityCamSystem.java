@@ -6,7 +6,6 @@ import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.bullet.collision.PhysicsRayTestResult;
-import com.jme3.bullet.control.CharacterControl;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.FastMath;
@@ -20,8 +19,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.util.BufferUtils;
 import museumhell.engine.world.builders._6LightPlacer;
-import museumhell.engine.world.levelgen.roomObjects.SecurityCamera;
-import museumhell.engine.world.levelgen.roomObjects.SecurityCamera.CameraData;
+import museumhell.game.ai.SecurityCamera.CameraData;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.game.player.PlayerController;
 

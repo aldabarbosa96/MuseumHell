@@ -7,7 +7,7 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.Room;
-import museumhell.engine.world.levelgen.roomObjects.SecurityCamera;
+import museumhell.game.ai.SecurityCamera;
 
 import java.util.HashMap;
 import java.util.List;
