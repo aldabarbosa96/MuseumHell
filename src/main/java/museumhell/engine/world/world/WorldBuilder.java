@@ -17,24 +17,22 @@ import static museumhell.utils.GeoUtil.opposite;
 import static museumhell.utils.GeoUtil.overlap;
 
 public class WorldBuilder {
-    private final _7LightPlacer a7LightPlacer;
+    private final _6LightPlacer a7LightPlacer;
     private final _1FloorBuilder a1FloorBuilder;
-    private final _6CeilBuilder0 a6CeilBuilder;
+    private final _5CeilBuilder0 a6CeilBuilder;
     private final _2WallBuilder a2WallBuilder;
-    private final _4DoorBuilder a4DoorBuilder;
-    private final _3CorridorBuilder a3CorridorBuilder;
-    private final _5StairBuilder a5StairBuilder;
+    private final _3DoorBuilder a4DoorBuilder;
+    private final _4StairBuilder a5StairBuilder;
     private final List<Door> doors = new ArrayList<>();
     private boolean doorOpen = false;
 
     public WorldBuilder(AssetManager am, Node root, PhysicsSpace space, AssetLoader assetLoader) {
-        this.a7LightPlacer = new _7LightPlacer(root);
+        this.a7LightPlacer = new _6LightPlacer(root);
         this.a1FloorBuilder = new _1FloorBuilder(root, space, am, assetLoader);
-        this.a6CeilBuilder = new _6CeilBuilder0(root, space, am);
+        this.a6CeilBuilder = new _5CeilBuilder0(root, space, am);
         this.a2WallBuilder = new _2WallBuilder(am, root, space, assetLoader);
-        this.a3CorridorBuilder = new _3CorridorBuilder(am, root, space, a1FloorBuilder, a6CeilBuilder);
-        this.a4DoorBuilder = new _4DoorBuilder(am, space, root, doors, a2WallBuilder);
-        this.a5StairBuilder = new _5StairBuilder(am, space, root);
+        this.a4DoorBuilder = new _3DoorBuilder(am, space, root, doors, a2WallBuilder);
+        this.a5StairBuilder = new _4StairBuilder(am, space, root);
     }
 
     // 1) build: genera conexiones y las pasa a buildSingleFloor
@@ -49,7 +47,7 @@ public class WorldBuilder {
         }
 
         /* ---------- 2) planificación de escaleras ---------- */
-        _5StairBuilder.Plan plan = a5StairBuilder.plan(museum);
+        _4StairBuilder.Plan plan = a5StairBuilder.plan(museum);
 
         /* ---------- 2.1) huecos‑base de escalera por planta ---------- */
         Map<Integer, List<Rect>> baseHoles = new HashMap<>();
@@ -79,7 +77,7 @@ public class WorldBuilder {
         a5StairBuilder.place(plan, museum);
     }
 
-    private Rect computeHoleFromPlacement(_5StairBuilder.StairPlacement sp, float floorH) {
+    private Rect computeHoleFromPlacement(_4StairBuilder.StairPlacement sp, float floorH) {
 
         int steps = (int) Math.ceil(floorH / STEP_H);
         float runD = steps * STEP_DEPTH;
@@ -133,11 +131,6 @@ public class WorldBuilder {
 
         /* 2) suelo y techo */
         for (Room r : rooms) {
-            if (isCorridor(r)) {
-                a3CorridorBuilder.build(r, y0, h);
-                continue;
-            }
-
             float floorCenterY = y0 - FLOOR_T * 0.5f;
             a1FloorBuilder.buildPatches(r.x(), r.z(), r.w(), r.h(), floorHoles, floorCenterY, FLOOR_T);
 
@@ -206,7 +199,7 @@ public class WorldBuilder {
         return Float.compare(r.w(), HOLE_W) == 0 || Float.compare(r.h(), HOLE_W) == 0;
     }
 
-    public _7LightPlacer getLightPlacer() {
+    public _6LightPlacer getLightPlacer() {
         return a7LightPlacer;
     }
 

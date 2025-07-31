@@ -10,9 +10,9 @@ import museumhell.utils.GeoUtil.Rect;
 import java.util.List;
 
 
-public class _6CeilBuilder0 extends _0HorizontalBuilder {
+public class _5CeilBuilder0 extends _0HorizontalBuilder {
 
-    public _6CeilBuilder0(Node root, PhysicsSpace space, AssetManager am) {
+    public _5CeilBuilder0(Node root, PhysicsSpace space, AssetManager am) {
         super(root, space, am);
     }
 

@@ -7,21 +7,20 @@ import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.Direction;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.levelgen.Room;
-import museumhell.utils.AssetLoader;
 
 import java.util.List;
 
 import static museumhell.utils.ConstantManager.*;
 
 
-public class _4DoorBuilder {
+public class _3DoorBuilder {
     private final AssetManager assetManager;
     private final _2WallBuilder wallBuilder;
     private final PhysicsSpace space;
     private final Node root;
     private final List<Door> doors;
 
-    public _4DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, _2WallBuilder wallBuilder) {
+    public _3DoorBuilder(AssetManager assetManager, PhysicsSpace space, Node root, List<Door> doors, _2WallBuilder wallBuilder) {
         this.assetManager = assetManager;
         this.space = space;
         this.root = root;

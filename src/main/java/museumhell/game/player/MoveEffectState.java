@@ -5,7 +5,7 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
-import museumhell.engine.world.builders._7LightPlacer;
+import museumhell.engine.world.builders._6LightPlacer;
 import museumhell.game.input.InputSystem;
 import museumhell.ui.Hud;
 import museumhell.utils.AudioLoader;
@@ -20,13 +20,13 @@ public class MoveEffectState extends BaseAppState {
     private final AudioLoader audio;
     private final Hud hud;
     private final Camera cam;
-    private final _7LightPlacer lightPlacer;
+    private final _6LightPlacer lightPlacer;
     private float bobTime = 0f, stepTime = 0f;
     private int lastStepCount = 0;
     private Vector3f smoothEyePos, smoothDirection;
     private final Random random = new Random();
 
-    public MoveEffectState(PlayerController player, InputSystem input, AudioLoader audio, Hud hud, Camera cam, _7LightPlacer lightPlacer) {
+    public MoveEffectState(PlayerController player, InputSystem input, AudioLoader audio, Hud hud, Camera cam, _6LightPlacer lightPlacer) {
         this.player = player;
         this.input = input;
         this.audio = audio;

@@ -16,14 +16,14 @@ import java.util.Random;
 
 import static museumhell.utils.ConstantManager.*;
 
-public class _7LightPlacer {
+public class _6LightPlacer {
     private final Node root;
     private SpotLight flashlight;
     private Vector3f smoothPos;
     private Vector3f smoothDir;
     private final Map<Room, PointLight> roomBeacons = new HashMap<>();
 
-    public _7LightPlacer(Node root) {
+    public _6LightPlacer(Node root) {
         this.root = root;
     }
 
