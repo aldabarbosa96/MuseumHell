@@ -7,6 +7,7 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.Room;
+import museumhell.engine.world.levelgen.roomObjects.SecurityCamera;
 
 import java.util.HashMap;
 import java.util.List;
@@ -82,8 +83,6 @@ public class _7LightPlacer {
         addSpot(x2, ceilingY, z2, Vector3f.UNIT_Y.negate(), range, angle, color);
     }
 
-
-
     private void addSpot(float x, float y, float z, Vector3f direction, float range, float angle, ColorRGBA color) {
         SpotLight sl = new SpotLight();
         sl.setSpotRange(range);
@@ -115,4 +114,16 @@ public class _7LightPlacer {
         }
     }
 
+    public void placeCameraLights(List<SecurityCamera.CameraData> cams) {
+        for (SecurityCamera.CameraData info : cams) {
+            SpotLight sl = new SpotLight();
+            sl.setSpotRange(SPOT_RANGE);
+            sl.setSpotInnerAngle(INNER_ANGLE);
+            sl.setSpotOuterAngle(OUTER_ANGLE);
+            sl.setPosition(info.spat().getWorldTranslation());
+            sl.setDirection(info.dir());
+            sl.setColor(new ColorRGBA(1f, 0.85f, 0.6f, 1f).multLocal(2.5f));
+            root.addLight(sl);
+        }
+    }
 }
