@@ -41,7 +41,7 @@ public class MuseumHell extends SimpleApplication {
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);
         app.setShowSettings(true);
-        app.setDisplayStatView(false);
+        app.setDisplayStatView(true);
         app.setDisplayFps(true);
         app.start();
     }

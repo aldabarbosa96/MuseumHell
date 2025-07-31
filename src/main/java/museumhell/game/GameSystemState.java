@@ -14,6 +14,7 @@ import com.jme3.asset.AssetManager;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
+import museumhell.game.ai.EnemySystem;
 import museumhell.game.ai.SecurityCamera;
 import museumhell.game.ai.SecurityCamSystem;
 import museumhell.game.input.InputSystem;
@@ -98,7 +99,7 @@ public class GameSystemState extends BaseAppState {
 
         // 6) Sistema de guardias
         BulletAppState bullet = getStateManager().getState(BulletAppState.class);
-        getStateManager().attach(new museumhell.game.ai.EnemySystem(assetManager, bullet, rootNode, layout, player));
+        getStateManager().attach(new EnemySystem(assetManager, bullet, rootNode, layout, world, player));
 
         // 7) MoveEffectState
         getStateManager().attach(new MoveEffectState(player, input, audio, hud, camera, world.getLightPlacer()));

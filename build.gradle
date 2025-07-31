@@ -50,8 +50,7 @@ dependencies {
     implementation 'org.codehaus.groovy:groovy-all:3.0.21'
     implementation 'com.simsilica:lemur:1.16.0'
     implementation 'com.simsilica:lemur-proto:1.13.0'
-
-    implementation 'net.sf.sociaal:jME3-ai:0.1.831'
+    implementation "net.sf.sociaal:jME3-ai:0.1.831"
 }
 
 distZip {

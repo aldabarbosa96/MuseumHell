@@ -67,7 +67,7 @@ public class Hud extends BaseAppState {
         dirTxt.setSize(22);
         sApp.getGuiNode().attachChild(dirTxt);
 
-        root.setLocalTranslation(25, 50, 0);
+        root.setLocalTranslation(225, 50, 0);
 
         set(0, 0);
         setDirection("NORTE");
