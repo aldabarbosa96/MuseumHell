@@ -1,4 +1,3 @@
-// src/main/java/museumhell/game/ai/EnemySystem.java
 package museumhell.game.ai;
 
 import com.jme3.app.Application;
@@ -11,15 +10,11 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
-import museumhell.engine.world.levelgen.Connection;
-import museumhell.engine.world.levelgen.Direction;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.player.PlayerController;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 public class EnemySystem extends BaseAppState {
     private final AssetManager am;
@@ -29,8 +24,8 @@ public class EnemySystem extends BaseAppState {
     private final WorldBuilder world;
     private final PlayerController player;
 
-    private float timeElapsed;
-    private boolean spawned;
+    private float timer = 0f;
+    private boolean spawned = false;
     private Enemy enemy;
     private final Random rnd = new Random();
 
@@ -46,8 +41,8 @@ public class EnemySystem extends BaseAppState {
     @Override
     public void update(float tpf) {
         if (!spawned) {
-            timeElapsed += tpf;
-            if (timeElapsed >= 5f) {
+            timer += tpf;
+            if (timer >= 5f) {
                 spawnEnemy();
                 spawned = true;
             }
@@ -59,74 +54,58 @@ public class EnemySystem extends BaseAppState {
     private void spawnEnemy() {
         int floorIdx = rnd.nextInt(layout.floors().size());
         List<Room> rooms = layout.floors().get(floorIdx).rooms();
-        Room startRoom = rooms.get(rnd.nextInt(rooms.size()));
-        float baseY = layout.yOf(floorIdx);
+        Room start = rooms.get(rnd.nextInt(rooms.size()));
+        float y = layout.yOf(floorIdx);
 
-        enemy = new Enemy(am, space, player, world, startRoom, baseY, rootNode);
+        enemy = new Enemy(am, space, player, world, start, y, rootNode);
 
-        List<Vector3f> patrol = buildPatrolRoute(startRoom, floorIdx, 5);
-        enemy.setPatrolPoints(patrol);
+        enemy.setPatrolPoints(buildPatrolRoute(start, floorIdx, 5));
 
-        Vector3f spawnPos = startRoom.center3f(baseY + 0.5f);
-        enemy.setLocalTranslation(spawnPos);
-        CharacterControl cc = enemy.getControl(CharacterControl.class);
-        cc.setPhysicsLocation(spawnPos);
+        Vector3f pos = start.center3f(y + 0.5f);
+        enemy.setLocalTranslation(pos);
+        enemy.getControl(CharacterControl.class).setPhysicsLocation(pos);
     }
 
-    private List<Vector3f> buildPatrolRoute(Room from, int floorIdx, int length) {
-        float y = layout.yOf(floorIdx) + 0.5f;
-        List<Connection> conns = layout.floors().get(floorIdx).conns();
-        List<Room> visited = new ArrayList<>();
-        List<Vector3f> route = new ArrayList<>();
+    private List<Vector3f> buildPatrolRoute(Room from, int fIdx, int len) {
+        float y = layout.yOf(fIdx) + 0.5f;
+        var conns = layout.floors().get(fIdx).conns();
+        var route = new java.util.ArrayList<Vector3f>();
+        var visited = new java.util.ArrayList<Room>();
+        Room cur = from;
+        visited.add(cur);
 
-        Room current = from;
-        visited.add(current);
-
-        for (int i = 0; i < length; i++) {
-            Room finalCurrent = current;
-            Room finalCurrent1 = current;
-            List<Connection> options = conns.stream().filter(c -> c.a() == finalCurrent || c.b() == finalCurrent).filter(c -> {
-                Room other = (c.a() == finalCurrent1) ? c.b() : c.a();
-                return !visited.contains(other);
-            }).toList();
-            if (options.isEmpty()) break;
-            Connection sel = options.get(rnd.nextInt(options.size()));
-            Room next = (sel.a() == current) ? sel.b() : sel.a();
-
-            float doorX, doorZ;
+        for (int i = 0; i < len; i++) {
+            Room finalCur = cur;
+            Room finalCur1 = cur;
+            var opts = conns.stream().filter(c -> c.a() == finalCur || c.b() == finalCur).filter(c -> !visited.contains(c.a() == finalCur1 ? c.b() : c.a())).toList();
+            if (opts.isEmpty()) break;
+            var sel = opts.get(rnd.nextInt(opts.size()));
+            Room next = sel.a() == cur ? sel.b() : sel.a();
+            float dx, dz;
+            final float dx1 = (Math.max(cur.x(), next.x()) + Math.min(cur.x() + cur.w(), next.x() + next.w())) * 0.5f;
+            final float dz1 = (Math.max(cur.z(), next.z()) + Math.min(cur.z() + cur.h(), next.z() + next.h())) * 0.5f;
             switch (sel.dir()) {
                 case NORTH -> {
-                    float minX = Math.max(current.x(), next.x());
-                    float maxX = Math.min(current.x() + current.w(), next.x() + next.w());
-                    doorX = (minX + maxX) * 0.5f;
-                    doorZ = current.z();
+                    dx = dx1;
+                    dz = cur.z();
                 }
                 case SOUTH -> {
-                    float minX = Math.max(current.x(), next.x());
-                    float maxX = Math.min(current.x() + current.w(), next.x() + next.w());
-                    doorX = (minX + maxX) * 0.5f;
-                    doorZ = current.z() + current.h();
+                    dx = dx1;
+                    dz = cur.z() + cur.h();
                 }
                 case EAST -> {
-                    float minZ = Math.max(current.z(), next.z());
-                    float maxZ = Math.min(current.z() + current.h(), next.z() + next.h());
-                    doorZ = (minZ + maxZ) * 0.5f;
-                    doorX = current.x() + current.w();
+                    dz = dz1;
+                    dx = cur.x() + cur.w();
                 }
-                case WEST -> {
-                    float minZ = Math.max(current.z(), next.z());
-                    float maxZ = Math.min(current.z() + current.h(), next.z() + next.h());
-                    doorZ = (minZ + maxZ) * 0.5f;
-                    doorX = current.x();
+                default -> {
+                    dz = dz1;
+                    dx = cur.x();
                 }
-                default -> throw new IllegalStateException();
             }
-
-            route.add(new Vector3f(doorX, y, doorZ));
+            route.add(new Vector3f(dx, y, dz));
             route.add(next.center3f(y));
-
             visited.add(next);
-            current = next;
+            cur = next;
         }
         return route;
     }
