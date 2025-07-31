@@ -31,7 +31,6 @@ public class SecurityCamSystem extends BaseAppState {
 
     private final _6LightPlacer lightPlacer;
     private PhysicsSpace space;
-    private CharacterControl playerControl;
     private final SecurityCamera camSys;
     private final PlayerController player;
     private final Node root;
@@ -51,7 +50,7 @@ public class SecurityCamSystem extends BaseAppState {
     protected void initialize(Application app) {
         BulletAppState bullet = getStateManager().getState(BulletAppState.class);
         space = bullet.getPhysicsSpace();
-        playerControl = player.getCharacterControl();
+
     }
 
     @Override
@@ -103,7 +102,7 @@ public class SecurityCamSystem extends BaseAppState {
                 }
             }
             // Si el primer objeto no es el jugador → está bloqueado
-            if (closestObj != playerControl) {
+            if (closestObj != player.getCharacterControl()) {
                 continue;
             }
 

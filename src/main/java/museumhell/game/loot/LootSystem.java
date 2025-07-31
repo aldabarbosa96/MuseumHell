@@ -4,7 +4,6 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
-import com.jme3.bullet.collision.PhysicsRayTestResult;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.ui.Hud;
@@ -16,7 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
+
+
+import static museumhell.utils.ConstantManager.WALL_T;
 
 
 public class LootSystem extends BaseAppState {
@@ -43,10 +44,9 @@ public class LootSystem extends BaseAppState {
 
     public void scatter(Room room, int floorIdx, int n) {
         float halfSize = 0.25f;
-        float wallThickness = 0.33f;
-        float margin = wallThickness + halfSize + 0.05f;
+        float margin = WALL_T + halfSize + 0.05f;
         float baseY = floorIdx * floorHeight;
-        float y = baseY + halfSize + 0.01f; // un pelín por encima del suelo
+        float y = baseY + halfSize + 0.01f;
 
         // Área XZ con margen
         float xMin = room.x() + margin;
