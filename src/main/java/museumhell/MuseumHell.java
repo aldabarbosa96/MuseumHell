@@ -103,6 +103,13 @@ public class MuseumHell extends SimpleApplication {
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace(), visuals);
         world.build(museum);
 
+        float floorH = museum.floorHeight();
+        for (int i = 0; i < museum.floors().size(); i++) {
+            float y0 = museum.yOf(i);
+            List<Room> rooms = museum.floors().get(i).rooms();
+            world.getLightPlacer().initRoomBeacons(rooms, y0, floorH);
+        }
+
         cameraBase.scale(0.5f);
 
         float baseExtrusion = 1.25f;
@@ -116,7 +123,7 @@ public class MuseumHell extends SimpleApplication {
         player = new PlayerController(physics.getPhysicsSpace(), startRoom.center3f(5f));
         rootNode.attachChild(player.getNode());
 
-        stateManager.attach(new SecurityCamSystem(camBuilder, player, rootNode));
+        stateManager.attach(new SecurityCamSystem(camBuilder, player, rootNode, world.getLightPlacer()));
 
         /* ---------- SYSTEMS ---------- */
         input = new InputSystem(inputManager, flyCam);

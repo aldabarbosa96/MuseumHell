@@ -1,5 +1,6 @@
 package museumhell.engine.world.builders;
 
+import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
@@ -7,7 +8,9 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.Room;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import static museumhell.utils.ConstantManager.*;
@@ -17,6 +20,7 @@ public class _7LightPlacer {
     private SpotLight flashlight;
     private Vector3f smoothPos;
     private Vector3f smoothDir;
+    private final Map<Room, PointLight> roomBeacons = new HashMap<>();
 
     public _7LightPlacer(Node root) {
         this.root = root;
@@ -91,5 +95,24 @@ public class _7LightPlacer {
         root.addLight(sl);
     }
 
+    public void initRoomBeacons(List<Room> rooms, float baseY, float height) {
+        for (Room room : rooms) {
+            Vector3f ctr = room.center3f(baseY + height * 0.5f);
+            PointLight beacon = new PointLight();
+            beacon.setColor(new ColorRGBA(1f, 0f, 0f, 1f).multLocal(2f));
+            beacon.setRadius( Math.max(room.w(), room.h()) * 1.5f ); // cubre la sala
+            beacon.setPosition(new Vector3f(ctr.x, baseY + height - 0.1f, ctr.z));
+            beacon.setEnabled(false);
+            root.addLight(beacon);
+            roomBeacons.put(room, beacon);
+        }
+    }
+
+    public void setRoomBeacon(Room room, boolean enabled) {
+        PointLight beacon = roomBeacons.get(room);
+        if (beacon != null) {
+            beacon.setEnabled(enabled);
+        }
+    }
 
 }

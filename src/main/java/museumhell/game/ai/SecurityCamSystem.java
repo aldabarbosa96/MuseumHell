@@ -12,6 +12,7 @@ import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.util.BufferUtils;
+import museumhell.engine.world.builders._7LightPlacer;
 import museumhell.engine.world.levelgen.roomObjects.Camera;
 import museumhell.engine.world.levelgen.roomObjects.Camera.CameraData;
 import museumhell.engine.world.levelgen.Room;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 public class SecurityCamSystem extends BaseAppState {
+    private final _7LightPlacer lightPlacer;
     private final Camera camSys;
     private final PlayerController player;
     private final Node root;
@@ -34,10 +36,11 @@ public class SecurityCamSystem extends BaseAppState {
     private final float maxDist = 20f;
     private final float halfFov = FastMath.DEG_TO_RAD * 30;
 
-    public SecurityCamSystem(Camera camSys, PlayerController player, Node root) {
+    public SecurityCamSystem(Camera camSys, PlayerController player, Node root, _7LightPlacer lightPlacer) {
         this.camSys = camSys;
         this.player = player;
         this.root = root;
+        this.lightPlacer = lightPlacer;
     }
 
     @Override
@@ -49,52 +52,17 @@ public class SecurityCamSystem extends BaseAppState {
     public void update(float tpf) {
         Vector3f pPos = player.getLocation().clone();
         for (CameraData info : camSys.getCameraData()) {
-            // usa spat(), dir(), room(), baseY(), floorH()
+            Room room = info.room();
             Vector3f camPos = info.spat().getWorldTranslation();
             Vector3f toPlayer = pPos.subtract(camPos);
             float dist = toPlayer.length();
-            if (dist <= maxDist) {
-                toPlayer.normalizeLocal();
-                float angle = FastMath.acos(info.dir().dot(toPlayer));
-                if (angle <= halfFov) {
-                    highlight(info);
-                    continue;
-                }
+            if (dist <= maxDist && FastMath.acos(info.dir().dot(toPlayer.normalize())) <= halfFov) {
+                // **ACTIVA** el beacon rojo de toda la sala
+                lightPlacer.setRoomBeacon(room, true);
+            } else {
+                // **DESACTIVA** el beacon
+                lightPlacer.setRoomBeacon(room, false);
             }
-            unhighlight(info.room());
-        }
-    }
-
-    private void highlight(CameraData info) {
-        Room room = info.room();
-        if (redLights.containsKey(room)) return;
-
-        // crea el SpotLight
-        SpotLight red = new SpotLight();
-        red.setColor(new ColorRGBA(1, 0, 0, 1f).multLocal(2f));
-        red.setSpotRange(50f);
-
-        // innerAngle = half del halfFov (opcional, da un “corazón” más brillante)
-        float inner = halfFov * 0.5f;
-
-        red.setSpotInnerAngle(inner);
-        red.setSpotOuterAngle(halfFov);
-
-        // posición cenital sobre la sala
-        Vector3f ctr = room.center3f(info.baseY() + info.floorH() * 0.5f);
-        red.setPosition(new Vector3f(ctr.x, info.baseY() + info.floorH() - 0.1f, ctr.z));
-        red.setDirection(Vector3f.UNIT_Y.negate());
-
-        root.addLight(red);
-        redLights.put(room, red);
-    }
-
-
-    private void unhighlight(Room room) {
-        SpotLight red = redLights.remove(room);
-        if (red != null) {
-            // llama a removeLight directamente en el nodo
-            root.removeLight(red);
         }
     }
 
