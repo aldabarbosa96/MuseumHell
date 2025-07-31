@@ -145,7 +145,10 @@ public class WorldBuilder {
 
                 Connection c = findConnection(conns, r, dir);
                 if (c == null) {
-                    a2WallBuilder.buildSolid(r, dir, y0, h);
+                    // Antes de poner un muro sólido, comprobamos si chocaría con alguna puerta ya creada
+                    if (!isDoorIntersectingWall(r, dir)) {
+                        a2WallBuilder.buildSolid(r, dir, y0, h);
+                    }
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
@@ -156,6 +159,44 @@ public class WorldBuilder {
         }
     }
 
+    private boolean isDoorIntersectingWall(Room r, Direction dir) {
+        // DOOR_T es el grosor de la puerta, lo tomamos de tus constantes
+        float halfDoorThick = DOOR_T * 0.5f + 0.1f; // + un pequeño margen
+        for (Door d : doors) {
+            Vector3f p = d.getAccessPoint(); // posición central de la puerta
+            switch (dir) {
+                case NORTH:
+                    // plano Z = r.z
+                    if (Math.abs(p.z - r.z()) < halfDoorThick
+                            && p.x >= r.x() && p.x <= r.x() + r.w()) {
+                        return true;
+                    }
+                    break;
+                case SOUTH:
+                    // plano Z = r.z + r.h
+                    if (Math.abs(p.z - (r.z() + r.h())) < halfDoorThick
+                            && p.x >= r.x() && p.x <= r.x() + r.w()) {
+                        return true;
+                    }
+                    break;
+                case WEST:
+                    // plano X = r.x
+                    if (Math.abs(p.x - r.x()) < halfDoorThick
+                            && p.z >= r.z() && p.z <= r.z() + r.h()) {
+                        return true;
+                    }
+                    break;
+                case EAST:
+                    // plano X = r.x + r.w
+                    if (Math.abs(p.x - (r.x() + r.w())) < halfDoorThick
+                            && p.z >= r.z() && p.z <= r.z() + r.h()) {
+                        return true;
+                    }
+                    break;
+            }
+        }
+        return false;
+    }
 
     private boolean hasNeighbor(Room a, List<Room> rooms, Direction dir) {
         for (Room b : rooms) {

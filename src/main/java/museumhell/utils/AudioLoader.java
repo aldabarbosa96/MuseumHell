@@ -32,8 +32,8 @@ public class AudioLoader {
     }
 
     public void loadAllSounds() {
-        register("ambient1", "Sounds/ambientSound1.ogg", true, 0.1f);
-        register("ambient2", "Sounds/ambientSound2.ogg", true, 0.2f);
+        register("ambient1", "Sounds/ambientSound1.ogg", true, 0.15f);
+        register("ambient2", "Sounds/ambientSound2.ogg", true, 0.25f);
         register("door", "Sounds/doorSound.ogg", false, 1f);
         register("flashlight", "Sounds/click.ogg", false, 0.3f);
         register("footstep1", "Sounds/footsteps1.ogg", false, 1);
