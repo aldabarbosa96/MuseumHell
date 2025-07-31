@@ -105,7 +105,9 @@ public class MuseumHell extends SimpleApplication {
 
         cameraBase.scale(0.5f);
 
-        float cameraExtrusion = 1.25f;
+        float baseExtrusion = 1.25f;
+        float cameraExtrusion = baseExtrusion + WALL_T * 0.5f * FastMath.sqrt(2f);
+
         var camBuilder = new Camera(rootNode, cameraBase, cameraExtrusion);
         camBuilder.build(museum);
 

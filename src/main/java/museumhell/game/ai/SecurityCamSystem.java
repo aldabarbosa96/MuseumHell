@@ -28,6 +28,7 @@ public class SecurityCamSystem extends BaseAppState {
     private final Node root;
     private final Map<Room, SpotLight> redLights = new HashMap<>();
     private final List<Geometry> debugLines = new ArrayList<>();
+    private static final boolean DEBUG_RAYS = false;
 
     // Parámetros del cono
     private final float maxDist = 20f;
@@ -41,7 +42,7 @@ public class SecurityCamSystem extends BaseAppState {
 
     @Override
     protected void initialize(Application app) {
-        createDebugLines();
+        if (DEBUG_RAYS) createDebugLines();
     }
 
     @Override
@@ -101,17 +102,13 @@ public class SecurityCamSystem extends BaseAppState {
         // 1) Construye el mesh con dos vértices
         Mesh mesh = new Mesh();
         mesh.setMode(Mesh.Mode.Lines);
-        mesh.setBuffer(VertexBuffer.Type.Position, 3, BufferUtils.createFloatBuffer(new float[]{
-                from.x, from.y, from.z,
-                to.x,   to.y,   to.z
-        }));
+        mesh.setBuffer(VertexBuffer.Type.Position, 3, BufferUtils.createFloatBuffer(new float[]{from.x, from.y, from.z, to.x, to.y, to.z}));
         mesh.setBuffer(VertexBuffer.Type.Index, 2, new short[]{0, 1});
         mesh.updateBound();
 
         // 2) Crea la geometría
         Geometry geom = new Geometry(name, mesh);
-        Material mat = new Material(getApplication().getAssetManager(),
-                "Common/MatDefs/Misc/Unshaded.j3md");
+        Material mat = new Material(getApplication().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
         mat.setColor("Color", color);
         // **Habilita el depth test** para que se ocluyan con la geometría:
         mat.getAdditionalRenderState().setDepthTest(true);
@@ -127,7 +124,7 @@ public class SecurityCamSystem extends BaseAppState {
 
     private void createDebugLines() {
         // color verde semitransparente
-        ColorRGBA col = new ColorRGBA(0, 1, 0, 0.6f);
+        ColorRGBA col = new ColorRGBA(1, 0, 0, 0.5f);
         for (CameraData info : camSys.getCameraData()) {
             Vector3f camPos = info.spat().getWorldTranslation();
             Vector3f dir = info.dir();
