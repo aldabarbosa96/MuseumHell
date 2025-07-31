@@ -88,16 +88,6 @@ public class MuseumHell extends SimpleApplication {
 
         physics.setDebugEnabled(false);
 
-        inputManager.addMapping("ToggleDebug", new KeyTrigger(KeyInput.KEY_TAB)); // todo --> mover a InputSystem
-        inputManager.addListener(new ActionListener() {
-            @Override
-            public void onAction(String name, boolean isPressed, float tpf) {
-                if (name.equals("ToggleDebug") && isPressed) {
-                    physics.setDebugEnabled(!physics.isDebugEnabled());
-                }
-            }
-        }, "ToggleDebug");
-
         /* ---------- WORLD ---------- */
         MuseumLayout museum = MuseumGenerator.generate(150, 125, 3, System.nanoTime());
         world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace(), visuals);
@@ -126,7 +116,7 @@ public class MuseumHell extends SimpleApplication {
         stateManager.attach(new SecurityCamSystem(camBuilder, player, rootNode, world.getLightPlacer()));
 
         /* ---------- SYSTEMS ---------- */
-        input = new InputSystem(inputManager, flyCam);
+        input = new InputSystem(inputManager, flyCam, physics);
         input.setAudioManager(audio);
         input.setupCameraFollow(cam);
         input.registerPlayerControl(player);

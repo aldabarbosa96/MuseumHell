@@ -1,5 +1,6 @@
 package museumhell.game.input;
 
+import com.jme3.bullet.BulletAppState;
 import com.jme3.input.FlyByCamera;
 import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
@@ -18,6 +19,7 @@ import static museumhell.utils.ConstantManager.*;
 public class InputSystem implements ActionListener {
     private WorldBuilder world;
     private AudioLoader audio;
+    private BulletAppState physics;
     private final InputManager inMgr;
     private final FlyByCamera flyCam;
     private Camera cam;
@@ -25,9 +27,10 @@ public class InputSystem implements ActionListener {
     private LootSystem lootMgr;
     private boolean up, down, left, right, sprint, crouch, debug, jump;
 
-    public InputSystem(InputManager inMgr, FlyByCamera flyCam) {
+    public InputSystem(InputManager inMgr, FlyByCamera flyCam, BulletAppState physics) {
         this.inMgr = inMgr;
         this.flyCam = flyCam;
+        this.physics = physics;
         setupMappings();
     }
 
@@ -64,7 +67,10 @@ public class InputSystem implements ActionListener {
     public void onAction(String name, boolean isPressed, float tpf) {
         switch (name) {
             case "Debug" -> {
-                debug = isPressed; // todo --> mover lógica de debug aquí en un futuro
+                debug = isPressed;
+                if (isPressed){
+                    physics.setDebugEnabled(!physics.isDebugEnabled());
+                }
             }
             case "Left" -> left = isPressed;
             case "Right" -> right = isPressed;
