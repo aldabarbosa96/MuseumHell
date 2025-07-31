@@ -1,5 +1,7 @@
 package museumhell.game.input;
 
+import com.jme3.app.Application;
+import com.jme3.app.state.BaseAppState;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.input.FlyByCamera;
 import com.jme3.input.InputManager;
@@ -10,13 +12,13 @@ import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import museumhell.game.player.PlayerController;
-import museumhell.engine.world.WorldBuilder;
+import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
 import museumhell.utils.AudioLoader;
 
 import static museumhell.utils.ConstantManager.*;
 
-public class InputSystem implements ActionListener {
+public class InputSystem extends BaseAppState implements ActionListener {
     private WorldBuilder world;
     private AudioLoader audio;
     private BulletAppState physics;
@@ -154,5 +156,26 @@ public class InputSystem implements ActionListener {
 
     public boolean isJump() {
         return jump;
+    }
+
+    @Override
+    protected void initialize(Application application) {
+
+    }
+
+    @Override
+    protected void cleanup(Application application) {
+        inMgr.clearMappings();
+        inMgr.removeListener(this);
+    }
+
+    @Override
+    protected void onEnable() {
+
+    }
+
+    @Override
+    protected void onDisable() {
+
     }
 }

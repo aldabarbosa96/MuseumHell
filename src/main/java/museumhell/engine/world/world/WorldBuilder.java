@@ -1,4 +1,4 @@
-package museumhell.engine.world;
+package museumhell.engine.world.world;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;

@@ -11,7 +11,7 @@ import java.util.*;
 
 import static museumhell.utils.ConstantManager.WALL_T;
 
-public class Camera {
+public class SecurityCamera {
     private static final float THIN_T = 0.33f;
     private final Node root;
     private final Spatial cameraBase;
@@ -19,7 +19,7 @@ public class Camera {
     private final Random rnd = new Random();
     private final List<CameraData> camInfos = new ArrayList<>();
 
-    public Camera(Node root, Spatial cameraBase, float extrusion) {
+    public SecurityCamera(Node root, Spatial cameraBase, float extrusion) {
         this.root = root;
         this.cameraBase = cameraBase;
         this.extrusion = extrusion;

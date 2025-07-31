@@ -13,8 +13,8 @@ import com.jme3.scene.Node;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.util.BufferUtils;
 import museumhell.engine.world.builders._7LightPlacer;
-import museumhell.engine.world.levelgen.roomObjects.Camera;
-import museumhell.engine.world.levelgen.roomObjects.Camera.CameraData;
+import museumhell.engine.world.levelgen.roomObjects.SecurityCamera;
+import museumhell.engine.world.levelgen.roomObjects.SecurityCamera.CameraData;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.game.player.PlayerController;
 
@@ -25,7 +25,7 @@ import java.util.Map;
 
 public class SecurityCamSystem extends BaseAppState {
     private final _7LightPlacer lightPlacer;
-    private final Camera camSys;
+    private final SecurityCamera camSys;
     private final PlayerController player;
     private final Node root;
     private final Map<Room, SpotLight> redLights = new HashMap<>();
@@ -36,7 +36,7 @@ public class SecurityCamSystem extends BaseAppState {
     private final float maxDist = 20f;
     private final float halfFov = FastMath.DEG_TO_RAD * 30;
 
-    public SecurityCamSystem(Camera camSys, PlayerController player, Node root, _7LightPlacer lightPlacer) {
+    public SecurityCamSystem(SecurityCamera camSys, PlayerController player, Node root, _7LightPlacer lightPlacer) {
         this.camSys = camSys;
         this.player = player;
         this.root = root;

@@ -1,11 +1,11 @@
-package museumhell.game.interaction;
+package museumhell.game.input;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.math.Vector3f;
 import museumhell.game.player.PlayerController;
 import museumhell.ui.Prompt;
-import museumhell.engine.world.WorldBuilder;
+import museumhell.engine.world.world.WorldBuilder;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.game.loot.LootItem;
 import museumhell.game.loot.LootSystem;
