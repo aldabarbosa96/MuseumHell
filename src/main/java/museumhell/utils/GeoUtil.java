@@ -3,7 +3,7 @@ package museumhell.utils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
-import museumhell.engine.world.levelgen.Direction;
+import museumhell.engine.world.levelgen.enums.Direction;
 
 import java.util.List;
 

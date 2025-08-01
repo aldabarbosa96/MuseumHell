@@ -9,12 +9,14 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 import museumhell.engine.world.levelgen.*;
+import museumhell.engine.world.levelgen.enums.ConnectionType;
+import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.utils.GeoUtil;
 import museumhell.utils.GeoUtil.*;
 
 import java.util.*;
 
-import static museumhell.engine.world.levelgen.Direction.*;
+import static museumhell.engine.world.levelgen.enums.Direction.*;
 import static museumhell.utils.ConstantManager.*;
 
 public class _4StairBuilder {

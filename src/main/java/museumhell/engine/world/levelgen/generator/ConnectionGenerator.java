@@ -1,8 +1,8 @@
 package museumhell.engine.world.levelgen.generator;
 
 import museumhell.engine.world.levelgen.Connection;
-import museumhell.engine.world.levelgen.ConnectionType;
-import museumhell.engine.world.levelgen.Direction;
+import museumhell.engine.world.levelgen.enums.ConnectionType;
+import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.engine.world.levelgen.LevelLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.utils.GeoUtil;

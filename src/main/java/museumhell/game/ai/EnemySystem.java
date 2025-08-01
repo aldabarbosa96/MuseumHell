@@ -5,7 +5,6 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.PhysicsSpace;
-import com.jme3.bullet.control.CharacterControl;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.MuseumLayout;
@@ -13,8 +12,7 @@ import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.player.PlayerController;
 
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class EnemySystem extends BaseAppState {
     private final AssetManager am;
@@ -23,11 +21,12 @@ public class EnemySystem extends BaseAppState {
     private final MuseumLayout layout;
     private final WorldBuilder world;
     private final PlayerController player;
-
-    private float timer = 0f;
-    private boolean spawned = false;
-    private Enemy enemy;
     private final Random rnd = new Random();
+
+    private Enemy enemy;
+    private Room spawnRoom;
+    private int spawnFloorIdx;
+    private float timer = 0f;
 
     public EnemySystem(AssetManager am, BulletAppState bullet, Node rootNode, MuseumLayout layout, WorldBuilder world, PlayerController player) {
         this.am = am;
@@ -40,73 +39,90 @@ public class EnemySystem extends BaseAppState {
 
     @Override
     public void update(float tpf) {
-        if (!spawned) {
+        if (enemy == null) {
             timer += tpf;
             if (timer >= 5f) {
                 spawnEnemy();
-                spawned = true;
             }
-        } else if (enemy != null) {
+        } else {
             enemy.update(tpf);
+            if (enemy.isPatrolFinished()) {
+                // Regenera una ruta distinta desde la misma sala de spawn
+                List<Vector3f> pts = buildFullPatrolRoute(spawnRoom, spawnFloorIdx);
+                enemy.setPatrolPoints(pts);
+            }
         }
     }
 
     private void spawnEnemy() {
-        int floorIdx = rnd.nextInt(layout.floors().size());
-        List<Room> rooms = layout.floors().get(floorIdx).rooms();
-        Room start = rooms.get(rnd.nextInt(rooms.size()));
-        float y = layout.yOf(floorIdx);
+        spawnFloorIdx = rnd.nextInt(layout.floors().size());
+        List<Room> rooms = layout.floors().get(spawnFloorIdx).rooms();
+        spawnRoom = rooms.get(rnd.nextInt(rooms.size()));
+        float y = layout.yOf(spawnFloorIdx);
 
-        enemy = new Enemy(am, space, player, world, start, y, rootNode);
+        enemy = new Enemy(am, space, player, world, spawnRoom, y, rootNode);
+        enemy.setPatrolPoints(buildFullPatrolRoute(spawnRoom, spawnFloorIdx));
 
-        enemy.setPatrolPoints(buildPatrolRoute(start, floorIdx, 5));
-
-        Vector3f pos = start.center3f(y + 0.5f);
+        Vector3f pos = spawnRoom.center3f(y + 0.5f);
         enemy.setLocalTranslation(pos);
-        enemy.getControl(CharacterControl.class).setPhysicsLocation(pos);
+        enemy.getControl(com.jme3.bullet.control.CharacterControl.class).setPhysicsLocation(pos);
     }
 
-    private List<Vector3f> buildPatrolRoute(Room from, int fIdx, int len) {
+    private List<Vector3f> buildFullPatrolRoute(Room start, int fIdx) {
         float y = layout.yOf(fIdx) + 0.5f;
         var conns = layout.floors().get(fIdx).conns();
-        var route = new java.util.ArrayList<Vector3f>();
-        var visited = new java.util.ArrayList<Room>();
-        Room cur = from;
-        visited.add(cur);
+        List<Vector3f> route = new ArrayList<>();
+        Set<Room> visited = new HashSet<>();
+        Deque<Room> stack = new ArrayDeque<>();
 
-        for (int i = 0; i < len; i++) {
-            Room finalCur = cur;
-            Room finalCur1 = cur;
-            var opts = conns.stream().filter(c -> c.a() == finalCur || c.b() == finalCur).filter(c -> !visited.contains(c.a() == finalCur1 ? c.b() : c.a())).toList();
-            if (opts.isEmpty()) break;
-            var sel = opts.get(rnd.nextInt(opts.size()));
-            Room next = sel.a() == cur ? sel.b() : sel.a();
-            float dx, dz;
-            final float dx1 = (Math.max(cur.x(), next.x()) + Math.min(cur.x() + cur.w(), next.x() + next.w())) * 0.5f;
-            final float dz1 = (Math.max(cur.z(), next.z()) + Math.min(cur.z() + cur.h(), next.z() + next.h())) * 0.5f;
-            switch (sel.dir()) {
-                case NORTH -> {
-                    dx = dx1;
-                    dz = cur.z();
+        stack.push(start);
+        visited.add(start);
+
+        while (!stack.isEmpty()) {
+            Room cur = stack.peek();
+            var opts = conns.stream().filter(c -> c.a() == cur || c.b() == cur).filter(c -> !visited.contains(c.a() == cur ? c.b() : c.a())).toList();
+
+            if (!opts.isEmpty()) {
+                var sel = opts.get(rnd.nextInt(opts.size()));
+                Room next = (sel.a() == cur ? sel.b() : sel.a());
+
+                // centro de la puerta:
+                float dx1 = (Math.max(cur.x(), next.x()) + Math.min(cur.x() + cur.w(), next.x() + next.w())) * 0.5f;
+                float dz1 = (Math.max(cur.z(), next.z()) + Math.min(cur.z() + cur.h(), next.z() + next.h())) * 0.5f;
+                float dx, dz;
+                switch (sel.dir()) {
+                    case NORTH -> {
+                        dx = dx1;
+                        dz = cur.z();
+                    }
+                    case SOUTH -> {
+                        dx = dx1;
+                        dz = cur.z() + cur.h();
+                    }
+                    case EAST -> {
+                        dz = dz1;
+                        dx = cur.x() + cur.w();
+                    }
+                    case WEST -> {
+                        dz = dz1;
+                        dx = cur.x();
+                    }
+                    default -> throw new IllegalStateException("Dirección desconocida: " + sel.dir());
                 }
-                case SOUTH -> {
-                    dx = dx1;
-                    dz = cur.z() + cur.h();
-                }
-                case EAST -> {
-                    dz = dz1;
-                    dx = cur.x() + cur.w();
-                }
-                default -> {
-                    dz = dz1;
-                    dx = cur.x();
+                route.add(new Vector3f(dx, y, dz));
+                // centro de la sala siguiente:
+                route.add(next.center3f(y));
+
+                visited.add(next);
+                stack.push(next);
+            } else {
+                stack.pop();
+                if (!stack.isEmpty()) {
+                    route.add(stack.peek().center3f(y));
                 }
             }
-            route.add(new Vector3f(dx, y, dz));
-            route.add(next.center3f(y));
-            visited.add(next);
-            cur = next;
         }
+
         return route;
     }
 

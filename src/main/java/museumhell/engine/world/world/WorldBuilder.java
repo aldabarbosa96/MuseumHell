@@ -6,6 +6,8 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.builders.*;
 import museumhell.engine.world.levelgen.*;
+import museumhell.engine.world.levelgen.enums.ConnectionType;
+import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
 import museumhell.utils.AssetLoader;
 import museumhell.utils.GeoUtil.*;

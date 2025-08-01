@@ -14,13 +14,13 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import museumhell.engine.world.levelgen.Direction;
+import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.utils.AssetLoader;
 
 import java.util.List;
 
-import static museumhell.engine.world.levelgen.Direction.*;
+import static museumhell.engine.world.levelgen.enums.Direction.*;
 import static museumhell.utils.ConstantManager.*;
 
 public class _2WallBuilder {

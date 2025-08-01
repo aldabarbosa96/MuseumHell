@@ -4,7 +4,7 @@ import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
-import museumhell.engine.world.levelgen.Direction;
+import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.levelgen.Room;
 

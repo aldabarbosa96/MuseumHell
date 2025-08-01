@@ -18,14 +18,11 @@ import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.player.PlayerController;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class Enemy extends Node {
     private enum State {WANDER, CHASE}
+
     private State state = State.WANDER;
 
     private final CharacterControl control;
@@ -41,6 +38,7 @@ public class Enemy extends Node {
 
     private final List<Vector3f> patrolPoints = new ArrayList<>();
     private int patrolIndex = 0;
+    private boolean patrolFinished = false;
 
     private Vector3f lastDir = new Vector3f(1, 0, 0);
     private Vector3f lastPos = new Vector3f();
@@ -57,6 +55,7 @@ public class Enemy extends Node {
         this.player = player;
         this.world = world;
 
+        // Visual & Physics
         Geometry g = new Geometry("GuardCube", new Box(1, 6, 1));
         Material m = new Material(am, "Common/MatDefs/Misc/Unshaded.j3md");
         m.setColor("Color", ColorRGBA.Black);
@@ -66,14 +65,12 @@ public class Enemy extends Node {
         control = new CharacterControl(new CapsuleCollisionShape(1f, 1f), .05f);
         control.setGravity(30);
         control.setFallSpeed(20);
-
         Vector3f spawn = room.center3f(baseY + 0.5f);
         setLocalTranslation(spawn);
         control.setPhysicsLocation(spawn);
         addControl(control);
         space.add(control);
         rootNode.attachChild(this);
-
         lastPos.set(spawn);
     }
 
@@ -81,33 +78,31 @@ public class Enemy extends Node {
         patrolPoints.clear();
         patrolPoints.addAll(pts);
         patrolIndex = 0;
+        patrolFinished = false;
+    }
+
+    public boolean isPatrolFinished() {
+        return patrolFinished;
     }
 
     public void update(float tpf) {
         Vector3f pos = control.getPhysicsLocation();
 
+        // Abrir puertas si está cerca
         Door d = world.nearestDoor(pos, 3.5f);
         if (d != null) {
-            // 2) Si aún no la hemos marcado para abrirla, solicitamos apertura
             if (!openingDoors.contains(d)) {
                 world.tryUseDoor(pos);
                 openingDoors.add(d);
             }
-            // 3) Mientras no esté abierta, quedamos esperando
-            if (!d.isOpen()) {
-                return;
-            }
-            // 4) Una vez abierta podemos borrarla del set y continuar
+            if (!d.isOpen()) return;
             openingDoors.remove(d);
         }
 
+        // Estado
         if (canSee(pos)) state = State.CHASE;
-
-        if (state == State.CHASE) {
-            chase(pos);
-        } else {
-            wander(pos);
-        }
+        if (state == State.CHASE) chase(pos);
+        else wander(pos);
 
         avoidObstacles(pos);
         detectStuck(pos, tpf);
@@ -121,13 +116,26 @@ public class Enemy extends Node {
     }
 
     private void wander(Vector3f p) {
+        if (patrolFinished) return;
+
         if (!patrolPoints.isEmpty()) {
+            if (patrolIndex >= patrolPoints.size()) {
+                patrolFinished = true;
+                return;
+            }
+
             Vector3f tgt = patrolPoints.get(patrolIndex);
             Vector3f d = tgt.subtract(p).setY(0);
+
             if (d.length() < pointTol) {
-                patrolIndex = (patrolIndex + 1) % patrolPoints.size();
+                patrolIndex++;
+                if (patrolIndex >= patrolPoints.size()) {
+                    patrolFinished = true;
+                    return;
+                }
                 d = patrolPoints.get(patrolIndex).subtract(p).setY(0);
             }
+
             Vector3f dir = d.normalizeLocal();
             lastDir.set(dir);
             control.setWalkDirection(dir.mult(wanderSpeed));
@@ -164,8 +172,8 @@ public class Enemy extends Node {
     private void detectStuck(Vector3f p, float tpf) {
         if (lastPos.distance(p) < STUCK_EPS) {
             stuckTimer += tpf;
-            if (stuckTimer > STUCK_THR) {
-                patrolIndex = (patrolIndex + 1) % patrolPoints.size();
+            if (stuckTimer > STUCK_THR && !patrolFinished) {
+                patrolIndex++;
                 stuckTimer = 0;
                 lastPos.set(p);
             }
@@ -180,7 +188,7 @@ public class Enemy extends Node {
         Vector3f d = tp.subtract(p);
         if (d.length() > detectRange) return false;
         if (lastDir.dot(d.normalizeLocal()) < cosHalfFov) return false;
-        PhysicsCollisionObject hit = space.rayTest(p, tp).stream().min((a, b) -> Float.compare(a.getHitFraction(), b.getHitFraction())).map(PhysicsRayTestResult::getCollisionObject).orElse(null);
+        PhysicsCollisionObject hit = space.rayTest(p, tp).stream().min(Comparator.comparing(PhysicsRayTestResult::getHitFraction)).map(PhysicsRayTestResult::getCollisionObject).orElse(null);
         return hit == player.getCharacterControl();
     }
 }
