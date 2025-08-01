@@ -39,6 +39,7 @@ public class AudioLoader {
         register("footstep1", "Sounds/footsteps1.ogg", false, 1);
         register("footstep2", "Sounds/footsteps2.ogg", false, 1);
         register("footstep3", "Sounds/footsteps3.ogg", false, 1);
+        register("alarm", "Sounds/alarm.ogg", false, 0.5f);
     }
 
     private void register(String name, String path, boolean looping, float volume) {

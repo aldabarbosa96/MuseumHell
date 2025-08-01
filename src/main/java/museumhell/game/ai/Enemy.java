@@ -35,8 +35,8 @@ public class Enemy extends Node {
 
     private final float detectRange = 15f;
     private final float cosHalfFov = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
-    private final float wanderSpeed = 0.1f;
-    private final float chaseSpeed = 0.2f;
+    private final float wanderSpeed = 0.075f;
+    private final float chaseSpeed = 0.1f;
     private final float pointTol = 0.25f;
 
     private final List<Vector3f> patrolPoints = new ArrayList<>();
@@ -45,7 +45,7 @@ public class Enemy extends Node {
     private Vector3f lastDir = new Vector3f(1, 0, 0);
     private Vector3f lastPos = new Vector3f();
     private float stuckTimer = 0f;
-    private static final float STUCK_EPS = 0.02f;
+    private static final float STUCK_EPS = 0.1f;
     private static final float STUCK_THR = 1f;
 
     private final Set<Door> openingDoors = new HashSet<>();
@@ -164,9 +164,10 @@ public class Enemy extends Node {
     private void detectStuck(Vector3f p, float tpf) {
         if (lastPos.distance(p) < STUCK_EPS) {
             stuckTimer += tpf;
-            if (stuckTimer > STUCK_THR && !patrolPoints.isEmpty()) {
+            if (stuckTimer > STUCK_THR) {
                 patrolIndex = (patrolIndex + 1) % patrolPoints.size();
                 stuckTimer = 0;
+                lastPos.set(p);
             }
         } else {
             stuckTimer = 0;

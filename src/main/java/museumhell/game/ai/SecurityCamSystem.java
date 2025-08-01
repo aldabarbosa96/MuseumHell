@@ -6,34 +6,26 @@ import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.bullet.collision.PhysicsRayTestResult;
-import com.jme3.material.Material;
-import com.jme3.material.RenderState;
 import com.jme3.math.FastMath;
-import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
-import com.jme3.math.ColorRGBA;
-import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
-import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
-import com.jme3.scene.VertexBuffer;
-import com.jme3.util.BufferUtils;
 import museumhell.engine.world.builders._6LightPlacer;
 import museumhell.game.ai.SecurityCamera.CameraData;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.game.player.PlayerController;
+import museumhell.utils.AudioLoader;
 
 import java.util.*;
 
 public class SecurityCamSystem extends BaseAppState {
-
     private final _6LightPlacer lightPlacer;
     private PhysicsSpace space;
     private final SecurityCamera camSys;
     private final PlayerController player;
     private final Node root;
     private final List<Geometry> debugLines = new ArrayList<>();
-    private static final boolean DEBUG_RAYS = true;
+    //private static final boolean DEBUG_RAYS = false;
     private final float maxDist = 20f;
     private final float halfFov = FastMath.DEG_TO_RAD * 30;
 
@@ -108,7 +100,7 @@ public class SecurityCamSystem extends BaseAppState {
             detected.put(room, true);
         }
 
-        // 3) Si estamos en modo DEBUG, limpiar y dibujar sólo los conos de las cámaras que detectaron
+        /* 3) Si estamos en modo DEBUG, limpiar y dibujar sólo los conos de las cámaras que detectaron
         if (DEBUG_RAYS) {
             debugLines.forEach(root::detachChild);
             debugLines.clear();
@@ -117,15 +109,16 @@ public class SecurityCamSystem extends BaseAppState {
                     drawDebugForCamera(info);
                 }
             }
-        }
+        }*/
 
         // 4) Finalmente, encender/apagar el beacon rojo de cada sala UNA VEZ
         for (var entry : detected.entrySet()) {
             lightPlacer.setRoomBeacon(entry.getKey(), entry.getValue());
+
         }
     }
 
-    private void drawDebugForCamera(CameraData info) {
+    /*private void drawDebugForCamera(CameraData info) {
         ColorRGBA col = new ColorRGBA(1, 0, 0, 0.5f);
         Vector3f camPos = info.spat().getWorldTranslation();
         Vector3f dir = info.dir();
@@ -167,7 +160,7 @@ public class SecurityCamSystem extends BaseAppState {
         geom.setMaterial(mat);
         geom.setQueueBucket(RenderQueue.Bucket.Transparent);
         return geom;
-    }
+    }*/
 
     @Override
     protected void cleanup(Application app) {
