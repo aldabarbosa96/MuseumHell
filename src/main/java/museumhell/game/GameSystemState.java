@@ -61,7 +61,7 @@ public class GameSystemState extends BaseAppState {
         Camera camera = sApp.getCamera();
 
         // 1) Cámaras de seguridad
-        getStateManager().attach(new SecurityCamSystem(camBuilder, player, rootNode, world.getLightPlacer()));
+        getStateManager().attach(new SecurityCamSystem(camBuilder, player, rootNode, world.getLightPlacer(), audio));
 
         // 2) Sistema de input
         InputSystem input = new InputSystem(im, fc, physics);

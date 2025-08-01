@@ -98,8 +98,8 @@ public class _6LightPlacer {
         for (Room room : rooms) {
             Vector3f ctr = room.center3f(baseY + height * 0.5f);
             PointLight beacon = new PointLight();
-            beacon.setColor(new ColorRGBA(1f, 0f, 0f, 1f).multLocal(2f));
-            beacon.setRadius( Math.max(room.w(), room.h()) * 1.5f ); // cubre la sala
+            beacon.setColor(new ColorRGBA(0.5f, 0f, 0f, 1f).multLocal(3f));
+            beacon.setRadius( Math.max(room.w(), room.h()) * 3f ); // cubre la sala
             beacon.setPosition(new Vector3f(ctr.x, baseY + height - 0.1f, ctr.z));
             beacon.setEnabled(false);
             root.addLight(beacon);
