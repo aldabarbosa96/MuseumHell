@@ -24,7 +24,7 @@ import museumhell.game.player.MoveEffectState;
 import museumhell.game.player.PlayerController;
 import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
-import museumhell.utils.AudioLoader;
+import museumhell.utils.media.AudioLoader;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;

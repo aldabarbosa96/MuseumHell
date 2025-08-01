@@ -13,7 +13,7 @@ import museumhell.engine.world.builders._6LightPlacer;
 import museumhell.game.ai.SecurityCamera.CameraData;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.game.player.PlayerController;
-import museumhell.utils.AudioLoader;
+import museumhell.utils.media.AudioLoader;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +31,7 @@ public class SecurityCamSystem extends BaseAppState {
     private Room alarmRoom = null;
     private int toggleCount = 0;
     private float blinkTimer = 0f;
-    private static final float BLINK_INTERVAL = 0.45f;
+    private static final float BLINK_INTERVAL = 0.425f;
     private final float maxDist = 20f;
     private final float halfFov = FastMath.DEG_TO_RAD * 30;
 

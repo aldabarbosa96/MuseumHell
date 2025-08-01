@@ -8,7 +8,7 @@ import com.jme3.renderer.Camera;
 import museumhell.engine.world.builders._6LightPlacer;
 import museumhell.game.input.InputSystem;
 import museumhell.ui.Hud;
-import museumhell.utils.AudioLoader;
+import museumhell.utils.media.AudioLoader;
 
 import java.util.Random;
 

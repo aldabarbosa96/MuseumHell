@@ -9,7 +9,7 @@ import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import museumhell.utils.AssetLoader;
+import museumhell.utils.media.AssetLoader;
 import museumhell.utils.GeoUtil.Rect;
 
 import java.util.List;

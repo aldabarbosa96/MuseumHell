@@ -16,7 +16,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.engine.world.levelgen.Room;
-import museumhell.utils.AssetLoader;
+import museumhell.utils.media.AssetLoader;
 
 import java.util.List;
 

@@ -14,7 +14,7 @@ import com.jme3.renderer.Camera;
 import museumhell.game.player.PlayerController;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
-import museumhell.utils.AudioLoader;
+import museumhell.utils.media.AudioLoader;
 
 import static museumhell.utils.ConstantManager.*;
 

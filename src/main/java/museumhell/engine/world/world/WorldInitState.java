@@ -11,7 +11,7 @@ import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
 import museumhell.game.ai.SecurityCamera;
-import museumhell.utils.AssetLoader;
+import museumhell.utils.media.AssetLoader;
 
 import java.util.List;
 

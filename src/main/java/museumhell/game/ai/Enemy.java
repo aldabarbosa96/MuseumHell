@@ -1,3 +1,4 @@
+// Enemy.java
 package museumhell.game.ai;
 
 import com.jme3.asset.AssetManager;
@@ -7,12 +8,10 @@ import com.jme3.bullet.collision.PhysicsRayTestResult;
 import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
 import com.jme3.bullet.control.CharacterControl;
 import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
-import com.jme3.scene.shape.Box;
-import com.jme3.material.Material;
-import com.jme3.math.ColorRGBA;
+import com.jme3.scene.Spatial;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.world.WorldBuilder;
@@ -55,22 +54,24 @@ public class Enemy extends Node {
         this.player = player;
         this.world = world;
 
-        // Visual & Physics
-        Geometry g = new Geometry("GuardCube", new Box(1, 6, 1));
-        Material m = new Material(am, "Common/MatDefs/Misc/Unshaded.j3md");
-        m.setColor("Color", ColorRGBA.Black);
-        g.setMaterial(m);
-        attachChild(g);
+        Spatial model = am.loadModel("Models/Monster1.glb");
+        model.setLocalScale(0.5f);
+        model.setLocalTranslation(0, -1.65f, 0);
+        model.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.PI, Vector3f.UNIT_Y)); // todo --> revisar (va de lado)
+        attachChild(model);
 
+        // Control físico (capsule) independiente del modelo
         control = new CharacterControl(new CapsuleCollisionShape(1f, 1f), .05f);
         control.setGravity(30);
         control.setFallSpeed(20);
+
         Vector3f spawn = room.center3f(baseY + 0.5f);
         setLocalTranslation(spawn);
         control.setPhysicsLocation(spawn);
         addControl(control);
         space.add(control);
         rootNode.attachChild(this);
+
         lastPos.set(spawn);
     }
 
@@ -88,7 +89,7 @@ public class Enemy extends Node {
     public void update(float tpf) {
         Vector3f pos = control.getPhysicsLocation();
 
-        // Abrir puertas si está cerca
+        // 1) Abrir puertas si está cerca
         Door d = world.nearestDoor(pos, 3.5f);
         if (d != null) {
             if (!openingDoors.contains(d)) {
@@ -99,11 +100,21 @@ public class Enemy extends Node {
             openingDoors.remove(d);
         }
 
-        // Estado
-        if (canSee(pos)) state = State.CHASE;
+        // 2) Determinar si ve al jugador
+        boolean seesPlayer = canSee(pos);
+
+        // 3) Cambiar estado
+        if (seesPlayer) {
+            state = State.CHASE;
+        } else if (state == State.CHASE) {
+            state = State.WANDER;
+        }
+
+        // 4) Comportamiento según estado
         if (state == State.CHASE) chase(pos);
         else wander(pos);
 
+        // 5) Ajustes de movimiento
         avoidObstacles(pos);
         detectStuck(pos, tpf);
         setLocalTranslation(control.getPhysicsLocation());

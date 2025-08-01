@@ -14,8 +14,8 @@ import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.world.WorldInitState;
 import museumhell.game.GameSystemState;
 import museumhell.game.player.PlayerController;
-import museumhell.utils.AudioLoader;
-import museumhell.utils.AssetLoader;
+import museumhell.utils.media.AudioLoader;
+import museumhell.utils.media.AssetLoader;
 
 import java.awt.*;
 

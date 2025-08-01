@@ -9,7 +9,7 @@ import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.enums.ConnectionType;
 import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.engine.world.levelgen.generator.ConnectionGenerator;
-import museumhell.utils.AssetLoader;
+import museumhell.utils.media.AssetLoader;
 import museumhell.utils.GeoUtil.*;
 
 import java.util.*;
