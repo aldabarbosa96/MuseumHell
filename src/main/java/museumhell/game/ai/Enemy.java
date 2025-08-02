@@ -1,6 +1,7 @@
 package museumhell.game.ai;
 
 
+import com.jme3.anim.AnimComposer;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.bullet.collision.PhysicsRayTestResult;
@@ -25,6 +26,7 @@ import java.util.Set;
 
 public class Enemy extends Node {
     private enum State {WANDER, CHASE}
+
     private State state = State.WANDER;
 
     private final CharacterControl control;
@@ -32,10 +34,12 @@ public class Enemy extends Node {
     private final PlayerController player;
     private final Spatial model;
     private final WorldBuilder world;
+    private AnimComposer composer;
+    private String lastAnim = "";
 
     private static final float DETECT_RANGE = 15f;
     private static final float COS_HALF_FOV = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
-    private static final float WANDER_SPEED = 0.075f;
+    private static final float WANDER_SPEED = 0.05f;
     private static final float CHASE_SPEED = 0.1f;
     private static final float POINT_TOL = 0.25f;
 
@@ -50,11 +54,11 @@ public class Enemy extends Node {
     private final Set<Door> openingDoors = new HashSet<>();
     private final Random rnd = new Random();
     private boolean avoiding = false;
+    private int avoidDirSign = 0;
     private final Vector3f avoidOrigin = new Vector3f();
     private static final float AVOID_DISTANCE = 1f;
-    private final Quaternion[] rotSamples = new Quaternion[13];
+    private Quaternion[] rotSamples;
     private final Vector3f candDir = new Vector3f();
-    private final Vector3f bestDir = new Vector3f();
     private final Vector3f scratchVec = new Vector3f();
     private final Vector3f scratchEnd = new Vector3f();
     private final Quaternion lookQuat = new Quaternion();
@@ -69,32 +73,46 @@ public class Enemy extends Node {
         this.world = world;
 
         // Precompute ±90° in 15° steps around Y
-        for (int i = -6; i <= 6; i++) {
-            rotSamples[i + 6] = new Quaternion().fromAngleAxis(i * 15f * FastMath.DEG_TO_RAD, Vector3f.UNIT_Y);
+        int samples = 16;
+        rotSamples = new Quaternion[samples];
+        for (int i = 0; i < samples; i++) {
+            float angle = FastMath.TWO_PI * i / samples;
+            rotSamples[i] = new Quaternion().fromAngleAxis(angle, Vector3f.UNIT_Y);
         }
 
         // Load and orient model
-        model = am.get("wander1");
-        model.setLocalScale(0.55f);
+        model = am.get("wander1Animated");
+        model.setLocalScale(0.525f);
         model.rotate(0, -FastMath.HALF_PI, 0);
-        model.setLocalTranslation(0, -1.75f, 0);
+        model.setLocalTranslation(0, -1.7f, 0);
+
+        // Initialize AnimComposer
+        model.depthFirstTraversal(spat -> {
+            if (composer == null) {
+                composer = spat.getControl(AnimComposer.class);
+            }
+        });
+        if (composer == null) {
+            throw new IllegalStateException("El modelo no tiene AnimComposer");
+        }
+
         attachChild(model);
 
         // Physics control
         control = new CharacterControl(new CapsuleCollisionShape(1f, 1f), .05f);
         control.setGravity(30);
         control.setFallSpeed(20);
+        addControl(control);
+        space.add(control);
+        rootNode.attachChild(this);
 
         // Spawn position
         Vector3f spawn = room.center3f(baseY + 0.5f);
         setLocalTranslation(spawn);
         control.setPhysicsLocation(spawn);
-        addControl(control);
-        space.add(control);
-        rootNode.attachChild(this);
-
         lastPos.set(spawn);
     }
+
 
     public void setPatrolPoints(List<Vector3f> pts) {
         patrolPoints.clear();
@@ -123,21 +141,23 @@ public class Enemy extends Node {
 
         // 2) State transition
         boolean seesPlayer = canSee(pos);
-        if (seesPlayer) state = State.CHASE;
-        else if (state == State.CHASE) state = State.WANDER;
+        state = seesPlayer ? State.CHASE : state == State.CHASE ? State.WANDER : state;
 
         // 3) Behavior
         if (state == State.CHASE) chase(pos);
         else wander(pos);
 
-        // 4) Obstacle avoidance & stuck detection
+        // 4) Animación de caminar
+        playAnimationIfChanged("ArmatureAction");
+
+        // 5) Avoidance & stuck detection
         avoidObstacles(pos);
         detectStuck(pos, tpf);
 
-        // 5) Apply physics location
+        // 6) Apply physics location
         setLocalTranslation(control.getPhysicsLocation());
 
-        // 6) Smooth model rotation
+        // 7) Smooth model rotation
         if (lastDir.lengthSquared() > 0f) {
             lookQuat.lookAt(lastDir.normalizeLocal(), Vector3f.UNIT_Y);
             desiredQuat.set(lookQuat).multLocal(offsetQuat);
@@ -146,6 +166,7 @@ public class Enemy extends Node {
             model.setLocalRotation(currentQuat);
         }
     }
+
 
     private void chase(Vector3f p) {
         Vector3f dir = player.getLocation().subtract(p).setY(0).normalizeLocal();
@@ -191,42 +212,52 @@ public class Enemy extends Node {
     }
 
     private void avoidObstacles(Vector3f p) {
+        // Si ya estamos evitando y ya avanzamos AVOID_DISTANCE, salimos de evasión
         if (avoiding) {
             if (avoidOrigin.distance(p) > AVOID_DISTANCE) {
                 avoiding = false;
+                avoidDirSign = 0;
             } else {
                 return;
             }
         }
-
         Vector3f dirNorm = lastDir.normalizeLocal();
         float probeLen = 1.5f;
 
+        // chequeo rápido: si adelante está despejado, nada que esquivar
         if (measureClearance(p, dirNorm, probeLen) >= probeLen) {
+            avoidDirSign = 0;
             return;
         }
 
+        // 1) busco la mejor muestra en 360°
         float bestClear = -1f;
+        Vector3f bestDir = new Vector3f();
         for (Quaternion rot : rotSamples) {
             rot.mult(dirNorm, candDir);
-            float cl = measureClearance(p, candDir, probeLen);
-            if (cl > bestClear) {
-                bestClear = cl;
+            float clear = measureClearance(p, candDir, probeLen);
+            if (clear > bestClear) {
+                bestClear = clear;
                 bestDir.set(candDir);
             }
         }
 
-        lastDir.set(bestDir);
+        // 2) si ninguna muestra queda tan libre como medio probeLen, hago reverse 180°
+        if (bestClear < probeLen * 0.5f) {
+            lastDir.set(dirNorm.negate()); // giro 180°
+        } else {
+            lastDir.set(bestDir);
+        }
+
+        // 3) aplico la dirección elegida
         float speed = (state == State.CHASE) ? CHASE_SPEED : WANDER_SPEED;
-        control.setWalkDirection(bestDir.mult(speed));
+        control.setWalkDirection(lastDir.mult(speed));
         avoiding = true;
         avoidOrigin.set(p);
         stuckTimer = 0f;
-        lastPos.set(p);
     }
 
     private float measureClearance(Vector3f origin, Vector3f dir, float maxDist) {
-        // Compute end point = origin + dir * maxDist
         scratchEnd.set(dir).multLocal(maxDist).addLocal(origin);
         List<PhysicsRayTestResult> results = space.rayTest(origin, scratchEnd);
 
@@ -278,5 +309,12 @@ public class Enemy extends Node {
             }
         }
         return closest == player.getCharacterControl();
+    }
+
+    private void playAnimationIfChanged(String animName) {
+        if (!animName.equals(lastAnim)) {
+            composer.setCurrentAction(animName);
+            lastAnim = animName;
+        }
     }
 }
