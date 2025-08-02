@@ -3,6 +3,7 @@ package museumhell.game;
 import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
+import com.jme3.asset.AssetKey;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.input.InputManager;
 import com.jme3.input.FlyByCamera;
@@ -24,6 +25,7 @@ import museumhell.game.player.MoveEffectState;
 import museumhell.game.player.PlayerController;
 import museumhell.ui.Hud;
 import museumhell.ui.Prompt;
+import museumhell.utils.media.AssetLoader;
 import museumhell.utils.media.AudioLoader;
 
 import java.util.AbstractMap;
@@ -32,7 +34,8 @@ import java.util.List;
 import java.util.Map;
 
 public class GameSystemState extends BaseAppState {
-    private final AssetManager assetManager;
+    private final AssetLoader assetManager;
+    private final AssetManager assets;
     private LootSystem lootSystem;
     private final Node rootNode;
     private final BulletAppState physics;
@@ -42,8 +45,9 @@ public class GameSystemState extends BaseAppState {
     private final SecurityCamera camBuilder;
     private final AudioLoader audio;
 
-    public GameSystemState(AssetManager assetManager, Node rootNode, BulletAppState physics, WorldBuilder world, MuseumLayout layout, PlayerController player, SecurityCamera camBuilder, AudioLoader audio) {
+    public GameSystemState(AssetLoader assetManager,AssetManager assets, Node rootNode, BulletAppState physics, WorldBuilder world, MuseumLayout layout, PlayerController player, SecurityCamera camBuilder, AudioLoader audio) {
         this.assetManager = assetManager;
+        this.assets = assets;
         this.rootNode = rootNode;
         this.physics = physics;
         this.world = world;
@@ -78,7 +82,7 @@ public class GameSystemState extends BaseAppState {
         getStateManager().attach(prompt);
 
         // 4) LootSystem + distribución de loot
-        lootSystem = new LootSystem(assetManager, rootNode, physics.getPhysicsSpace(), player, hud, layout.floorHeight());
+        lootSystem = new LootSystem(assets, rootNode, physics.getPhysicsSpace(), player, hud, layout.floorHeight());
         getStateManager().attach(lootSystem);
         input.setLootManager(lootSystem);
 

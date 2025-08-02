@@ -2,7 +2,6 @@ package museumhell.game.ai;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
-import com.jme3.asset.AssetManager;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.control.CharacterControl;
@@ -12,11 +11,12 @@ import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.player.PlayerController;
+import museumhell.utils.media.AssetLoader;
 
 import java.util.*;
 
 public class EnemySystem extends BaseAppState {
-    private final AssetManager am;
+    private final AssetLoader am;
     private final PhysicsSpace space;
     private final Node rootNode;
     private final MuseumLayout layout;
@@ -29,7 +29,7 @@ public class EnemySystem extends BaseAppState {
     private int spawnFloorIdx;
     private float timer = 0f;
 
-    public EnemySystem(AssetManager am, BulletAppState bullet, Node rootNode, MuseumLayout layout, WorldBuilder world, PlayerController player) {
+    public EnemySystem(AssetLoader am, BulletAppState bullet, Node rootNode, MuseumLayout layout, WorldBuilder world, PlayerController player) {
         this.am = am;
         this.space = bullet.getPhysicsSpace();
         this.rootNode = rootNode;

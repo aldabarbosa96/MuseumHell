@@ -1,6 +1,6 @@
 package museumhell.game.ai;
 
-import com.jme3.asset.AssetManager;
+
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.bullet.collision.PhysicsRayTestResult;
@@ -15,6 +15,7 @@ import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.player.PlayerController;
+import museumhell.utils.media.AssetLoader;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -61,7 +62,7 @@ public class Enemy extends Node {
     private final Quaternion desiredQuat = new Quaternion();
     private final Quaternion offsetQuat = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
 
-    public Enemy(AssetManager am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode) {
+    public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode) {
         super("Enemy");
         this.space = space;
         this.player = player;
@@ -73,7 +74,7 @@ public class Enemy extends Node {
         }
 
         // Load and orient model
-        model = am.loadModel("Models/Monster1.glb");
+        model = am.get("wander1");
         model.setLocalScale(0.55f);
         model.rotate(0, -FastMath.HALF_PI, 0);
         model.setLocalTranslation(0, -1.75f, 0);

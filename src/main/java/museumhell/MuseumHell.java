@@ -78,7 +78,7 @@ public class MuseumHell extends SimpleApplication {
         rootNode.attachChild(player.getNode());
 
         // 6) GameSystemState
-        GameSystemState gameState = new GameSystemState(assetManager, rootNode, physics, world, museumLayout, player, camBuilder, audio);
+        GameSystemState gameState = new GameSystemState(visuals,assetManager, rootNode, physics, world, museumLayout, player, camBuilder, audio);
         stateManager.attach(gameState);
 
         // 7) Ajuste final de cámara (FOV)
