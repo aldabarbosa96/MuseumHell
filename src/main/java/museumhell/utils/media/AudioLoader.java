@@ -3,6 +3,7 @@ package museumhell.utils.media;
 import com.jme3.asset.AssetManager;
 import com.jme3.audio.AudioData;
 import com.jme3.audio.AudioNode;
+import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 
 import java.util.HashMap;
@@ -40,6 +41,8 @@ public class AudioLoader {
         register("footstep2", "Sounds/footsteps2.ogg", false, 1);
         register("footstep3", "Sounds/footsteps3.ogg", false, 1);
         register("alarm", "Sounds/alarm.ogg", false, 0.5f);
+        register("monsterSteps1", "Sounds/monsterSteps1.ogg", false, 1f);
+        register("monsterSteps2", "Sounds/monsterSteps2.ogg", false, 1f);
     }
 
     private void register(String name, String path, boolean looping, float volume) {
@@ -66,5 +69,15 @@ public class AudioLoader {
         } else {
             e.node.clone().playInstance();
         }
+    }
+
+    public void playWithVolume(String name, float volume) {
+        Entry e = sounds.get(name);
+        if (e == null) return;
+        AudioNode node = e.node.clone();
+        node.setPositional(false);
+        node.setVolume(volume);
+        rootNode.attachChild(node);
+        node.playInstance();
     }
 }

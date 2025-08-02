@@ -17,6 +17,7 @@ import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.player.PlayerController;
 import museumhell.utils.media.AssetLoader;
+import museumhell.utils.media.AudioLoader;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -61,18 +62,25 @@ public class Enemy extends Node {
     private final Vector3f candDir = new Vector3f();
     private final Vector3f scratchVec = new Vector3f();
     private final Vector3f scratchEnd = new Vector3f();
+
+    private final AudioLoader audio;
+    private float stepTime = 0f;
+    private int lastStepCount = 0;
+    private static final float STEP_INTERVAL = 0.92f;
+    private static final float CHASE_STEP_INTERVAL = 0.75f;
+
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
     private final Quaternion desiredQuat = new Quaternion();
     private final Quaternion offsetQuat = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
 
-    public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode) {
+    public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode, AudioLoader audio) {
         super("Enemy");
         this.space = space;
         this.player = player;
         this.world = world;
+        this.audio = audio;
 
-        // Precompute ±90° in 15° steps around Y
         int samples = 16;
         rotSamples = new Quaternion[samples];
         for (int i = 0; i < samples; i++) {
@@ -80,13 +88,10 @@ public class Enemy extends Node {
             rotSamples[i] = new Quaternion().fromAngleAxis(angle, Vector3f.UNIT_Y);
         }
 
-        // Load and orient model
         model = am.get("wander1Animated");
         model.setLocalScale(0.525f);
         model.rotate(0, -FastMath.HALF_PI, 0);
-        model.setLocalTranslation(0, -1.7f, 0);
-
-        // Initialize AnimComposer
+        model.setLocalTranslation(0, -1.68f, 0);
         model.depthFirstTraversal(spat -> {
             if (composer == null) {
                 composer = spat.getControl(AnimComposer.class);
@@ -98,7 +103,6 @@ public class Enemy extends Node {
 
         attachChild(model);
 
-        // Physics control
         control = new CharacterControl(new CapsuleCollisionShape(1f, 1f), .05f);
         control.setGravity(30);
         control.setFallSpeed(20);
@@ -106,7 +110,6 @@ public class Enemy extends Node {
         space.add(control);
         rootNode.attachChild(this);
 
-        // Spawn position
         Vector3f spawn = room.center3f(baseY + 0.5f);
         setLocalTranslation(spawn);
         control.setPhysicsLocation(spawn);
@@ -128,7 +131,7 @@ public class Enemy extends Node {
     public void update(float tpf) {
         Vector3f pos = control.getPhysicsLocation();
 
-        // 1) Open nearby doors
+        // 1) Gestión de puertas
         Door d = world.nearestDoor(pos, 3.5f);
         if (d != null) {
             if (!openingDoors.contains(d)) {
@@ -141,23 +144,41 @@ public class Enemy extends Node {
 
         // 2) State transition
         boolean seesPlayer = canSee(pos);
-        state = seesPlayer ? State.CHASE : state == State.CHASE ? State.WANDER : state;
+        State newState = seesPlayer ? State.CHASE : (state == State.CHASE ? State.WANDER : state);
+        if (newState != state) {
+            stepTime = 0f;
+            lastStepCount = 0;
+        }
+        state = newState;
 
-        // 3) Behavior
+        // 3) Comportamiento
         if (state == State.CHASE) chase(pos);
         else wander(pos);
 
-        // 4) Animación de caminar
+        // 4) Animación de caminar + audio de pasos:
         playAnimationIfChanged("ArmatureAction");
+
+        if ("ArmatureAction".equals(lastAnim)) {
+            stepTime += tpf;
+            float interval = (state == State.CHASE ? CHASE_STEP_INTERVAL : STEP_INTERVAL);
+            int stepCount = (int) (stepTime / interval);
+            if (stepCount > lastStepCount) {
+                lastStepCount = stepCount;
+                float volume = getVolume();
+                audio.playWithVolume("monsterSteps2", volume);
+            }
+        } else {
+            stepTime = 0f;
+            lastStepCount = 0;
+        }
 
         // 5) Avoidance & stuck detection
         avoidObstacles(pos);
         detectStuck(pos, tpf);
 
-        // 6) Apply physics location
+        // 6) Posicionamiento y rotación
         setLocalTranslation(control.getPhysicsLocation());
 
-        // 7) Smooth model rotation
         if (lastDir.lengthSquared() > 0f) {
             lookQuat.lookAt(lastDir.normalizeLocal(), Vector3f.UNIT_Y);
             desiredQuat.set(lookQuat).multLocal(offsetQuat);
@@ -165,6 +186,32 @@ public class Enemy extends Node {
             currentQuat.slerp(desiredQuat, tpf * 5f);
             model.setLocalRotation(currentQuat);
         }
+    }
+
+    private float getVolume() {
+        Vector3f e = this.getWorldTranslation();
+        Vector3f j = player.getLocation();
+
+        float dx = e.x - j.x;
+        float dz = e.z - j.z;
+        float horizontalDist = FastMath.sqrt(dx * dx + dz * dz);
+
+        float dy = Math.abs(e.y - j.y);
+        float verticalWeight = 2f; // penalizador de altura para mayor realismo
+        float weightedDist = FastMath.sqrt(horizontalDist * horizontalDist + (verticalWeight * dy) * (verticalWeight * dy));
+
+        float fullVolUntil = 13f;
+        float audibleFrom = 66f;
+
+        float volume;
+        if (weightedDist <= fullVolUntil) {
+            volume = 1f;
+        } else if (weightedDist >= audibleFrom) {
+            volume = 0f;
+        } else {
+            volume = 1f - (weightedDist - fullVolUntil) / (audibleFrom - fullVolUntil);
+        }
+        return volume;
     }
 
 
@@ -224,7 +271,7 @@ public class Enemy extends Node {
         Vector3f dirNorm = lastDir.normalizeLocal();
         float probeLen = 1.5f;
 
-        // chequeo rápido: si adelante está despejado, nada que esquivar
+        // si adelante está despejado salimos
         if (measureClearance(p, dirNorm, probeLen) >= probeLen) {
             avoidDirSign = 0;
             return;

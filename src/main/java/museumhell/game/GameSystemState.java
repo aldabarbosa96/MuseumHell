@@ -103,7 +103,7 @@ public class GameSystemState extends BaseAppState {
 
         // 6) Sistema de guardias
         BulletAppState bullet = getStateManager().getState(BulletAppState.class);
-        getStateManager().attach(new EnemySystem(assetManager, bullet, rootNode, layout, world, player));
+        getStateManager().attach(new EnemySystem(assetManager, bullet, rootNode, layout, world, player, audio));
 
         // 7) MoveEffectState
         getStateManager().attach(new MoveEffectState(player, input, audio, hud, camera, world.getLightPlacer()));

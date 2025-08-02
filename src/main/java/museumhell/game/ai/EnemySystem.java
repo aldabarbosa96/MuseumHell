@@ -12,11 +12,13 @@ import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.player.PlayerController;
 import museumhell.utils.media.AssetLoader;
+import museumhell.utils.media.AudioLoader;
 
 import java.util.*;
 
 public class EnemySystem extends BaseAppState {
     private final AssetLoader am;
+    private final AudioLoader audio;
     private final PhysicsSpace space;
     private final Node rootNode;
     private final MuseumLayout layout;
@@ -29,13 +31,14 @@ public class EnemySystem extends BaseAppState {
     private int spawnFloorIdx;
     private float timer = 0f;
 
-    public EnemySystem(AssetLoader am, BulletAppState bullet, Node rootNode, MuseumLayout layout, WorldBuilder world, PlayerController player) {
+    public EnemySystem(AssetLoader am, BulletAppState bullet, Node rootNode, MuseumLayout layout, WorldBuilder world, PlayerController player, AudioLoader audio) {
         this.am = am;
         this.space = bullet.getPhysicsSpace();
         this.rootNode = rootNode;
         this.layout = layout;
         this.world = world;
         this.player = player;
+        this.audio = audio;
     }
 
     @Override
@@ -61,7 +64,7 @@ public class EnemySystem extends BaseAppState {
         spawnRoom = rooms.get(rnd.nextInt(rooms.size()));
         float y = layout.yOf(spawnFloorIdx);
 
-        enemy = new Enemy(am, space, player, world, spawnRoom, y, rootNode);
+        enemy = new Enemy(am, space, player, world, spawnRoom, y, rootNode, audio);
         enemy.setPatrolPoints(buildFullPatrolRoute(spawnRoom, spawnFloorIdx));
 
         Vector3f pos = spawnRoom.center3f(y + 0.5f);

@@ -61,7 +61,7 @@ public class SecurityCamera {
     }
 
     private static Vector3f[] getVectors(Room r, float floorH, float baseY, List<Room> rooms) {
-        float yCam = baseY + floorH - 0.455f;
+        float yCam = baseY + floorH - 0.5f;
         float tW = hasNeighbor(r, rooms, 'W') ? WALL_T : THIN_T;
         float tE = hasNeighbor(r, rooms, 'E') ? WALL_T : THIN_T;
         float tN = hasNeighbor(r, rooms, 'N') ? WALL_T : THIN_T;
