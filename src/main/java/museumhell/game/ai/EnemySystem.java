@@ -5,6 +5,7 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.control.CharacterControl;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.levelgen.MuseumLayout;
@@ -65,7 +66,7 @@ public class EnemySystem extends BaseAppState {
 
         Vector3f pos = spawnRoom.center3f(y + 0.5f);
         enemy.setLocalTranslation(pos);
-        enemy.getControl(com.jme3.bullet.control.CharacterControl.class).setPhysicsLocation(pos);
+        enemy.getControl(CharacterControl.class).setPhysicsLocation(pos);
     }
 
     private List<Vector3f> buildFullPatrolRoute(Room start, int fIdx) {
