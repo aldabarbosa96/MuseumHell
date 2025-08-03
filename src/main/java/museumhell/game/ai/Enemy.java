@@ -66,8 +66,9 @@ public class Enemy extends Node {
     private final AudioLoader audio;
     private float stepTime = 0f;
     private int lastStepCount = 0;
-    private static final float STEP_INTERVAL = 0.92f;
-    private static final float CHASE_STEP_INTERVAL = 0.75f;
+    private State prevState = null;
+    private static final float STEP_INTERVAL = 0.9f;
+    private static final float CHASE_STEP_INTERVAL = 0.66f;
 
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
@@ -91,7 +92,7 @@ public class Enemy extends Node {
         model = am.get("wander1Animated");
         model.setLocalScale(0.525f);
         model.rotate(0, -FastMath.HALF_PI, 0);
-        model.setLocalTranslation(0, -1.68f, 0);
+        model.setLocalTranslation(0, -1.65f, 0);
         model.depthFirstTraversal(spat -> {
             if (composer == null) {
                 composer = spat.getControl(AnimComposer.class);
@@ -145,11 +146,21 @@ public class Enemy extends Node {
         // 2) State transition
         boolean seesPlayer = canSee(pos);
         State newState = seesPlayer ? State.CHASE : (state == State.CHASE ? State.WANDER : state);
+
         if (newState != state) {
             stepTime = 0f;
             lastStepCount = 0;
         }
         state = newState;
+
+        if (state != prevState) {
+            if (state == State.CHASE) {
+                composer.setGlobalSpeed(2f);
+            } else {
+                composer.setGlobalSpeed(1f);
+            }
+            prevState = state;
+        }
 
         // 3) Comportamiento
         if (state == State.CHASE) chase(pos);
@@ -165,7 +176,9 @@ public class Enemy extends Node {
             if (stepCount > lastStepCount) {
                 lastStepCount = stepCount;
                 float volume = getVolume();
-                audio.playWithVolume("monsterSteps2", volume);
+                float dist3d = pos.distance(player.getLocation());
+                String soundName = dist3d <= 25f ? "monsterSteps1" : "monsterSteps2";
+                audio.playWithVolume(soundName, volume);
             }
         } else {
             stepTime = 0f;

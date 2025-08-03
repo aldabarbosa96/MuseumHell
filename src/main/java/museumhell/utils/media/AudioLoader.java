@@ -75,7 +75,6 @@ public class AudioLoader {
         Entry e = sounds.get(name);
         if (e == null) return;
         AudioNode node = e.node.clone();
-        node.setPositional(false);
         node.setVolume(volume);
         rootNode.attachChild(node);
         node.playInstance();
