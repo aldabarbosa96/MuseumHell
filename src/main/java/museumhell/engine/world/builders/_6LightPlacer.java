@@ -126,4 +126,29 @@ public class _6LightPlacer {
             root.addLight(sl);
         }
     }
+
+    public boolean isTargetLit(Vector3f target, float radius) {
+        if (flashlight == null || !flashlight.isEnabled()) {
+            return false;
+        }
+
+        Vector3f toTarget = target.subtract(flashlight.getPosition());
+        float dist = toTarget.length();
+
+        if (dist > flashlight.getSpotRange() + radius) {
+            return false;
+        }
+
+        float cosAngle = toTarget.normalizeLocal().dot(flashlight.getDirection());
+        float cosOuter = FastMath.cos(flashlight.getSpotOuterAngle());
+        return cosAngle >= cosOuter;
+    }
+
+    public Vector3f getFlashPosition() {
+        return flashlight != null ? flashlight.getPosition() : null;
+    }
+
+    public Vector3f getFlashDirection() {
+        return flashlight != null ? flashlight.getDirection() : null;
+    }
 }

@@ -12,6 +12,7 @@ import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
+import museumhell.engine.world.builders._6LightPlacer;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.world.WorldBuilder;
@@ -31,6 +32,7 @@ public class Enemy extends Node {
 
     private State state = State.WANDER;
 
+    private final _6LightPlacer lightPlacer;
     private final CharacterControl control;
     private final PhysicsSpace space;
     private final PlayerController player;
@@ -54,21 +56,21 @@ public class Enemy extends Node {
 
     private final List<Vector3f> patrolPoints = new ArrayList<>();
     private int patrolIndex = 0;
-    private boolean patrolFinished = false;
     private final Vector3f lastDir = new Vector3f(1, 0, 0);
     private final Vector3f lastPos = new Vector3f();
     private float stuckTimer = 0f;
     private static final float STUCK_EPS = 0.1f;
     private final Set<Door> openingDoors = new HashSet<>();
-    private final Random rnd = new Random();
     private boolean avoiding = false;
-    private int avoidDirSign = 0;
     private final Vector3f avoidOrigin = new Vector3f();
     private static final float AVOID_DISTANCE = 1f;
     private Quaternion[] rotSamples;
     private final Vector3f candDir = new Vector3f();
     private final Vector3f scratchVec = new Vector3f();
     private final Vector3f scratchEnd = new Vector3f();
+
+    private float alertTimer = 0f;
+    private static final float ALERT_TIME = 3f;
 
     private final AudioLoader audio;
     private float stepTime = 0f;
@@ -84,6 +86,7 @@ public class Enemy extends Node {
 
     public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode, AudioLoader audio, Supplier<List<Vector3f>> pathSupplier) {
         super("Enemy");
+        this.lightPlacer = world.getLightPlacer();
         this.space = space;
         this.player = player;
         this.world = world;
@@ -130,11 +133,6 @@ public class Enemy extends Node {
         patrolPoints.clear();
         patrolPoints.addAll(pts);
         patrolIndex = 0;
-        patrolFinished = false;
-    }
-
-    public boolean isPatrolFinished() {
-        return patrolFinished;
     }
 
     public void update(float tpf) {
@@ -154,7 +152,16 @@ public class Enemy extends Node {
 
         // 2) State transition
         boolean seesPlayer = canSee(pos);
-        State newState = seesPlayer ? State.CHASE : (state == State.CHASE ? State.WANDER : state);
+        boolean litByTorch = isDirectlyLit(getWorldTranslation());
+
+        if (seesPlayer || litByTorch) {
+            alertTimer = ALERT_TIME;
+        } else {
+            alertTimer = Math.max(0f, alertTimer - tpf);
+        }
+        boolean shouldChase = alertTimer > 0f;
+
+        State newState = shouldChase ? State.CHASE : (state == State.CHASE ? State.WANDER : state);
 
         if (newState != state) {
             stepTime = 0f;
@@ -272,7 +279,6 @@ public class Enemy extends Node {
         if (avoiding) {
             if (avoidOrigin.distance(p) > AVOID_DISTANCE) {
                 avoiding = false;
-                avoidDirSign = 0;
             } else {
                 return;
             }
@@ -281,7 +287,6 @@ public class Enemy extends Node {
         float probeLen = 1.5f;
 
         if (measureClearance(p, dirNorm, probeLen) >= probeLen) {
-            avoidDirSign = 0;
             return;
         }
 
@@ -396,5 +401,23 @@ public class Enemy extends Node {
             composer.setCurrentAction(animName);
             lastAnim = animName;
         }
+    }
+
+    private boolean isDirectlyLit(Vector3f enemyPos) {
+        if (lightPlacer == null || lightPlacer.getFlashPosition() == null) return false;
+        if (!lightPlacer.isTargetLit(enemyPos, 0.6f)) return false;
+
+        Vector3f src = lightPlacer.getFlashPosition();
+        List<PhysicsRayTestResult> hits = space.rayTest(src, enemyPos);
+
+        float bestFrac = 1f;
+        PhysicsCollisionObject first = null;
+        for (PhysicsRayTestResult r : hits) {
+            if (r.getHitFraction() < bestFrac) {
+                bestFrac = r.getHitFraction();
+                first = r.getCollisionObject();
+            }
+        }
+        return first == this.control;
     }
 }
