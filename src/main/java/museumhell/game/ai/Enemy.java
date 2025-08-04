@@ -1,6 +1,7 @@
 package museumhell.game.ai;
 
 import com.jme3.anim.AnimComposer;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.bullet.collision.PhysicsRayTestResult;
@@ -40,20 +41,13 @@ public class Enemy extends Node {
     private final WorldBuilder world;
     private AnimComposer composer;
     private String lastAnim = "";
-
     private final Supplier<List<Vector3f>> requestNewPath;
     private Room currentRoomRef;
-
-    public Room currentRoom() {
-        return currentRoomRef;
-    }
-
     private static final float DETECT_RANGE = 15f;
     private static final float COS_HALF_FOV = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
     private static final float WANDER_SPEED = 0.05f;
     private static final float CHASE_SPEED = 0.125f;
     private static final float POINT_TOL = 0.25f;
-
     private final List<Vector3f> patrolPoints = new ArrayList<>();
     private int patrolIndex = 0;
     private final Vector3f lastDir = new Vector3f(1, 0, 0);
@@ -68,17 +62,12 @@ public class Enemy extends Node {
     private final Vector3f candDir = new Vector3f();
     private final Vector3f scratchVec = new Vector3f();
     private final Vector3f scratchEnd = new Vector3f();
-
     private float alertTimer = 0f;
     private static final float ALERT_TIME = 3f;
-
     private final AudioLoader audio;
     private float stepTime = 0f;
     private int lastStepCount = 0;
-    private State prevState = null;
     private float stepFactor = 0f;
-    private static final float STEP_INTERVAL = 1f;
-    private static final float CHASE_STEP_INTERVAL = 0.33f;
 
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
@@ -104,7 +93,16 @@ public class Enemy extends Node {
         model = am.get("wander2Animated");
         model.setLocalScale(0.525f);
         model.rotate(0, -FastMath.HALF_PI, 0);
-        model.setLocalTranslation(0, -1.64f, 0);
+        model.updateGeometricState();
+        BoundingBox bb = (BoundingBox) model.getWorldBound();
+        float yMin = bb.getCenter().y - bb.getYExtent();
+
+        float radius = 1f;
+        float cylHeight = 1f;
+        float yBottom = -(cylHeight * .5f + radius);
+
+        float offsetY = yBottom - yMin;
+        model.setLocalTranslation(0, offsetY, 0);
         model.depthFirstTraversal(spat -> {
             if (composer == null) {
                 composer = spat.getControl(AnimComposer.class);
@@ -417,5 +415,9 @@ public class Enemy extends Node {
             }
         }
         return first == this.control;
+    }
+
+    public Room currentRoom() {
+        return currentRoomRef;
     }
 }
