@@ -25,6 +25,7 @@ public class WorldBuilder {
     private final _2WallBuilder a2WallBuilder;
     private final _3DoorBuilder a4DoorBuilder;
     private final _4StairBuilder a5StairBuilder;
+    private MuseumLayout layoutRef;
     private final List<Door> doors = new ArrayList<>();
     private boolean doorOpen = false;
 
@@ -37,8 +38,8 @@ public class WorldBuilder {
         this.a5StairBuilder = new _4StairBuilder(am, space, root);
     }
 
-    // 1) build: genera conexiones y las pasa a buildSingleFloor
     public void build(MuseumLayout museum) {
+        this.layoutRef = museum;
         float h = museum.floorHeight();
 
         /* ---------- 1) conexiones por planta ---------- */
@@ -162,36 +163,31 @@ public class WorldBuilder {
     }
 
     private boolean isDoorIntersectingWall(Room r, Direction dir) {
-        // DOOR_T es el grosor de la puerta, lo tomamos de tus constantes
-        float halfDoorThick = DOOR_T * 0.5f + 0.1f; // + un pequeño margen
+        float halfDoorThick = DOOR_T * 0.5f + 0.1f;
         for (Door d : doors) {
-            Vector3f p = d.getAccessPoint(); // posición central de la puerta
+            Vector3f p = d.getAccessPoint();
             switch (dir) {
                 case NORTH:
                     // plano Z = r.z
-                    if (Math.abs(p.z - r.z()) < halfDoorThick
-                            && p.x >= r.x() && p.x <= r.x() + r.w()) {
+                    if (Math.abs(p.z - r.z()) < halfDoorThick && p.x >= r.x() && p.x <= r.x() + r.w()) {
                         return true;
                     }
                     break;
                 case SOUTH:
                     // plano Z = r.z + r.h
-                    if (Math.abs(p.z - (r.z() + r.h())) < halfDoorThick
-                            && p.x >= r.x() && p.x <= r.x() + r.w()) {
+                    if (Math.abs(p.z - (r.z() + r.h())) < halfDoorThick && p.x >= r.x() && p.x <= r.x() + r.w()) {
                         return true;
                     }
                     break;
                 case WEST:
                     // plano X = r.x
-                    if (Math.abs(p.x - r.x()) < halfDoorThick
-                            && p.z >= r.z() && p.z <= r.z() + r.h()) {
+                    if (Math.abs(p.x - r.x()) < halfDoorThick && p.z >= r.z() && p.z <= r.z() + r.h()) {
                         return true;
                     }
                     break;
                 case EAST:
                     // plano X = r.x + r.w
-                    if (Math.abs(p.x - (r.x() + r.w())) < halfDoorThick
-                            && p.z >= r.z() && p.z <= r.z() + r.h()) {
+                    if (Math.abs(p.x - (r.x() + r.w())) < halfDoorThick && p.z >= r.z() && p.z <= r.z() + r.h()) {
                         return true;
                     }
                     break;
@@ -237,6 +233,23 @@ public class WorldBuilder {
         }
         return null;
     }
+
+    public Room whichRoom(Vector3f p) {
+        if (layoutRef == null) return null;
+
+        float floorH = layoutRef.floorHeight();
+        int floorIdx = (int) Math.floor(p.y / floorH);
+
+        if (floorIdx < 0 || floorIdx >= layoutRef.floors().size()) return null;
+
+        for (Room r : layoutRef.floors().get(floorIdx).rooms()) {
+            boolean insideX = p.x >= r.x() && p.x <= r.x() + r.w();
+            boolean insideZ = p.z >= r.z() && p.z <= r.z() + r.h();
+            if (insideX && insideZ) return r;
+        }
+        return null;
+    }
+
 
     private boolean isCorridor(Room r) {
         return Float.compare(r.w(), HOLE_W) == 0 || Float.compare(r.h(), HOLE_W) == 0;

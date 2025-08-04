@@ -15,10 +15,12 @@ import museumhell.utils.media.AssetLoader;
 import museumhell.utils.media.AudioLoader;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 public class EnemySystem extends BaseAppState {
     private final AssetLoader am;
     private final AudioLoader audio;
+    private PatrolPlanner planner;
     private final PhysicsSpace space;
     private final Node rootNode;
     private final MuseumLayout layout;
@@ -50,84 +52,32 @@ public class EnemySystem extends BaseAppState {
             }
         } else {
             enemy.update(tpf);
-            if (enemy.isPatrolFinished()) {
-                // Regenera una ruta distinta desde la misma sala de spawn
-                List<Vector3f> pts = buildFullPatrolRoute(spawnRoom, spawnFloorIdx);
-                enemy.setPatrolPoints(pts);
-            }
+
         }
     }
 
     private void spawnEnemy() {
+
+        // 1) planta y sala de aparición  ---------------------------
         spawnFloorIdx = rnd.nextInt(layout.floors().size());
         List<Room> rooms = layout.floors().get(spawnFloorIdx).rooms();
         spawnRoom = rooms.get(rnd.nextInt(rooms.size()));
-        float y = layout.yOf(spawnFloorIdx);
+        float baseY = layout.yOf(spawnFloorIdx);
 
-        enemy = new Enemy(am, space, player, world, spawnRoom, y, rootNode, audio);
-        enemy.setPatrolPoints(buildFullPatrolRoute(spawnRoom, spawnFloorIdx));
+        // 2) Planner para esa planta ------------------------------
+        planner = new PatrolPlanner(layout, spawnFloorIdx);
 
-        Vector3f pos = spawnRoom.center3f(y + 0.5f);
+        // 3) LAMBDA que Enemy usará cuando necesite un camino nuevo
+        Supplier<List<Vector3f>> pathSupplier = () -> planner.randomRoute(enemy != null && enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom);
+
+        // 4) Crear el enemigo -------------------------------------
+        enemy = new Enemy(am, space, player, world, spawnRoom, baseY, rootNode, audio, pathSupplier);
+
+        enemy.setPatrolPoints(planner.randomRoute(spawnRoom));
+
+        Vector3f pos = spawnRoom.center3f(baseY + 0.5f);
         enemy.setLocalTranslation(pos);
         enemy.getControl(CharacterControl.class).setPhysicsLocation(pos);
-    }
-
-    private List<Vector3f> buildFullPatrolRoute(Room start, int fIdx) {
-        float y = layout.yOf(fIdx) + 0.5f;
-        var conns = layout.floors().get(fIdx).conns();
-        List<Vector3f> route = new ArrayList<>();
-        Set<Room> visited = new HashSet<>();
-        Deque<Room> stack = new ArrayDeque<>();
-
-        stack.push(start);
-        visited.add(start);
-
-        while (!stack.isEmpty()) {
-            Room cur = stack.peek();
-            var opts = conns.stream().filter(c -> c.a() == cur || c.b() == cur).filter(c -> !visited.contains(c.a() == cur ? c.b() : c.a())).toList();
-
-            if (!opts.isEmpty()) {
-                var sel = opts.get(rnd.nextInt(opts.size()));
-                Room next = (sel.a() == cur ? sel.b() : sel.a());
-
-                // centro de la puerta:
-                float dx1 = (Math.max(cur.x(), next.x()) + Math.min(cur.x() + cur.w(), next.x() + next.w())) * 0.5f;
-                float dz1 = (Math.max(cur.z(), next.z()) + Math.min(cur.z() + cur.h(), next.z() + next.h())) * 0.5f;
-                float dx, dz;
-                switch (sel.dir()) {
-                    case NORTH -> {
-                        dx = dx1;
-                        dz = cur.z();
-                    }
-                    case SOUTH -> {
-                        dx = dx1;
-                        dz = cur.z() + cur.h();
-                    }
-                    case EAST -> {
-                        dz = dz1;
-                        dx = cur.x() + cur.w();
-                    }
-                    case WEST -> {
-                        dz = dz1;
-                        dx = cur.x();
-                    }
-                    default -> throw new IllegalStateException("Dirección desconocida: " + sel.dir());
-                }
-                route.add(new Vector3f(dx, y, dz));
-                // centro de la sala siguiente:
-                route.add(next.center3f(y));
-
-                visited.add(next);
-                stack.push(next);
-            } else {
-                stack.pop();
-                if (!stack.isEmpty()) {
-                    route.add(stack.peek().center3f(y));
-                }
-            }
-        }
-
-        return route;
     }
 
     @Override

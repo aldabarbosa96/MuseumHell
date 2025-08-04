@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public class Enemy extends Node {
     private enum State {WANDER, CHASE}
@@ -38,6 +39,13 @@ public class Enemy extends Node {
     private AnimComposer composer;
     private String lastAnim = "";
 
+    private final Supplier<List<Vector3f>> requestNewPath;
+    private Room currentRoomRef;
+
+    public Room currentRoom() {
+        return currentRoomRef;
+    }
+
     private static final float DETECT_RANGE = 15f;
     private static final float COS_HALF_FOV = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
     private static final float WANDER_SPEED = 0.05f;
@@ -51,7 +59,6 @@ public class Enemy extends Node {
     private final Vector3f lastPos = new Vector3f();
     private float stuckTimer = 0f;
     private static final float STUCK_EPS = 0.1f;
-    private static final float STUCK_THR = 1f;
     private final Set<Door> openingDoors = new HashSet<>();
     private final Random rnd = new Random();
     private boolean avoiding = false;
@@ -68,19 +75,20 @@ public class Enemy extends Node {
     private int lastStepCount = 0;
     private State prevState = null;
     private static final float STEP_INTERVAL = 0.92f;
-    private static final float CHASE_STEP_INTERVAL = 0.66f;
+    private static final float CHASE_STEP_INTERVAL = 0.33f;
 
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
     private final Quaternion desiredQuat = new Quaternion();
     private final Quaternion offsetQuat = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
 
-    public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode, AudioLoader audio) {
+    public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode, AudioLoader audio, Supplier<List<Vector3f>> pathSupplier) {
         super("Enemy");
         this.space = space;
         this.player = player;
         this.world = world;
         this.audio = audio;
+        this.requestNewPath = pathSupplier;
 
         int samples = 16;
         rotSamples = new Quaternion[samples];
@@ -130,6 +138,7 @@ public class Enemy extends Node {
     }
 
     public void update(float tpf) {
+        currentRoomRef = world.whichRoom(control.getPhysicsLocation());
         Vector3f pos = control.getPhysicsLocation();
 
         // 1) Gestión de puertas
@@ -235,40 +244,28 @@ public class Enemy extends Node {
     }
 
     private void wander(Vector3f p) {
-        if (patrolFinished) return;
-
-        if (!patrolPoints.isEmpty()) {
-            if (patrolIndex >= patrolPoints.size()) {
-                patrolFinished = true;
-                return;
-            }
-            Vector3f tgt = patrolPoints.get(patrolIndex);
-            Vector3f d = tgt.subtract(p).setY(0);
-            if (d.length() < POINT_TOL) {
-                patrolIndex++;
-                if (patrolIndex >= patrolPoints.size()) {
-                    patrolFinished = true;
-                    return;
-                }
-                d = patrolPoints.get(patrolIndex).subtract(p).setY(0);
-            }
-            Vector3f dir = d.normalizeLocal();
-            lastDir.set(dir);
-            control.setWalkDirection(dir.mult(WANDER_SPEED));
-        } else {
-            classicWander(p);
+        if (patrolPoints.isEmpty()) {
+            setPatrolPoints(requestNewPath.get());
+            return;
         }
-    }
 
-    private void classicWander(Vector3f p) {
-        Vector3f d = lastPos.subtract(p).setY(0);
-        if (d.lengthSquared() < 0.25f) {
-            Vector3f r = new Vector3f(rnd.nextFloat() * 2 - 1, 0, rnd.nextFloat() * 2 - 1).normalizeLocal();
-            lastDir.set(r);
-            control.setWalkDirection(r.mult(WANDER_SPEED));
-        } else {
-            control.setWalkDirection(lastDir.mult(WANDER_SPEED));
+        if (patrolIndex >= patrolPoints.size()) {
+            // ruta agotada ⟶ conseguir otra
+            setPatrolPoints(requestNewPath.get());
+            return;
         }
+
+        Vector3f tgt = patrolPoints.get(patrolIndex);
+        Vector3f d = tgt.subtract(p).setY(0);
+
+        if (d.length() < POINT_TOL) {
+            patrolIndex++;
+            return;
+        }
+
+        Vector3f dir = d.normalizeLocal();
+        lastDir.set(dir);
+        control.setWalkDirection(dir.mult(WANDER_SPEED));
     }
 
     private void avoidObstacles(Vector3f p) {
@@ -328,27 +325,25 @@ public class Enemy extends Node {
         return minFrac * maxDist;
     }
 
-    private void detectStuck(Vector3f p, float tpf) {
-        if (lastPos.distance(p) < STUCK_EPS) {
+    private void detectStuck(Vector3f pos, float tpf) {
+
+        // ¿se ha movido lo suficiente desde el último frame?
+        if (lastPos.distanceSquared(pos) < STUCK_EPS * STUCK_EPS) {
             stuckTimer += tpf;
-            if (stuckTimer > STUCK_THR && !patrolFinished) {
-                patrolIndex++;
-                stuckTimer = 0f;
-                lastPos.set(p);
-                if (patrolIndex < patrolPoints.size()) {
-                    Vector3f nextTgt = patrolPoints.get(patrolIndex);
-                    Vector3f d = nextTgt.subtract(p).setY(0).normalizeLocal();
-                    lastDir.set(d);
-                    control.setWalkDirection(d.mult(WANDER_SPEED));
-                } else {
-                    patrolFinished = true;
-                }
-            }
         } else {
             stuckTimer = 0f;
+            lastPos.set(pos);
+            return;
         }
-        lastPos.set(p);
+
+        // Si lleva más de 0.8 s prácticamente quieto → nueva ruta
+        if (stuckTimer > 0.8f) {
+            setPatrolPoints(requestNewPath.get());
+            stuckTimer = 0f;
+            lastPos.set(pos);
+        }
     }
+
 
     private boolean canSee(Vector3f enemyPos) {
         // 1) Vector desde el enemigo hasta el jugador
