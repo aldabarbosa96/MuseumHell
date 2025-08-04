@@ -5,28 +5,28 @@ import com.jme3.bullet.BulletAppState;
 import com.jme3.light.AmbientLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
-import museumhell.game.player.PlayerController;
-import museumhell.engine.world.WorldBuilder;
+import museumhell.game.ai.SecurityCamera;
+import museumhell.engine.world.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
-import museumhell.engine.world.levelgen.generator.MuseumGenerator;
-import museumhell.game.input.InputSystem;
-import museumhell.game.interaction.InteractionSystem;
-import museumhell.game.loot.LootSystem;
-import museumhell.ui.Hud;
-import museumhell.ui.Prompt;
+import museumhell.engine.world.world.WorldInitState;
+import museumhell.game.GameSystemState;
+import museumhell.game.player.PlayerController;
+import museumhell.utils.media.AudioLoader;
+import museumhell.utils.media.AssetLoader;
 
 import java.awt.*;
 
 public class MuseumHell extends SimpleApplication {
-
+    private AssetLoader visuals;
+    private AudioLoader audio;
     private BulletAppState physics;
     private WorldBuilder world;
     private PlayerController player;
-    private InputSystem input;
+    private MuseumLayout museumLayout;
+    private Spatial cameraBase;
 
     public static void main(String[] args) {
         DisplayMode dm = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
@@ -36,63 +36,59 @@ public class MuseumHell extends SimpleApplication {
         cfg.setTitle("MuseumHell");
         cfg.setVSync(true);
         cfg.setGammaCorrection(true);
-        if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate());
+        if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate()); // todo --> revisar si se capan los fps
 
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);
-        app.setShowSettings(false);
+        app.setShowSettings(true);
+        app.setDisplayStatView(true);
+        app.setDisplayFps(true);
         app.start();
     }
 
     @Override
     public void simpleInitApp() {
+        // 1) Carga de assets y audio
+        visuals = new AssetLoader(assetManager);
+        audio = new AudioLoader(assetManager, rootNode);
+        audio.play("ambient1");
+        audio.play("ambient2");
+        cameraBase = visuals.get("camera1");
 
-        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(.1f)));
+        // 2) Luz ambiental tenue
+        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.003f)));
 
-        physics = new BulletAppState();
+        // 3) Física
+        Vector3f worldMin = new Vector3f(-150f, -10f, -150f);
+        Vector3f worldMax = new Vector3f(150f, 50f, 150f);
+        physics = new BulletAppState(worldMin, worldMax);
         stateManager.attach(physics);
         physics.setDebugEnabled(false);
 
-        /* ---------- WORLD ---------- */
-        MuseumLayout museum = MuseumGenerator.generate(85, 65, 3, System.nanoTime());
-        world = new WorldBuilder(assetManager, rootNode, physics.getPhysicsSpace());
-        world.build(museum);
+        // 4) Mundo
+        WorldInitState worldState = new WorldInitState(assetManager, rootNode, physics, visuals, cameraBase);
+        stateManager.attach(worldState);
+        world = worldState.getWorldBuilder();
+        museumLayout = worldState.getMuseumLayout();
+        SecurityCamera camBuilder = worldState.getCameraBuilder();
 
-        /* ---------- PLAYER ---------- */
-        Room startRoom = museum.floors().get(0).rooms().get(0);
-        player = new PlayerController(assetManager, physics.getPhysicsSpace(), startRoom.center3f(3f));
+        // 5) Jugador
+        Room startRoom = museumLayout.floors().get(0).rooms().get(0);
+        player = new PlayerController(physics.getPhysicsSpace(), startRoom.center3f(5f));
         rootNode.attachChild(player.getNode());
 
-        /* ---------- SYSTEMS ---------- */
-        input = new InputSystem(inputManager, flyCam);
-        input.setupCameraFollow(cam);
-        input.registerPlayerControl(player);
-        input.setWorld(world);
+        // 6) GameSystemState
+        GameSystemState gameState = new GameSystemState(visuals,assetManager, rootNode, physics, world, museumLayout, player, camBuilder, audio);
+        stateManager.attach(gameState);
 
-        Hud hud = new Hud();
-        stateManager.attach(hud);
-        Prompt prompt = new Prompt();
-        stateManager.attach(prompt);
-
-        LootSystem loot = new LootSystem(assetManager, rootNode, player, hud);
-        stateManager.attach(loot);
-        input.setLootManager(loot);
-
-        stateManager.attach(new InteractionSystem(player, world, loot, prompt));
-
-        /* ---------- LOOT SPAWN ---------- */
-        museum.floors().forEach(f -> f.rooms().stream().skip(1).filter(r -> Math.random() > .5).forEach(r -> loot.scatter(r, 1 + (int) (Math.random() * 3))));
-
-        cam.setFrustumNear(.55f);
+        // 7) Ajuste final de cámara (FOV)
+        cam.setFrustumNear(0.525f);
     }
+
 
     @Override
     public void simpleUpdate(float tpf) {
         player.update(tpf);
-        input.update(tpf);
         world.update(tpf);
-
-        Vector3f eye = player.getLocation().add(0, .4f, 0).addLocal(cam.getDirection().mult(-.25f));
-        cam.setLocation(eye);
     }
 }

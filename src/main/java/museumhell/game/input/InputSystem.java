@@ -1,44 +1,53 @@
 package museumhell.game.input;
 
+import com.jme3.app.Application;
+import com.jme3.app.state.BaseAppState;
+import com.jme3.bullet.BulletAppState;
 import com.jme3.input.FlyByCamera;
 import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import museumhell.game.player.PlayerController;
-import museumhell.engine.world.WorldBuilder;
+import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
+import museumhell.utils.media.AudioLoader;
 
-public class InputSystem implements ActionListener {
+import static museumhell.utils.ConstantManager.*;
+
+public class InputSystem extends BaseAppState implements ActionListener {
     private WorldBuilder world;
+    private AudioLoader audio;
+    private BulletAppState physics;
     private final InputManager inMgr;
     private final FlyByCamera flyCam;
     private Camera cam;
     private PlayerController player;
     private LootSystem lootMgr;
+    private boolean up, down, left, right, sprint, crouch, debug, jump;
 
-    private boolean up, down, left, right, sprint;
-
-    private static final float WALK_SPEED = 8f;
-    private static final float SPRINT_MULT = 2f;
-
-    public InputSystem(InputManager inMgr, FlyByCamera flyCam) {
+    public InputSystem(InputManager inMgr, FlyByCamera flyCam, BulletAppState physics) {
         this.inMgr = inMgr;
         this.flyCam = flyCam;
+        this.physics = physics;
         setupMappings();
     }
 
     private void setupMappings() {
+        inMgr.addMapping("Debug", new KeyTrigger(KeyInput.KEY_TAB));
         inMgr.addMapping("Left", new KeyTrigger(KeyInput.KEY_A));
         inMgr.addMapping("Right", new KeyTrigger(KeyInput.KEY_D));
         inMgr.addMapping("Up", new KeyTrigger(KeyInput.KEY_W));
         inMgr.addMapping("Down", new KeyTrigger(KeyInput.KEY_S));
         inMgr.addMapping("Jump", new KeyTrigger(KeyInput.KEY_SPACE));
         inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
+        inMgr.addMapping("Crouch", new KeyTrigger(KeyInput.KEY_LCONTROL));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
-        inMgr.addListener(this, "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use");
+        inMgr.addMapping("Lantern", new MouseButtonTrigger(1));
+        inMgr.addListener(this, "Debug", "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
 
         flyCam.setDragToRotate(false);
         flyCam.setRotationSpeed(1.5f);
@@ -52,22 +61,50 @@ public class InputSystem implements ActionListener {
         this.player = pc;
     }
 
+    public void setAudioManager(AudioLoader audio) {
+        this.audio = audio;
+    }
+
     @Override
     public void onAction(String name, boolean isPressed, float tpf) {
         switch (name) {
+            case "Debug" -> {
+                debug = isPressed;
+                if (isPressed){
+                    physics.setDebugEnabled(!physics.isDebugEnabled());
+                }
+            }
             case "Left" -> left = isPressed;
             case "Right" -> right = isPressed;
             case "Up" -> up = isPressed;
             case "Down" -> down = isPressed;
             case "Sprint" -> sprint = isPressed;
             case "Jump" -> {
+                jump = isPressed;
                 if (isPressed && player != null) player.jump();
             }
             case "Use" -> {
                 if (isPressed && world != null && player != null) {
-                    world.tryUseDoor(player.getLocation());                // puertas
-                    if (lootMgr != null)                                   // loot
-                        lootMgr.tryPickUp(player.getLocation());
+                    world.tryUseDoor(player.getLocation());
+                    if (world.isDoorOpen()) {
+                        audio.play("door");
+                    }
+                    if (lootMgr != null) lootMgr.tryPickUp(player.getLocation());
+                }
+            }
+            case "Lantern" -> {
+                if (isPressed && world != null && world.getLightPlacer() != null) {
+                    world.getLightPlacer().toggleFlashlight();
+
+                    if (audio != null) {
+                        audio.play("flashlight");
+                    }
+                }
+            }
+            case "Crouch" -> {
+                crouch = isPressed;
+                if (player != null) {
+                    player.setCrouch(crouch);
                 }
             }
         }
@@ -82,8 +119,27 @@ public class InputSystem implements ActionListener {
         if (up) dir.addLocal(cam.getDirection());
         if (down) dir.addLocal(cam.getDirection().negate());
 
-        float speed = sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED;
-        player.move(dir.multLocal(speed * tpf));
+        dir.setY(0);
+
+        if (dir.lengthSquared() > 0) {
+            dir.normalizeLocal();
+        }
+
+        float baseSpeed = crouch ? CROUCH_SPEED : (sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED);
+
+        player.move(dir.multLocal(baseSpeed * tpf));
+    }
+
+    public boolean isMoving() {
+        return up || down || left || right;
+    }
+
+    public boolean isMovingForwardBack() {
+        return up || down;
+    }
+
+    public boolean isSprinting() {
+        return sprint;
     }
 
     public void setWorld(WorldBuilder w) {
@@ -92,5 +148,34 @@ public class InputSystem implements ActionListener {
 
     public void setLootManager(LootSystem lm) {
         this.lootMgr = lm;
+    }
+
+    public boolean isCrouching() {
+        return crouch;
+    }
+
+    public boolean isJump() {
+        return jump;
+    }
+
+    @Override
+    protected void initialize(Application application) {
+
+    }
+
+    @Override
+    protected void cleanup(Application application) {
+        inMgr.clearMappings();
+        inMgr.removeListener(this);
+    }
+
+    @Override
+    protected void onEnable() {
+
+    }
+
+    @Override
+    protected void onDisable() {
+
     }
 }
