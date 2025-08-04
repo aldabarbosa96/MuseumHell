@@ -1,6 +1,5 @@
 package museumhell.game.ai;
 
-
 import com.jme3.anim.AnimComposer;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
@@ -23,9 +22,10 @@ import museumhell.utils.media.AudioLoader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Supplier;
+
+import static museumhell.utils.ConstantManager.*;
 
 public class Enemy extends Node {
     private enum State {WANDER, CHASE}
@@ -76,7 +76,8 @@ public class Enemy extends Node {
     private float stepTime = 0f;
     private int lastStepCount = 0;
     private State prevState = null;
-    private static final float STEP_INTERVAL = 0.92f;
+    private float stepFactor = 0f;
+    private static final float STEP_INTERVAL = 1f;
     private static final float CHASE_STEP_INTERVAL = 0.33f;
 
     private final Quaternion lookQuat = new Quaternion();
@@ -100,7 +101,7 @@ public class Enemy extends Node {
             rotSamples[i] = new Quaternion().fromAngleAxis(angle, Vector3f.UNIT_Y);
         }
 
-        model = am.get("wander1Animated");
+        model = am.get("wander2Animated");
         model.setLocalScale(0.525f);
         model.rotate(0, -FastMath.HALF_PI, 0);
         model.setLocalTranslation(0, -1.64f, 0);
@@ -139,83 +140,74 @@ public class Enemy extends Node {
         currentRoomRef = world.whichRoom(control.getPhysicsLocation());
         Vector3f pos = control.getPhysicsLocation();
 
-        // 1) Gestión de puertas
-        Door d = world.nearestDoor(pos, 3.5f);
-        if (d != null) {
-            if (!openingDoors.contains(d)) {
+        Door nearDoor = world.nearestDoor(pos, 3.5f);
+        if (nearDoor != null) {
+            if (!openingDoors.contains(nearDoor)) {
                 world.tryUseDoor(pos);
-                openingDoors.add(d);
+                openingDoors.add(nearDoor);
             }
-            if (!d.isOpen()) return;
-            openingDoors.remove(d);
+            if (!nearDoor.isOpen()) {
+                return;
+            }
+            openingDoors.remove(nearDoor);
         }
 
-        // 2) State transition
         boolean seesPlayer = canSee(pos);
         boolean litByTorch = isDirectlyLit(getWorldTranslation());
+        alertTimer = (seesPlayer || litByTorch) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
+        boolean chasing = alertTimer > 0f;
 
-        if (seesPlayer || litByTorch) {
-            alertTimer = ALERT_TIME;
-        } else {
-            alertTimer = Math.max(0f, alertTimer - tpf);
-        }
-        boolean shouldChase = alertTimer > 0f;
-
-        State newState = shouldChase ? State.CHASE : (state == State.CHASE ? State.WANDER : state);
-
-        if (newState != state) {
+        State previous = state;
+        state = chasing ? State.CHASE : State.WANDER;
+        if (state != previous) {
             stepTime = 0f;
             lastStepCount = 0;
-        }
-        state = newState;
-
-        if (state != prevState) {
-            if (state == State.CHASE) {
-                composer.setGlobalSpeed(3f);
-            } else {
-                composer.setGlobalSpeed(1f);
-            }
-            prevState = state;
+            composer.setGlobalSpeed(state == State.CHASE ? 3f : 1f);
         }
 
-        // 3) Comportamiento
-        if (state == State.CHASE) chase(pos);
-        else wander(pos);
+        float baseSpeed = (state == State.CHASE) ? CHASE_SPEED : WANDER_SPEED;
+        float interval = (state == State.CHASE) ? EN_STEP_INTERVAL_RUN : EN_STEP_INTERVAL;
 
-        // 4) Animación de caminar + audio de pasos:
-        playAnimationIfChanged("ArmatureAction");
+        stepTime += tpf;
+        float phase = (stepTime / interval) % 1f;
+        float tri = 1f - FastMath.abs(phase * 2f - 1f);
+        stepFactor = FastMath.pow(tri, EN_STEP_SHARPNESS);
 
-        if ("ArmatureAction".equals(lastAnim)) {
-            stepTime += tpf;
-            float interval = (state == State.CHASE ? CHASE_STEP_INTERVAL : STEP_INTERVAL);
-            int stepCount = (int) (stepTime / interval);
-            if (stepCount > lastStepCount) {
-                lastStepCount = stepCount;
-                float volume = getVolume();
-                float dist3d = pos.distance(player.getLocation());
-                String soundName = dist3d <= 20f ? "monsterSteps1" : "monsterSteps2";
-                audio.playWithVolume(soundName, volume);
-            }
+        if (state == State.CHASE) {
+            chase(pos);
         } else {
-            stepTime = 0f;
-            lastStepCount = 0;
+            wander(pos);
         }
 
-        // 5) Avoidance & stuck detection
         avoidObstacles(pos);
         detectStuck(pos, tpf);
 
-        // 6) Posicionamiento y rotación
+        Vector3f walk = lastDir.normalize().multLocal(baseSpeed * EN_STEP_GAIN * stepFactor);
+        control.setWalkDirection(walk);
+
         setLocalTranslation(control.getPhysicsLocation());
 
         if (lastDir.lengthSquared() > 0f) {
-            lookQuat.lookAt(lastDir.normalizeLocal(), Vector3f.UNIT_Y);
+            lookQuat.lookAt(lastDir.normalize(), Vector3f.UNIT_Y);
             desiredQuat.set(lookQuat).multLocal(offsetQuat);
             currentQuat.set(model.getLocalRotation());
             currentQuat.slerp(desiredQuat, tpf * 5f);
             model.setLocalRotation(currentQuat);
         }
+
+        playAnimationIfChanged("ArmatureAction");
+        if ("ArmatureAction".equals(lastAnim)) {
+            int stepCnt = (int) (stepTime / interval);
+            if (stepCnt > lastStepCount) {
+                lastStepCount = stepCnt;
+                float volume = getVolume();
+                float dist3d = pos.distance(player.getLocation());
+                String snd = dist3d <= 20f ? "monsterSteps1" : "monsterSteps2";
+                audio.playWithVolume(snd, volume);
+            }
+        }
     }
+
 
     private float getVolume() {
         Vector3f e = this.getWorldTranslation();
@@ -243,6 +235,12 @@ public class Enemy extends Node {
         return volume;
     }
 
+    private float calcStepFactor(float dt, float interval) {
+        stepTime += dt;
+        float phase = (stepTime / interval) % 1f;
+        float tri = 1f - FastMath.abs(phase * 2f - 1f);
+        return FastMath.pow(tri, EN_STEP_SHARPNESS);
+    }
 
     private void chase(Vector3f p) {
         Vector3f dir = player.getLocation().subtract(p).setY(0).normalizeLocal();

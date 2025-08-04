@@ -67,4 +67,10 @@ public class ConstantManager {
     public static final float INNER_ANGLE = FastMath.DEG_TO_RAD * 8;
     public static final float OUTER_ANGLE = FastMath.DEG_TO_RAD * 28f;
 
+    // ENEMIES
+    public static final float EN_STEP_INTERVAL = 0.92f;
+    public static final float EN_STEP_INTERVAL_RUN = 0.33f;
+    public static final float EN_STEP_SHARPNESS = 2.0f;
+    public static final float EN_STEP_GAIN = 2.0f;
+
 }
