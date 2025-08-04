@@ -41,7 +41,7 @@ public class Enemy extends Node {
     private static final float DETECT_RANGE = 15f;
     private static final float COS_HALF_FOV = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
     private static final float WANDER_SPEED = 0.05f;
-    private static final float CHASE_SPEED = 0.1f;
+    private static final float CHASE_SPEED = 0.125f;
     private static final float POINT_TOL = 0.25f;
 
     private final List<Vector3f> patrolPoints = new ArrayList<>();
@@ -67,7 +67,7 @@ public class Enemy extends Node {
     private float stepTime = 0f;
     private int lastStepCount = 0;
     private State prevState = null;
-    private static final float STEP_INTERVAL = 0.9f;
+    private static final float STEP_INTERVAL = 0.92f;
     private static final float CHASE_STEP_INTERVAL = 0.66f;
 
     private final Quaternion lookQuat = new Quaternion();
@@ -92,7 +92,7 @@ public class Enemy extends Node {
         model = am.get("wander1Animated");
         model.setLocalScale(0.525f);
         model.rotate(0, -FastMath.HALF_PI, 0);
-        model.setLocalTranslation(0, -1.65f, 0);
+        model.setLocalTranslation(0, -1.64f, 0);
         model.depthFirstTraversal(spat -> {
             if (composer == null) {
                 composer = spat.getControl(AnimComposer.class);
@@ -155,7 +155,7 @@ public class Enemy extends Node {
 
         if (state != prevState) {
             if (state == State.CHASE) {
-                composer.setGlobalSpeed(2f);
+                composer.setGlobalSpeed(3f);
             } else {
                 composer.setGlobalSpeed(1f);
             }
@@ -177,7 +177,7 @@ public class Enemy extends Node {
                 lastStepCount = stepCount;
                 float volume = getVolume();
                 float dist3d = pos.distance(player.getLocation());
-                String soundName = dist3d <= 25f ? "monsterSteps1" : "monsterSteps2";
+                String soundName = dist3d <= 20f ? "monsterSteps1" : "monsterSteps2";
                 audio.playWithVolume(soundName, volume);
             }
         } else {
@@ -272,7 +272,6 @@ public class Enemy extends Node {
     }
 
     private void avoidObstacles(Vector3f p) {
-        // Si ya estamos evitando y ya avanzamos AVOID_DISTANCE, salimos de evasión
         if (avoiding) {
             if (avoidOrigin.distance(p) > AVOID_DISTANCE) {
                 avoiding = false;
@@ -284,7 +283,6 @@ public class Enemy extends Node {
         Vector3f dirNorm = lastDir.normalizeLocal();
         float probeLen = 1.5f;
 
-        // si adelante está despejado salimos
         if (measureClearance(p, dirNorm, probeLen) >= probeLen) {
             avoidDirSign = 0;
             return;
@@ -304,7 +302,7 @@ public class Enemy extends Node {
 
         // 2) si ninguna muestra queda tan libre como medio probeLen, hago reverse 180°
         if (bestClear < probeLen * 0.5f) {
-            lastDir.set(dirNorm.negate()); // giro 180°
+            lastDir.set(dirNorm.negate());
         } else {
             lastDir.set(bestDir);
         }
@@ -352,24 +350,51 @@ public class Enemy extends Node {
         lastPos.set(p);
     }
 
-    private boolean canSee(Vector3f p) {
-        Vector3f tp = player.getLocation();
-        scratchVec.set(tp).subtractLocal(p);
+    private boolean canSee(Vector3f enemyPos) {
+        // 1) Vector desde el enemigo hasta el jugador
+        Vector3f playerPos = player.getLocation();
+        scratchVec.set(playerPos).subtractLocal(enemyPos);
 
-        if (scratchVec.length() > DETECT_RANGE) return false;
-        if (lastDir.dot(scratchVec.normalizeLocal()) < COS_HALF_FOV) return false;
-
-        List<PhysicsRayTestResult> results = space.rayTest(p, tp);
-        PhysicsCollisionObject closest = null;
-        float minFrac = 1f;
-        for (PhysicsRayTestResult rr : results) {
-            if (rr.getHitFraction() < minFrac) {
-                closest = rr.getCollisionObject();
-                minFrac = rr.getHitFraction();
-            }
+        // 2) Comprobación de rango usando distancia al cuadrado (sin sqrt)
+        float dist2 = scratchVec.lengthSquared();
+        if (dist2 > DETECT_RANGE * DETECT_RANGE) {
+            return false;
         }
+
+        // 3) Campo de visión: comparamos el coseno directamente
+        scratchVec.normalizeLocal();
+        float cosAngle = lastDir.dot(scratchVec);
+        if (cosAngle < COS_HALF_FOV) {
+            return false;
+        }
+
+        // 4) Ray-cast hasta la posición exacta del jugador
+        List<PhysicsRayTestResult> results = space.rayTest(enemyPos, playerPos);
+
+        // 5) Buscamos la intersección más cercana que NO sea el propio CharacterControl del enemigo
+        PhysicsCollisionObject closest = getCollisionObject(results);
+
+        // 6) Vemos al jugador si lo primero que choca es SU CharacterControl
         return closest == player.getCharacterControl();
     }
+
+    private PhysicsCollisionObject getCollisionObject(List<PhysicsRayTestResult> results) {
+        PhysicsCollisionObject closest = null;
+        float minFrac = Float.MAX_VALUE;
+        for (PhysicsRayTestResult rr : results) {
+            float frac = rr.getHitFraction();
+            PhysicsCollisionObject obj = rr.getCollisionObject();
+            if (obj == this.control) {
+                continue;
+            }
+            if (frac < minFrac) {
+                minFrac = frac;
+                closest = obj;
+            }
+        }
+        return closest;
+    }
+
 
     private void playAnimationIfChanged(String animName) {
         if (!animName.equals(lastAnim)) {
