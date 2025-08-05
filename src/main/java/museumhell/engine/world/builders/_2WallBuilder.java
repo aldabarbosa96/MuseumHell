@@ -27,7 +27,7 @@ public class _2WallBuilder {
     private final Node root;
     private final PhysicsSpace space;
     private final Material wallMat;
-    private final Spatial wallModel, wall2Model;
+    private final Spatial wallModel, wall2Model, wall3Model;
 
     private final float wallLength, wallHeight, wallThickness;
     private final float wall2Length, wall2Height, wall2Thickness;
@@ -41,6 +41,7 @@ public class _2WallBuilder {
 
         this.wallModel = assetLoader.get("wall1");
         this.wall2Model = assetLoader.get("wall2");
+        this.wall3Model = assetLoader.get("wall3");
 
         wallModel.updateGeometricState();
         BoundingBox bb1 = (BoundingBox) wallModel.getWorldBound();
@@ -190,5 +191,17 @@ public class _2WallBuilder {
         var body = new RigidBodyControl(CollisionShapeFactory.createMeshShape(s), 0);
         s.addControl(body);
         space.add(body);
+    }
+
+    public Spatial makePatch(Direction dir, float width, float height, float thickness) {
+        Spatial slice = wall3Model.clone();
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            slice.setLocalRotation(rotNS);
+            slice.setLocalScale(thickness / wall2Length, height / wall2Height, width / wall2Thickness);
+        } else { // EAST / WEST
+            slice.setLocalRotation(rotEW);
+            slice.setLocalScale(width / wall2Length, height / wall2Height, thickness / wall2Thickness);
+        }
+        return slice;
     }
 }

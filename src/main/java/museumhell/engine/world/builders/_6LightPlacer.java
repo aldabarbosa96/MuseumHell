@@ -72,8 +72,8 @@ public class _6LightPlacer {
         float z1 = room.z() + 0.75f;
         float z2 = room.z() + room.h() - 0.75f;
 
-        float range = 10f;
-        float angle = FastMath.DEG_TO_RAD * 40f;
+        float range = 20f;
+        float angle = FastMath.DEG_TO_RAD * 60f;
         ColorRGBA color = new ColorRGBA(1f, 0.85f, 0.6f, 1f).multLocal(2.5f);
 
         // 4 focos de techo hacia abajo

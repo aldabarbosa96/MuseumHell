@@ -33,9 +33,12 @@ public class ConstantManager {
 
     // WORLD && BUILDERS
     public static final float DOOR_W = 3.5f, WALL_T = 2f, MARGIN = 1f;
-    public static final float DOOR_H = 8.3f;
+    public static final float DOOR_H = 10f;
     public static final float HOLE_W = DOOR_W * 2f;
     public static final float DOOR_T = .33f;
+    public static final float DOOR_OPEN_DIST = 4f;
+    public static final float SLICE_DOOR_T = 3 * DOOR_T;
+    public static final float SLICE_DOOR_W = 1.25f * DOOR_W;
     public static final int MIN_OVERLAP_FOR_DOOR = (int) (DOOR_W + 2 * MARGIN);
     public static final float CORRIDOR_WALL_T = WALL_T * 3f;
     public static final float FLOOR_T = 0.1f;

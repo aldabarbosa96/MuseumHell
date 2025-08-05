@@ -91,7 +91,7 @@ public class Enemy extends Node {
         }
 
         model = am.get("wander2Animated");
-        model.setLocalScale(0.525f);
+        model.setLocalScale(0.65f);
         model.rotate(0, -FastMath.HALF_PI, 0);
         model.updateGeometricState();
         BoundingBox bb = (BoundingBox) model.getWorldBound();
@@ -137,16 +137,15 @@ public class Enemy extends Node {
     public void update(float tpf) {
         currentRoomRef = world.whichRoom(control.getPhysicsLocation());
         Vector3f pos = control.getPhysicsLocation();
+        Vector3f doorProbe = pos.add(0, DOOR_H * 0.5f, 0);
 
-        Door nearDoor = world.nearestDoor(pos, 3.5f);
+        Door nearDoor = world.nearestDoor(doorProbe, 4f);
         if (nearDoor != null) {
             if (!openingDoors.contains(nearDoor)) {
-                world.tryUseDoor(pos);
+                world.tryUseDoor(doorProbe);
                 openingDoors.add(nearDoor);
             }
-            if (!nearDoor.isOpen()) {
-                return;
-            }
+            if (!nearDoor.isOpen()) return;
             openingDoors.remove(nearDoor);
         }
 

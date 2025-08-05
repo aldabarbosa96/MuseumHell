@@ -20,6 +20,6 @@ public final class MuseumGenerator {
             list.add(new LevelLayout(floor.rooms(), conns));
         }
 
-        return new MuseumLayout(list, 10f);
+        return new MuseumLayout(list, 15f);
     }
 }

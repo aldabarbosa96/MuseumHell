@@ -24,6 +24,7 @@ public class AssetLoader {
         models.put("floor1", assetManager.loadModel("Models/Floor1.glb"));
         models.put("wall1", assetManager.loadModel("Models/Wall1.glb"));
         models.put("wall2", assetManager.loadModel("Models/Wall2.glb"));
+        models.put("wall3", assetManager.loadModel("Models/Wall3.glb"));
         models.put("wander2Animated", assetManager.loadModel("Models/Monster_Animated2.glb"));
     }
 
