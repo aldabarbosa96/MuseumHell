@@ -10,65 +10,70 @@ import java.util.*;
 
 public class PatrolPlanner {
 
-    private record NavEdge(Room from, Room to, Vector3f preDoor, Vector3f postDoor) {
+    private record NavEdge(Room from, Room to, Vector3f preDoor, Vector3f postDoor, Vector3f roomCenter) {
     }
 
-    private final Map<Room, List<NavEdge>> graph = new HashMap<>();
+    private final Map<Room, NavEdge[]> graph = new HashMap<>();
     private final Random rng = new Random();
-
 
     public PatrolPlanner(MuseumLayout layout, int floorIdx) {
         float y = layout.yOf(floorIdx) + 0.5f;
+        Map<Room, List<NavEdge>> tmp = new HashMap<>();
 
         for (Connection c : layout.floors().get(floorIdx).conns()) {
             Room a = c.a();
             Room b = c.b();
-            Vector3f doorCtr = doorCenter(a, b, c.dir(), y);
+            Vector3f ctr = doorCenter(a, b, c.dir(), y);
 
-            Vector3f toA = a.center3f(y).subtract(doorCtr).normalizeLocal().multLocal(0.6f);
-            Vector3f toB = b.center3f(y).subtract(doorCtr).normalizeLocal().multLocal(0.6f);
+            Vector3f toA = a.center3f(y).subtract(ctr).normalizeLocal().multLocal(0.6f);
+            Vector3f toB = b.center3f(y).subtract(ctr).normalizeLocal().multLocal(0.6f);
 
-            Vector3f preA = doorCtr.add(toA);
-            Vector3f preB = doorCtr.add(toB);
+            Vector3f preA = ctr.add(toA);
+            Vector3f preB = ctr.add(toB);
 
-            graph.computeIfAbsent(a, k -> new ArrayList<>()).add(new NavEdge(a, b, preA, preB));
-            graph.computeIfAbsent(b, k -> new ArrayList<>()).add(new NavEdge(b, a, preB, preA));
+            tmp.computeIfAbsent(a, __ -> new ArrayList<>()).add(new NavEdge(a, b, preA, preB, b.center3f(y)));
+            tmp.computeIfAbsent(b, __ -> new ArrayList<>()).add(new NavEdge(b, a, preB, preA, a.center3f(y)));
         }
+
+        tmp.forEach((room, list) -> graph.put(room, list.toArray(new NavEdge[0])));
     }
 
-
     public List<Vector3f> randomRoute(Room start) {
-        List<Vector3f> waypoints = new ArrayList<>();
+        List<Vector3f> out = new ArrayList<>(32);
         Deque<Room> stack = new ArrayDeque<>();
         Set<Room> visited = new HashSet<>();
-
         stack.push(start);
         visited.add(start);
 
         while (!stack.isEmpty()) {
             Room cur = stack.peek();
-            var candidates = graph.getOrDefault(cur, List.of()).stream().filter(e -> !visited.contains(e.to())).toList();
-            if (candidates.isEmpty()) {
+            NavEdge[] edges = graph.get(cur);
+            NavEdge pick = null;
+            int count = 0;
+            if (edges != null) {
+                for (NavEdge e : edges) {
+                    if (!visited.contains(e.to())) {
+                        count++;
+                        if (rng.nextInt(count) == 0) pick = e;
+                    }
+                }
+            }
+            if (pick == null) {
                 stack.pop();
                 continue;
             }
-
-            NavEdge edge = candidates.get(rng.nextInt(candidates.size()));
-
-            waypoints.add(edge.preDoor());
-            waypoints.add(edge.postDoor());
-            waypoints.add(edge.to().center3f(edge.preDoor().y));
-
-            visited.add(edge.to());
-            stack.push(edge.to());
+            out.add(pick.preDoor());
+            out.add(pick.postDoor());
+            out.add(pick.roomCenter());
+            visited.add(pick.to());
+            stack.push(pick.to());
         }
-        return waypoints;
+        return out;
     }
 
     private static Vector3f doorCenter(Room a, Room b, Direction dir, float y) {
         float dxMid = (Math.max(a.x(), b.x()) + Math.min(a.x() + a.w(), b.x() + b.w())) * 0.5f;
         float dzMid = (Math.max(a.z(), b.z()) + Math.min(a.z() + a.h(), b.z() + b.h())) * 0.5f;
-
         return switch (dir) {
             case NORTH -> new Vector3f(dxMid, y, a.z());
             case SOUTH -> new Vector3f(dxMid, y, a.z() + a.h());

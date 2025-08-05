@@ -58,7 +58,6 @@ public class Enemy extends Node {
     private boolean avoiding = false;
     private final Vector3f avoidOrigin = new Vector3f();
     private static final float AVOID_DISTANCE = 1f;
-    private Quaternion[] rotSamples;
     private final Vector3f candDir = new Vector3f();
     private final Vector3f scratchVec = new Vector3f();
     private final Vector3f scratchEnd = new Vector3f();
@@ -68,11 +67,23 @@ public class Enemy extends Node {
     private float stepTime = 0f;
     private int lastStepCount = 0;
     private float stepFactor = 0f;
+    private final Vector3f bestDir = new Vector3f();
 
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
     private final Quaternion desiredQuat = new Quaternion();
     private final Quaternion offsetQuat = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
+
+    private static final Quaternion[] ROT_SAMPLES;
+
+    static {
+        int samples = 16;
+        ROT_SAMPLES = new Quaternion[samples];
+        for (int i = 0; i < samples; i++) {
+            float ang = FastMath.TWO_PI * i / samples;
+            ROT_SAMPLES[i] = new Quaternion().fromAngleAxis(ang, Vector3f.UNIT_Y);
+        }
+    }
 
     public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode, AudioLoader audio, Supplier<List<Vector3f>> pathSupplier) {
         super("Enemy");
@@ -82,13 +93,6 @@ public class Enemy extends Node {
         this.world = world;
         this.audio = audio;
         this.requestNewPath = pathSupplier;
-
-        int samples = 16;
-        rotSamples = new Quaternion[samples];
-        for (int i = 0; i < samples; i++) {
-            float angle = FastMath.TWO_PI * i / samples;
-            rotSamples[i] = new Quaternion().fromAngleAxis(angle, Vector3f.UNIT_Y);
-        }
 
         model = am.get("wander2Animated");
         model.setLocalScale(0.65f);
@@ -137,7 +141,7 @@ public class Enemy extends Node {
     public void update(float tpf) {
         currentRoomRef = world.whichRoom(control.getPhysicsLocation());
         Vector3f pos = control.getPhysicsLocation();
-        Vector3f doorProbe = pos.add(0, DOOR_H * 0.5f, 0);
+        Vector3f doorProbe = scratchEnd.set(pos).addLocal(0, DOOR_H * 0.5f, 0);
 
         Door nearDoor = world.nearestDoor(doorProbe, 4f);
         if (nearDoor != null) {
@@ -232,17 +236,11 @@ public class Enemy extends Node {
         return volume;
     }
 
-    private float calcStepFactor(float dt, float interval) {
-        stepTime += dt;
-        float phase = (stepTime / interval) % 1f;
-        float tri = 1f - FastMath.abs(phase * 2f - 1f);
-        return FastMath.pow(tri, EN_STEP_SHARPNESS);
-    }
-
     private void chase(Vector3f p) {
-        Vector3f dir = player.getLocation().subtract(p).setY(0).normalizeLocal();
+        Vector3f dir = scratchVec.set(player.getLocation()).subtractLocal(p).setY(0).normalizeLocal();
         lastDir.set(dir);
         control.setWalkDirection(dir.mult(CHASE_SPEED));
+
     }
 
     private void wander(Vector3f p) {
@@ -258,7 +256,7 @@ public class Enemy extends Node {
         }
 
         Vector3f tgt = patrolPoints.get(patrolIndex);
-        Vector3f d = tgt.subtract(p).setY(0);
+        Vector3f d = scratchVec.set(tgt).subtractLocal(p).setY(0);
 
         if (d.length() < POINT_TOL) {
             patrolIndex++;
@@ -278,7 +276,7 @@ public class Enemy extends Node {
                 return;
             }
         }
-        Vector3f dirNorm = lastDir.normalizeLocal();
+        Vector3f dirNorm = scratchVec.set(lastDir).normalizeLocal();
         float probeLen = 1.5f;
 
         if (measureClearance(p, dirNorm, probeLen) >= probeLen) {
@@ -287,8 +285,7 @@ public class Enemy extends Node {
 
         // 1) busco la mejor muestra en 360°
         float bestClear = -1f;
-        Vector3f bestDir = new Vector3f();
-        for (Quaternion rot : rotSamples) {
+        for (Quaternion rot : ROT_SAMPLES) {
             rot.mult(dirNorm, candDir);
             float clear = measureClearance(p, candDir, probeLen);
             if (clear > bestClear) {
@@ -349,7 +346,6 @@ public class Enemy extends Node {
         // 1) Vector desde el enemigo hasta el jugador
         Vector3f playerPos = player.getLocation();
         scratchVec.set(playerPos).subtractLocal(enemyPos);
-
         // 2) Comprobación de rango usando distancia al cuadrado (sin sqrt)
         float dist2 = scratchVec.lengthSquared();
         if (dist2 > DETECT_RANGE * DETECT_RANGE) {
