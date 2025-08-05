@@ -156,7 +156,7 @@ public class WorldBuilder {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
                 } else { /* puerta */
-                    a4DoorBuilder.build(r, dir, y0, h - 0.2f, rooms);
+                    a4DoorBuilder.build(r, dir, y0, h, rooms);
                 }
             }
         }
