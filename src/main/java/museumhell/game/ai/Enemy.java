@@ -68,6 +68,8 @@ public class Enemy extends Node {
     private int lastStepCount = 0;
     private float stepFactor = 0f;
     private final Vector3f bestDir = new Vector3f();
+    private float probeTimer = 0f;
+    private boolean pathBlocked = false;
 
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
@@ -139,6 +141,7 @@ public class Enemy extends Node {
     }
 
     public void update(float tpf) {
+        probeTimer -= tpf;
         currentRoomRef = world.whichRoom(control.getPhysicsLocation());
         Vector3f pos = control.getPhysicsLocation();
         Vector3f doorProbe = scratchEnd.set(pos).addLocal(0, DOOR_H * 0.5f, 0);
@@ -276,12 +279,17 @@ public class Enemy extends Node {
                 return;
             }
         }
+
+        if (!(probeTimer > 0f)) {
+            probeTimer = AVOID_PROBE_PERIOD;
+            Vector3f dirNorm = scratchVec.set(lastDir).normalizeLocal();
+            float probeLen = 1.5f;
+            pathBlocked = measureClearance(p, dirNorm, probeLen) < probeLen;
+        }
+        if (!pathBlocked) return;
+
         Vector3f dirNorm = scratchVec.set(lastDir).normalizeLocal();
         float probeLen = 1.5f;
-
-        if (measureClearance(p, dirNorm, probeLen) >= probeLen) {
-            return;
-        }
 
         // 1) busco la mejor muestra en 360°
         float bestClear = -1f;
