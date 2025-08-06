@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static museumhell.utils.ConstantManager.BLINK_INTERVAL;
+
 public class SecurityCamSystem extends BaseAppState {
     private final _6LightPlacer lightPlacer;
     private final AudioLoader audio;
@@ -31,7 +33,6 @@ public class SecurityCamSystem extends BaseAppState {
     private Room alarmRoom = null;
     private int toggleCount = 0;
     private float blinkTimer = 0f;
-    private static final float BLINK_INTERVAL = 0.425f;
     private final float maxDist = 20f;
     private final float halfFov = FastMath.DEG_TO_RAD * 30;
 

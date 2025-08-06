@@ -59,6 +59,7 @@ public class ConstantManager {
     public static final float RAIL_H = 2.5f;
     public static final float RAIL_T = 0.2f;
     public static final float STAIR_CLEAR = 0.04f;
+    public static final float BLINK_INTERVAL = 0.425f;
 
 
     // ITEMS
@@ -73,5 +74,12 @@ public class ConstantManager {
     public static final float EN_STEP_SHARPNESS = 2.0f;
     public static final float EN_STEP_GAIN = 2.0f;
     public static final float AVOID_PROBE_PERIOD = 0.2f;
-
+    public static final float DETECT_RANGE = 15f;
+    public static final float COS_HALF_FOV = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
+    public static final float WANDER_SPEED = 0.05f;
+    public static final float CHASE_SPEED = 0.125f;
+    public static final float POINT_TOL = 0.25f;
+    public static final float AVOID_DISTANCE = 1f;
+    public static final float ALERT_TIME = 3f;
+    public static final float STUCK_EPS = 0.1f;
 }

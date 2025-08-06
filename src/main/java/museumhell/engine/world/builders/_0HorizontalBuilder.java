@@ -2,6 +2,7 @@ package museumhell.engine.world.builders;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.material.Material;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
@@ -45,7 +46,7 @@ abstract class _0HorizontalBuilder {
         Geometry g = new Geometry("Patch", new Box(w * .5f, t * .5f, d * .5f));
         g.setMaterial(mat.clone());
         g.setLocalTranslation(x + w * .5f, y, z + d * .5f);
-        g.addControl(new com.jme3.bullet.control.RigidBodyControl(0));
+        g.addControl(new RigidBodyControl(0));
         root.attachChild(g);
         space.add(g);
     }
