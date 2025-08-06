@@ -1,6 +1,7 @@
 package museumhell.game.ai;
 
 import com.jme3.anim.AnimComposer;
+import com.jme3.audio.AudioNode;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
@@ -20,12 +21,14 @@ import museumhell.game.player.PlayerController;
 import museumhell.utils.media.AssetLoader;
 import museumhell.utils.media.AudioLoader;
 
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import static com.jme3.audio.AudioSource.Status.Playing;
 import static com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive;
 import static museumhell.utils.ConstantManager.*;
 
@@ -57,6 +60,7 @@ public class Enemy extends Node {
     private final Vector3f scratchEnd = new Vector3f();
     private float alertTimer = 0f;
     private final AudioLoader audio;
+    private final AudioNode scream;
     private float stepTime = 0f;
     private int lastStepCount = 0;
     private float stepFactor = 0f;
@@ -87,6 +91,11 @@ public class Enemy extends Node {
         this.player = player;
         this.world = world;
         this.audio = audio;
+        scream = audio.get("monsterScream").clone();
+        scream.setPositional(true);
+        scream.setRefDistance(5f);
+        scream.setMaxDistance(70f);
+        attachChild(scream);
         this.requestNewPath = pathSupplier;
 
         model = am.get("wander2Animated");
@@ -158,6 +167,18 @@ public class Enemy extends Node {
         State previous = state;
         state = chasing ? State.CHASE : State.WANDER;
         if (state != previous) {
+            if (state == State.CHASE) {
+                /* ENCENDER grito */
+                if (scream.getStatus() != Playing) {
+                    scream.play();
+                }
+            } else {
+                /* APAGAR grito */
+                if (scream.getStatus() == Playing) {
+                    scream.stop();
+                }
+            }
+
             stepTime = 0f;
             lastStepCount = 0;
             composer.setGlobalSpeed(state == State.CHASE ? 3f : 1f);
@@ -216,7 +237,7 @@ public class Enemy extends Node {
         float horizontalDist = FastMath.sqrt(dx * dx + dz * dz);
 
         float dy = Math.abs(e.y - j.y);
-        float verticalWeight = 2f; // penalizador de altura para mayor realismo
+        float verticalWeight = 2.5f; // penalizador de altura para mayor realismo
         float weightedDist = FastMath.sqrt(horizontalDist * horizontalDist + (verticalWeight * dy) * (verticalWeight * dy));
 
         float fullVolUntil = 13f;
@@ -237,7 +258,6 @@ public class Enemy extends Node {
         Vector3f dir = scratchVec.set(player.getLocation()).subtractLocal(p).setY(0).normalizeLocal();
         lastDir.set(dir);
         control.setWalkDirection(dir.mult(CHASE_SPEED));
-
     }
 
     private void wander(Vector3f p) {

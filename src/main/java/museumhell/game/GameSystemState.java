@@ -120,7 +120,7 @@ public class GameSystemState extends BaseAppState {
         flashSSR.setLight(world.getLightPlacer().getFlashlight());
         flashSSR.setEdgeFilteringMode(EdgeFilteringMode.PCF4);
         flashSSR.setShadowZExtend(200f);
-        flashSSR.setShadowIntensity(0.5f);
+        flashSSR.setShadowIntensity(0.75f);
         flashSSR.setShadowZFadeLength(20f);
         app.getViewPort().addProcessor(flashSSR);
 
