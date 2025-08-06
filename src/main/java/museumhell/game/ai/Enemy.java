@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive;
 import static museumhell.utils.ConstantManager.*;
 
 public class Enemy extends Node {
@@ -92,6 +93,7 @@ public class Enemy extends Node {
         model.setLocalScale(0.65f);
         model.rotate(0, -FastMath.HALF_PI, 0);
         model.updateGeometricState();
+        model.setShadowMode(CastAndReceive);
         BoundingBox bb = (BoundingBox) model.getWorldBound();
         float yMin = bb.getCenter().y - bb.getYExtent();
 

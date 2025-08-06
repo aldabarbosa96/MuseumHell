@@ -26,7 +26,7 @@ public class EnemySystem extends BaseAppState {
     private final MuseumLayout layout;
     private final WorldBuilder world;
     private final PlayerController player;
-    private final Random rnd = new Random();
+private final Random rnd = new Random();
     private Enemy enemy;
     private Room spawnRoom;
     private int spawnFloorIdx;

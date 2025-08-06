@@ -148,7 +148,7 @@ public class _6LightPlacer {
         return flashlight != null ? flashlight.getPosition() : null;
     }
 
-    public Vector3f getFlashDirection() {
-        return flashlight != null ? flashlight.getDirection() : null;
+    public SpotLight getFlashlight() {
+        return flashlight;
     }
 }

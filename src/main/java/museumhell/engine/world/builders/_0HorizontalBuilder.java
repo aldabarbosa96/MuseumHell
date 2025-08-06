@@ -4,12 +4,15 @@ import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.material.Material;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 import museumhell.utils.GeoUtil.Rect;
 
 import java.util.List;
+
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.Receive;
 
 abstract class _0HorizontalBuilder {
     protected final Node root;
@@ -47,6 +50,7 @@ abstract class _0HorizontalBuilder {
         g.setMaterial(mat.clone());
         g.setLocalTranslation(x + w * .5f, y, z + d * .5f);
         g.addControl(new RigidBodyControl(0));
+        g.setShadowMode(Receive);
         root.attachChild(g);
         space.add(g);
     }

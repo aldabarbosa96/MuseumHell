@@ -83,7 +83,12 @@ public class MoveEffectState extends BaseAppState {
         smoothDirection.interpolateLocal(cam.getDirection(), SMOOTH_FACTOR).normalizeLocal();
 
         // 5) Actualizar linterna
-        lightPlacer.updateFlashlight(smoothEyePos, smoothDirection);
+        Vector3f side = cam.getLeft().normalize().mult(FLASH_OFFSET_SIDE);
+        Vector3f down = new Vector3f(0, -FLASH_OFFSET_DOWN, 0);
+        Vector3f forward = cam.getDirection().normalize().mult(FLASH_OFFSET_FORWARD);
+        Vector3f torchPos = smoothEyePos.add(side).addLocal(down).addLocal(forward);
+
+        lightPlacer.updateFlashlight(torchPos, smoothDirection);
     }
 
     @Override
