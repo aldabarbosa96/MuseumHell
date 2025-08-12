@@ -155,7 +155,10 @@ public class Enemy extends Node {
                 world.tryUseDoor(doorProbe);
                 openingDoors.add(nearDoor);
             }
-            if (!nearDoor.isOpen()) return;
+            if (!nearDoor.isOpen()) {
+                control.setWalkDirection(Vector3f.ZERO);
+                return;
+            }
             openingDoors.remove(nearDoor);
         }
 
@@ -168,17 +171,10 @@ public class Enemy extends Node {
         state = chasing ? State.CHASE : State.WANDER;
         if (state != previous) {
             if (state == State.CHASE) {
-                /* ENCENDER grito */
-                if (scream.getStatus() != Playing) {
-                    scream.play();
-                }
+                if (scream.getStatus() != Playing) scream.play();
             } else {
-                /* APAGAR grito */
-                if (scream.getStatus() == Playing) {
-                    scream.stop();
-                }
+                if (scream.getStatus() == Playing) scream.stop();
             }
-
             stepTime = 0f;
             lastStepCount = 0;
             composer.setGlobalSpeed(state == State.CHASE ? 3f : 1f);
@@ -201,7 +197,9 @@ public class Enemy extends Node {
         avoidObstacles(pos);
         detectStuck(pos, tpf);
 
-        Vector3f walk = lastDir.normalize().multLocal(baseSpeed * EN_STEP_GAIN * stepFactor);
+        // === Igual que el player: velocidad por tick de física, no por frame ===
+        float dtPhysics = space.getAccuracy(); // normalmente 1/60f
+        Vector3f walk = lastDir.normalize().multLocal(baseSpeed * EN_STEP_GAIN * stepFactor * dtPhysics);
         control.setWalkDirection(walk);
 
         setLocalTranslation(control.getPhysicsLocation());
@@ -257,7 +255,6 @@ public class Enemy extends Node {
     private void chase(Vector3f p) {
         Vector3f dir = scratchVec.set(player.getLocation()).subtractLocal(p).setY(0).normalizeLocal();
         lastDir.set(dir);
-        control.setWalkDirection(dir.mult(CHASE_SPEED));
     }
 
     private void wander(Vector3f p) {
@@ -282,7 +279,6 @@ public class Enemy extends Node {
 
         Vector3f dir = d.normalizeLocal();
         lastDir.set(dir);
-        control.setWalkDirection(dir.mult(WANDER_SPEED));
     }
 
     private void avoidObstacles(Vector3f p) {
@@ -305,7 +301,7 @@ public class Enemy extends Node {
         Vector3f dirNorm = scratchVec.set(lastDir).normalizeLocal();
         float probeLen = 1.5f;
 
-        // 1) busco la mejor muestra en 360°
+        // 1) buscar mejor muestra en 360°
         float bestClear = -1f;
         for (Quaternion rot : ROT_SAMPLES) {
             rot.mult(dirNorm, candDir);
@@ -316,20 +312,19 @@ public class Enemy extends Node {
             }
         }
 
-        // 2) si ninguna muestra queda tan libre como medio probeLen, hago reverse 180°
+        // 2) si no hay dirección suficientemente libre, reverse 180°
         if (bestClear < probeLen * 0.5f) {
             lastDir.set(dirNorm.negate());
         } else {
             lastDir.set(bestDir);
         }
 
-        // 3) aplico la dirección elegida
-        float speed = (state == State.CHASE) ? CHASE_SPEED : WANDER_SPEED;
-        control.setWalkDirection(lastDir.mult(speed));
+        // 3) marcamos evitación; el movimiento se aplicará en update()
         avoiding = true;
         avoidOrigin.set(p);
         stuckTimer = 0f;
     }
+
 
     private float measureClearance(Vector3f origin, Vector3f dir, float maxDist) {
         scratchEnd.set(dir).multLocal(maxDist).addLocal(origin);
@@ -345,7 +340,6 @@ public class Enemy extends Node {
     }
 
     private void detectStuck(Vector3f pos, float tpf) {
-
         // ¿se ha movido lo suficiente desde el último frame?
         if (lastPos.distanceSquared(pos) < STUCK_EPS * STUCK_EPS) {
             stuckTimer += tpf;

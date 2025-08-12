@@ -56,20 +56,19 @@ private final Random rnd = new Random();
     }
 
     private void spawnEnemy() {
-
-        // 1) planta y sala de aparición  ---------------------------
+        // 1) planta y sala de aparición
         spawnFloorIdx = rnd.nextInt(layout.floors().size());
         List<Room> rooms = layout.floors().get(spawnFloorIdx).rooms();
         spawnRoom = rooms.get(rnd.nextInt(rooms.size()));
         float baseY = layout.yOf(spawnFloorIdx);
 
-        // 2) Planner para esa planta ------------------------------
+        // 2) Planner para esa planta
         planner = new PatrolPlanner(layout, spawnFloorIdx);
 
         // 3) LAMBDA que Enemy usará cuando necesite un camino nuevo
         Supplier<List<Vector3f>> pathSupplier = () -> planner.randomRoute(enemy != null && enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom);
 
-        // 4) Crear el enemigo -------------------------------------
+        // 4) Crear el enemigo
         enemy = new Enemy(am, space, player, world, spawnRoom, baseY, rootNode, audio, pathSupplier);
 
         enemy.setPatrolPoints(planner.randomRoute(spawnRoom));

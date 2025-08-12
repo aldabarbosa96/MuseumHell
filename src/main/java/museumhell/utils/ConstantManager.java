@@ -29,8 +29,8 @@ public class ConstantManager {
 
 
     // INPUT
-    public static final float WALK_SPEED = 8f;
-    public static final float CROUCH_SPEED = 4f;
+    public static final float WALK_SPEED = 3.33f;
+    public static final float CROUCH_SPEED = 1.66f;
     public static final float SPRINT_MULT = 2.75f;
 
 
@@ -79,8 +79,8 @@ public class ConstantManager {
     public static final float AVOID_PROBE_PERIOD = 0.2f;
     public static final float DETECT_RANGE = 15f;
     public static final float COS_HALF_FOV = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
-    public static final float WANDER_SPEED = 0.05f;
-    public static final float CHASE_SPEED = 0.125f;
+    public static final float WANDER_SPEED = 3.5f;
+    public static final float CHASE_SPEED = 8f;
     public static final float POINT_TOL = 0.25f;
     public static final float AVOID_DISTANCE = 1f;
     public static final float ALERT_TIME = 3f;

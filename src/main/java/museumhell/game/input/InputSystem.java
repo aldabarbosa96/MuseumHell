@@ -70,7 +70,7 @@ public class InputSystem extends BaseAppState implements ActionListener {
         switch (name) {
             case "Debug" -> {
                 debug = isPressed;
-                if (isPressed){
+                if (isPressed) {
                     physics.setDebugEnabled(!physics.isDebugEnabled());
                 }
             }
@@ -118,17 +118,23 @@ public class InputSystem extends BaseAppState implements ActionListener {
         if (right) dir.addLocal(cam.getLeft().negate());
         if (up) dir.addLocal(cam.getDirection());
         if (down) dir.addLocal(cam.getDirection().negate());
-
         dir.setY(0);
 
-        if (dir.lengthSquared() > 0) {
+        if (dir.lengthSquared() > 0f) {
             dir.normalizeLocal();
+
+            // Velocidad base en unidades/segundo
+            float baseSpeed = crouch ? CROUCH_SPEED : (sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED);
+
+            // Convierte a desplazamiento por tick de física (accuracy ≈ 1/60 s)
+            float dt = physics.getPhysicsSpace().getAccuracy();
+            player.move(dir.multLocal(baseSpeed * dt));
+        } else {
+            // Sin input: detén el character
+            player.move(Vector3f.ZERO);
         }
-
-        float baseSpeed = crouch ? CROUCH_SPEED : (sprint ? WALK_SPEED * SPRINT_MULT : WALK_SPEED);
-
-        player.move(dir.multLocal(baseSpeed * tpf));
     }
+
 
     public boolean isMoving() {
         return up || down || left || right;

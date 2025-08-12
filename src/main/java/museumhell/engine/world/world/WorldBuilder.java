@@ -44,9 +44,8 @@ public class WorldBuilder {
 
         /* ---------- 1) conexiones por planta ---------- */
         List<List<Connection>> floorConns = new ArrayList<>();
-        long seed = System.nanoTime();
         for (LevelLayout lvl : museum.floors()) {
-            floorConns.add(ConnectionGenerator.build(lvl, seed++));
+            floorConns.add(lvl.conns());
         }
 
         /* ---------- 2) planificación de escaleras ---------- */

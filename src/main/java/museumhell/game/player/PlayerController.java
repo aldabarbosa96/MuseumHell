@@ -15,11 +15,8 @@ public class PlayerController {
 
     public PlayerController( PhysicsSpace space, Vector3f startPos) {
         this.space = space;
-
         playerNode = new Node("Player");
         playerNode.setLocalTranslation(startPos);
-
-        // arrancamos en pie
         control = makeControl(STAND_HEIGHT);
         playerNode.addControl(control);
         space.add(control);
