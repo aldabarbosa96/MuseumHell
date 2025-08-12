@@ -78,6 +78,36 @@ private final Random rnd = new Random();
         enemy.getControl(CharacterControl.class).setPhysicsLocation(pos);
     }
 
+    public void onAlarm(Room room) {
+        if (enemy == null || room == null) return;
+
+        int roomFloor = floorOf(room);
+        if (roomFloor != spawnFloorIdx) return; // planner actual es por planta
+
+        Room start = enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom;
+
+        // Supplier para recalcular ruta dirigida (por si se queda atascado)
+        Supplier<List<Vector3f>> alarmSupplier = () ->
+                planner.routeTo(enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom, room);
+
+        List<Vector3f> path = planner.routeTo(start, room);
+        if (path != null && !path.isEmpty()) {
+            enemy.setAlarmChase(room, alarmSupplier, path); // entra en CHASE y corre a esa sala
+        }
+    }
+
+
+    private int floorOf(Room r) {
+        for (int i = 0; i < layout.floors().size(); i++) {
+            if (layout.floors().get(i).rooms().contains(r)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
+
     @Override
     protected void initialize(Application app) {
     }

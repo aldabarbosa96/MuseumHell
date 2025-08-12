@@ -76,25 +76,19 @@ public class SecurityCamSystem extends BaseAppState {
         }
         for (CameraData info : camSys.getCameraData()) {
             Room room = info.room();
-            if (detected.get(room)) {
-                continue;
-            }
+            if (detected.get(room)) continue;
+
             float baseY = info.baseY();
-            if (pPos.y < baseY || pPos.y > baseY + info.floorH()) {
+            if (pPos.y < baseY || pPos.y > baseY + info.floorH()) continue;
+            if (pPos.x < room.x() || pPos.x > room.x() + room.w() || pPos.z < room.z() || pPos.z > room.z() + room.h())
                 continue;
-            }
-            if (pPos.x < room.x() || pPos.x > room.x() + room.w() || pPos.z < room.z() || pPos.z > room.z() + room.h()) {
-                continue;
-            }
+
             Vector3f camPos = info.spat().getWorldTranslation();
             Vector3f toPlayer = pPos.subtract(camPos);
             float dist = toPlayer.length();
-            if (dist > maxDist) {
-                continue;
-            }
-            if (info.dir().dot(toPlayer.normalize()) < cosHalfFov) {
-                continue;
-            }
+            if (dist > maxDist) continue;
+            if (info.dir().dot(toPlayer.normalize()) < cosHalfFov) continue;
+
             List<PhysicsRayTestResult> results = space.rayTest(camPos, pPos);
             float closestFrac = 1f;
             PhysicsCollisionObject closestObj = null;
@@ -104,11 +98,11 @@ public class SecurityCamSystem extends BaseAppState {
                     closestObj = r.getCollisionObject();
                 }
             }
-            if (closestObj != player.getCharacterControl()) {
-                continue;
-            }
+            if (closestObj != player.getCharacterControl()) continue;
+
             detected.put(room, true);
         }
+
         for (Map.Entry<Room, Boolean> entry : detected.entrySet()) {
             Room room = entry.getKey();
             boolean isNow = entry.getValue();
@@ -120,6 +114,12 @@ public class SecurityCamSystem extends BaseAppState {
                 toggleCount = 0;
                 blinkTimer = 0f;
                 audio.play("alarm");
+
+                // Avisar al enemigo para que corra a esta sala
+                EnemySystem es = getStateManager().getState(EnemySystem.class);
+                if (es != null) {
+                    es.onAlarm(room);
+                }
             }
             prevDetected.put(room, isNow);
         }

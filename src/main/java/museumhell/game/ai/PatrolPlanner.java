@@ -71,6 +71,56 @@ public class PatrolPlanner {
         return out;
     }
 
+    public List<Vector3f> routeTo(Room start, Room target) {
+        List<Vector3f> out = new ArrayList<>();
+        if (start == null || target == null || start == target) return out;
+
+        Map<Room, NavEdge> parent = new HashMap<>();
+        Deque<Room> q = new ArrayDeque<>();
+        Set<Room> vis = new HashSet<>();
+
+        vis.add(start);
+        q.add(start);
+        boolean found = false;
+
+        while (!q.isEmpty()) {
+            Room cur = q.remove();
+            NavEdge[] edges = graph.get(cur);
+            if (edges == null) continue;
+            for (NavEdge e : edges) {
+                Room nxt = e.to();
+                if (vis.contains(nxt)) continue;
+                vis.add(nxt);
+                parent.put(nxt, e);
+                if (nxt == target) {
+                    found = true;
+                    q.clear();
+                    break;
+                }
+                q.add(nxt);
+            }
+        }
+        if (!found) return out;
+
+        List<NavEdge> steps = new ArrayList<>();
+        Room cur = target;
+        while (cur != start) {
+            NavEdge e = parent.get(cur);
+            if (e == null) break;
+            steps.add(e);
+            cur = e.from();
+        }
+        Collections.reverse(steps);
+
+        for (NavEdge e : steps) {
+            out.add(e.preDoor());
+            out.add(e.postDoor());
+            out.add(e.roomCenter());
+        }
+        return out;
+    }
+
+
     private static Vector3f doorCenter(Room a, Room b, Direction dir, float y) {
         float dxMid = (Math.max(a.x(), b.x()) + Math.min(a.x() + a.w(), b.x() + b.w())) * 0.5f;
         float dzMid = (Math.max(a.z(), b.z()) + Math.min(a.z() + a.h(), b.z() + b.h())) * 0.5f;

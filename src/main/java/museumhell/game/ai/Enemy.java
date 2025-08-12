@@ -67,6 +67,10 @@ public class Enemy extends Node {
     private final Vector3f bestDir = new Vector3f();
     private float probeTimer = 0f;
     private boolean pathBlocked = false;
+    private boolean alarmChasing = false;
+    private Room alarmTargetRoom = null;
+    private Supplier<List<Vector3f>> requestAlarmPath = null;
+
 
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
@@ -165,10 +169,12 @@ public class Enemy extends Node {
         boolean seesPlayer = canSee(pos);
         boolean litByTorch = isDirectlyLit(getWorldTranslation());
         alertTimer = (seesPlayer || litByTorch) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
-        boolean chasing = alertTimer > 0f;
+
+        boolean chasingPlayer = alertTimer > 0f;          // prioridad: si lo ve, persigue al jugador
+        boolean chasingByAlarm = alarmChasing && !chasingPlayer;
 
         State previous = state;
-        state = chasing ? State.CHASE : State.WANDER;
+        state = (chasingPlayer || alarmChasing) ? State.CHASE : State.WANDER;
         if (state != previous) {
             if (state == State.CHASE) {
                 if (scream.getStatus() != Playing) scream.play();
@@ -188,17 +194,16 @@ public class Enemy extends Node {
         float tri = 1f - FastMath.abs(phase * 2f - 1f);
         stepFactor = FastMath.pow(tri, EN_STEP_SHARPNESS);
 
-        if (state == State.CHASE) {
-            chase(pos);
+        if (chasingPlayer) {
+            chase(pos);                 // directo al jugador
         } else {
-            wander(pos);
+            followPathToTarget(pos);    // sigue la ruta (random o de alarma)
         }
 
         avoidObstacles(pos);
         detectStuck(pos, tpf);
 
-        // === Igual que el player: velocidad por tick de física, no por frame ===
-        float dtPhysics = space.getAccuracy(); // normalmente 1/60f
+        float dtPhysics = space.getAccuracy();
         Vector3f walk = lastDir.normalize().multLocal(baseSpeed * EN_STEP_GAIN * stepFactor * dtPhysics);
         control.setWalkDirection(walk);
 
@@ -223,7 +228,17 @@ public class Enemy extends Node {
                 audio.playWithVolume(snd, volume);
             }
         }
+
+        // ¿hemos llegado a la sala objetivo de la alarma?
+        if (alarmChasing) {
+            if ((alarmTargetRoom != null && currentRoomRef == alarmTargetRoom) || patrolIndex >= patrolPoints.size()) {
+                alarmChasing = false;
+                alarmTargetRoom = null;
+                requestAlarmPath = null;
+            }
+        }
     }
+
 
 
     private float getVolume() {
@@ -340,7 +355,6 @@ public class Enemy extends Node {
     }
 
     private void detectStuck(Vector3f pos, float tpf) {
-        // ¿se ha movido lo suficiente desde el último frame?
         if (lastPos.distanceSquared(pos) < STUCK_EPS * STUCK_EPS) {
             stuckTimer += tpf;
         } else {
@@ -348,13 +362,55 @@ public class Enemy extends Node {
             lastPos.set(pos);
             return;
         }
-
-        // Si lleva más de 0.8 s prácticamente quieto → nueva ruta
         if (stuckTimer > 0.8f) {
-            setPatrolPoints(requestNewPath.get());
+            if (alarmChasing && requestAlarmPath != null) {
+                List<Vector3f> path = requestAlarmPath.get();
+                if (path != null && !path.isEmpty()) setPatrolPoints(path);
+            } else {
+                setPatrolPoints(requestNewPath.get());
+            }
             stuckTimer = 0f;
             lastPos.set(pos);
         }
+    }
+
+
+    public void setAlarmChase(Room target, Supplier<List<Vector3f>> alarmPathSupplier, List<Vector3f> initialPath) {
+        this.alarmTargetRoom = target;
+        this.requestAlarmPath = alarmPathSupplier;
+        this.alarmChasing = true;
+        if (initialPath != null && !initialPath.isEmpty()) {
+            setPatrolPoints(initialPath);
+        }
+    }
+
+    private void followPathToTarget(Vector3f p) {
+        if (patrolPoints.isEmpty()) {
+            if (alarmChasing && requestAlarmPath != null) {
+                List<Vector3f> path = requestAlarmPath.get();
+                if (path != null && !path.isEmpty()) {
+                    setPatrolPoints(path);
+                }
+            } else {
+                setPatrolPoints(requestNewPath.get());
+            }
+            return;
+        }
+        if (patrolIndex >= patrolPoints.size()) {
+            if (alarmChasing && requestAlarmPath != null) {
+                List<Vector3f> path = requestAlarmPath.get();
+                if (path != null && !path.isEmpty()) setPatrolPoints(path);
+            }
+            return;
+        }
+        Vector3f tgt = patrolPoints.get(patrolIndex);
+        Vector3f d = scratchVec.set(tgt).subtractLocal(p).setY(0);
+        if (d.length() < POINT_TOL) {
+            patrolIndex++;
+            return;
+        }
+        Vector3f dir = d.normalizeLocal();
+        lastDir.set(dir);
     }
 
 
