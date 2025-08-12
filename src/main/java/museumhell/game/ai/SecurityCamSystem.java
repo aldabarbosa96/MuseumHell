@@ -34,7 +34,7 @@ public class SecurityCamSystem extends BaseAppState {
     private int toggleCount = 0;
     private float blinkTimer = 0f;
     private final float maxDist = 20f;
-    private final float halfFov = FastMath.DEG_TO_RAD * 30;
+    private final float cosHalfFov = FastMath.cos(FastMath.DEG_TO_RAD * 30);
 
     public SecurityCamSystem(SecurityCamera camSys, PlayerController player, Node root, _6LightPlacer lightPlacer, AudioLoader audioLoader) {
         this.camSys = camSys;
@@ -92,7 +92,7 @@ public class SecurityCamSystem extends BaseAppState {
             if (dist > maxDist) {
                 continue;
             }
-            if (FastMath.acos(info.dir().dot(toPlayer.normalize())) > halfFov) {
+            if (info.dir().dot(toPlayer.normalize()) < cosHalfFov) {
                 continue;
             }
             List<PhysicsRayTestResult> results = space.rayTest(camPos, pPos);

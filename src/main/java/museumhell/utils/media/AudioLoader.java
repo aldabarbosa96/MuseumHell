@@ -38,7 +38,6 @@ public class AudioLoader {
         register("flashlight", "Sounds/click.ogg", false, 0.3f);
         register("footstep1", "Sounds/footsteps1.ogg", false, 1);
         register("footstep2", "Sounds/footsteps2.ogg", false, 1);
-        register("footstep3", "Sounds/footsteps3.ogg", false, 1);
         register("alarm", "Sounds/alarm.ogg", false, 0.5f);
         register("monsterSteps1", "Sounds/monsterSteps1.ogg", false, 1f);
         register("monsterSteps2", "Sounds/monsterSteps2.ogg", false, 1f);
