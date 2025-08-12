@@ -25,7 +25,7 @@ public class ConstantManager {
     public static final float SMOOTH_FACTOR = 0.12f;
     public static final float FLASH_OFFSET_SIDE = -0.9f;
     public static final float FLASH_OFFSET_DOWN = 0.35f;
-    public static final float FLASH_OFFSET_FORWARD = 0.15f;
+    public static final float FLASH_OFFSET_FORWARD = 0.8f;
 
 
     // INPUT

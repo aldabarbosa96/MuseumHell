@@ -6,11 +6,15 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.input.InputManager;
 import com.jme3.input.FlyByCamera;
+import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Node;
 import com.jme3.asset.AssetManager;
 
+import com.jme3.scene.Spatial;
 import com.jme3.shadow.EdgeFilteringMode;
 import com.jme3.shadow.SpotLightShadowRenderer;
 import museumhell.engine.world.levelgen.Room;
@@ -34,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive;
 import static museumhell.utils.ConstantManager.*;
 
 public class GameSystemState extends BaseAppState {
@@ -124,6 +129,11 @@ public class GameSystemState extends BaseAppState {
         flashSSR.setShadowZFadeLength(20f);
         app.getViewPort().addProcessor(flashSSR);
 
+        Spatial torchModel = assetManager.get("lantern1");
+        torchModel.setShadowMode(CastAndReceive);
+
+        Quaternion forwardFix = new Quaternion().fromAngles(FastMath.DEG_TO_RAD * -10f, FastMath.PI, FastMath.DEG_TO_RAD * -15f);
+        world.getLightPlacer().attachFlashlightModel(torchModel, forwardFix, 0.2f, 0.15f);
 
     }
 
