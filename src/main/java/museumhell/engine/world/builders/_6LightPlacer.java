@@ -48,7 +48,6 @@ public class _6LightPlacer {
     }
 
     public void updateFlashlight(Vector3f targetPos, Vector3f targetDir) {
-        // Ya viene suavizado desde MoveEffectState → no suavizamos de nuevo
         if (smoothPos == null) smoothPos = targetPos.clone();
         if (smoothDir == null) smoothDir = targetDir.clone();
 
@@ -59,11 +58,8 @@ public class _6LightPlacer {
         flashlight.setDirection(smoothDir);
 
         if (flashlightModel != null) {
-            // rotación del modelo alineada con el haz
             Quaternion rot = new Quaternion().lookAt(smoothDir, Vector3f.UNIT_Y).multLocal(flashlightModelFix);
             flashlightModel.setLocalRotation(rot);
-
-            // posición del modelo = posición del haz + pequeño empuje hacia delante
             Vector3f modelPos = tmp.set(smoothDir).multLocal(flashlightModelAhead).addLocal(smoothPos);
             flashlightModel.setLocalTranslation(modelPos);
         }
@@ -155,10 +151,9 @@ public class _6LightPlacer {
         flashlightModel = model;
         flashlightModelFix.set(forwardFix);
         flashlightModel.setLocalScale(scale);
-        flashlightModelAhead = aheadMeters;   // << nuevo
+        flashlightModelAhead = aheadMeters;
         root.attachChild(flashlightModel);
 
-        // Si ya teníamos posición/dirección suavizada, colócalo ahí mismo
         if (flashlightModel != null) {
             Quaternion rot = new Quaternion().lookAt(smoothDir, Vector3f.UNIT_Y).multLocal(flashlightModelFix);
             flashlightModel.setLocalRotation(rot);

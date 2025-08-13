@@ -1,67 +1,79 @@
-# MuseumHell
+# 🎨 MuseumHell
 
-This is the readme for MuseumHell, try to keep it up to date with any information future-you will wish past-you
-remembered to write down
+**Sigilo / Atraco cooperativo en un museo procedural**
+Diseñado para partidas rápidas donde el equipo entra, roba y escapa evitando guardias y cámaras.
 
-## Project set up
-This is a gradle project using JMonkey Engine and other java libraries
+---
 
-## How to run (for development)
-You'll want a java 11 JDK installed on your machine (Your IDE may do this for you, IntelliJ does)
+## 📜 Género
+- 🎯 **FPS de sigilo / heist** con toques de horror ligero
 
-Open this application in your preferred IDE (IntelliJ and Eclipse will support Gradle by default, netbeans will support it with a plugin). The remaining instructions are for IntelliJ but the basic principle will be the same for any IDE)
+## 👥 Jugadores
+- 🧍 **1 jugador** (prototipo)
+- 🌐 **2–4 jugadores online** *(en roadmap)*
 
+## 💻 Plataforma
+- 🖥 **PC**
 
-### Development in IntelliJ
-- Download the latest version of IntelliJ Community (IntelliJ Ultimate is a paid for version the features of which you may consider useful but are not essential for a JMonkey project)
-- File > Open > select the top level folder of this project ( i.e. MuseumHell) > Ok.
-- The project will open with your project files on the left had side (IntelliJ may need to "think" for a couple of seconds before they appear)
-- IntelliJ may say "No SDK set up" and prompt you to download one, follow its instructions and allow it to download a java 11 JDK. A JDK is used for compiling java applications, a JRE is used for running them.
-- You can now add more java source files or assets to the project
-- To run the project find MuseumHell.java (which will be in under src/main/java/museumhell) and right click > Run 'MuseumHell'
+---
 
-## How to package the game
+## 🕵️‍♂️ De qué va
 
-### Distribute without a JRE
+En cada partida exploras un **museo generado proceduralmente**.
+Tu objetivo: **robar el botín** repartido por salas **sin activar alarmas**.
 
-Either:
+- Las **cámaras de seguridad** y un **enemigo que patrulla** reaccionan a tu presencia (visión y luz de la linterna).
+- Si te detectan: **alarma → persecución**.
+- En cooperativo, el equipo debe coordinarse: distracciones, apoyo con linternas, rutas alternativas y una salida sincronizada.
 
-In your IDE execute the gradle task distZip (which you'll find under gradle > distributions > distZip)
+---
 
-Or:
+## 🛠 Tecnologías
 
-In the command line open at the root of this project enter the following command: gradlew distZip
+- ☕ **Java 11**
+- 🎮 **JMonkeyEngine 3** (renderizado 3D y escena)
+- 🧠 **Bullet Physics**
+- ⚙️ **Gradle** (wrapper incluido)
+- 💡 **Iluminación dinámica** (Spotlights)
+- 🔊 **Audio espacial**
 
-Then you will find a zip in the build/distributions folder. This zip will contain your game, all the libraries to run it and in the bin folder launch files (for windows and linux).
+> No necesitas instalar nada raro fuera de Java 11; el wrapper de Gradle ya viene en el repositorio.
 
-Note that the distribution does not contain a JRE, so java will need to be installed on the machine of anyone you give this distribution to. Alternatively you may wish to bundle a JRE with your game to remove this requirement.
+---
 
+## 📌 Estado actual
 
-### Distribute with a JRE
+✅ **Prototipo jugable en local** con:
+- 🏛 **Generación procedural** de niveles por plantas
+- 👮‍♂️ **IA básica** de enemigo (patrulla y persecución)
+- 📷 **Cámaras de seguridad** con alarma por sala
+- 💰 **Botín aleatorio** + HUD con contador
+- 🔦 **Linterna con sombras** y controles FPS *(andar, sprint, agacharse, salto, usar)*
 
-Distributing with a JRE means you'll need to provide an operating specific bundle for each OS you are
-targeting (which is a disadvantage) but your end use will not have to have a JRE locally installed
-(which is an advantage).
+🚧 **Cooperativo online:** en diseño *(ver roadmap)*
 
-Either:
+---
 
-In your IDE execute the gradle task distZip (which you'll find under gradle > distributions > buildAllDistributions)
+## 📅 Roadmap
 
-Or:
+- 🔹 **Co-op online (2–4 jugadores):** lobby, host/cliente, sincronización de estado y física básica
+- 🔹 **Roles y gadgets:** ganzúas, inhibidores, distracciones, marcadores de objetivos
+- 🔹 **Sigilo avanzado:** detección por luz/sonido, coberturas, superficies ruidosas
+- 🔹 **Más enemigos y cámaras:** patrones, barridos, puntos ciegos
+- 🔹 **Objetivos y progresión:** contratos, puntuación, dificultad escalable
+- 🔹 **Base de operaciones móvil:** una furgoneta como hub entre atracos, donde el equipo podrá equiparse, planificar y seleccionar el próximo destino.
+- 🔹 **Opciones y accesibilidad:** remapeo de teclas, FOV, sensibilidad, ayudas visuales
+- 🔹 **Demo pública** (itch/Steam) y telemetría básica para balanceo
 
-In the command line open at the root of this project enter the following command: gradlew buildAllDistributions
+---
 
-Then you will find a series of zip in the build/distributions folder. These zip(s) will contain your game, all the libraries to run it and an
-OS specific JRE. (The same files will also be available unzipped in a folder, which may be useful if distributing via steampipe or similar).
+## 🚀 Cómo probar (rápido)
 
+**Requisitos:**
+- ☕ Java 11 o superior
 
-## Next Steps
-You may wish to commit your project to a git repository to keep track of your changes (so you can roll back if anything goes wrong)
+**Ejecución:**
+```bash
+./gradlew run
 
-## Adding more libraries
-During the JMonkey Initializer you chose from a small subset of the available java libraries.
-You can add more by editing the dependencies section in the build.gradle file
-
-## txt vs md
-
-This readme is provided as a .txt as that is a common format openable on any machine. However, it would more normally be a .md, this will allow it to be nicely formatted by most git repositories (assuming you commit it to git). Just change the extension from .txt to .md, the syntax is already correct for an md file
+O abre el proyecto en tu IDE favorito (IntelliJ recomendado) y ejecuta.
