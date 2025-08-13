@@ -39,7 +39,7 @@ public class WorldInitState extends BaseAppState {
         }
 
         // 4) Preparar cámaras fijas
-        cameraBase.scale(0.5f);
+        cameraBase.scale(0.7f);
         float baseExtrusion = 1.25f;
         float cameraExtrusion = baseExtrusion + WALL_T * 0.5f * FastMath.sqrt(2f);
         securityCameraBuilder = new SecurityCamera(rootNode, cameraBase, cameraExtrusion);

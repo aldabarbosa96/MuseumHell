@@ -7,12 +7,15 @@ import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import museumhell.utils.media.AssetLoader;
 import museumhell.utils.GeoUtil.Rect;
 
 import java.util.List;
+
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.Receive;
 
 public class _1FloorBuilder extends _0HorizontalBuilder {
 
@@ -78,6 +81,7 @@ public class _1FloorBuilder extends _0HorizontalBuilder {
         s.setLocalTranslation(x + w * .5f - ox * w / modelW, y - oy * thickness / modelH, z + d * .5f - oz * d / modelD);
         var body = new RigidBodyControl(CollisionShapeFactory.createMeshShape(s), 0);
         s.addControl(body);
+        s.setShadowMode(Receive);
         root.attachChild(s);
         space.add(body);
     }

@@ -3,15 +3,20 @@ package museumhell.game;
 import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
-import com.jme3.asset.AssetKey;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.input.InputManager;
 import com.jme3.input.FlyByCamera;
+import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Node;
 import com.jme3.asset.AssetManager;
 
+import com.jme3.scene.Spatial;
+import com.jme3.shadow.EdgeFilteringMode;
+import com.jme3.shadow.SpotLightShadowRenderer;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
@@ -33,6 +38,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive;
+import static museumhell.utils.ConstantManager.*;
+
 public class GameSystemState extends BaseAppState {
     private final AssetLoader assetManager;
     private final AssetManager assets;
@@ -45,7 +53,7 @@ public class GameSystemState extends BaseAppState {
     private final SecurityCamera camBuilder;
     private final AudioLoader audio;
 
-    public GameSystemState(AssetLoader assetManager,AssetManager assets, Node rootNode, BulletAppState physics, WorldBuilder world, MuseumLayout layout, PlayerController player, SecurityCamera camBuilder, AudioLoader audio) {
+    public GameSystemState(AssetLoader assetManager, AssetManager assets, Node rootNode, BulletAppState physics, WorldBuilder world, MuseumLayout layout, PlayerController player, SecurityCamera camBuilder, AudioLoader audio) {
         this.assetManager = assetManager;
         this.assets = assets;
         this.rootNode = rootNode;
@@ -109,8 +117,23 @@ public class GameSystemState extends BaseAppState {
         getStateManager().attach(new MoveEffectState(player, input, audio, hud, camera, world.getLightPlacer()));
 
         // 8) Inicialización de la linterna para evitar NPE en el primer update
-        Vector3f initEye = player.getLocation().add(0, 1f, 0).addLocal(camera.getDirection().mult(-0.25f));
-        world.getLightPlacer().initFlashlight(initEye, camera.getDirection().clone());
+        Vector3f eye = player.getLocation().add(0, 1f, 0).add(camera.getDirection().mult(-0.25f));
+        Vector3f torchPos = eye.add(camera.getLeft().normalize().mult(FLASH_OFFSET_SIDE)).add(0, -FLASH_OFFSET_DOWN, 0).add(camera.getDirection().normalize().mult(FLASH_OFFSET_FORWARD));
+        world.getLightPlacer().initFlashlight(torchPos, camera.getDirection().clone());
+
+        SpotLightShadowRenderer flashSSR = new SpotLightShadowRenderer(app.getAssetManager(), 1024); // todo --> testear rendimiento en diferentes sistemas
+        flashSSR.setLight(world.getLightPlacer().getFlashlight());
+        flashSSR.setEdgeFilteringMode(EdgeFilteringMode.PCF4);
+        flashSSR.setShadowZExtend(200f);
+        flashSSR.setShadowIntensity(0.75f);
+        flashSSR.setShadowZFadeLength(20f);
+        app.getViewPort().addProcessor(flashSSR);
+
+        Spatial torchModel = assetManager.get("lantern1");
+        torchModel.setShadowMode(CastAndReceive);
+
+        Quaternion forwardFix = new Quaternion().fromAngles(FastMath.DEG_TO_RAD * -10f, FastMath.PI, FastMath.DEG_TO_RAD * -15f);
+        world.getLightPlacer().attachFlashlightModel(torchModel, forwardFix, 0.2f, 0.15f);
 
     }
 

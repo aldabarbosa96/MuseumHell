@@ -1,7 +1,8 @@
 package museumhell.game.ai;
 
-
 import com.jme3.anim.AnimComposer;
+import com.jme3.audio.AudioNode;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.bullet.collision.PhysicsRayTestResult;
@@ -12,6 +13,7 @@ import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
+import museumhell.engine.world.builders._6LightPlacer;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.Door;
 import museumhell.engine.world.world.WorldBuilder;
@@ -19,18 +21,23 @@ import museumhell.game.player.PlayerController;
 import museumhell.utils.media.AssetLoader;
 import museumhell.utils.media.AudioLoader;
 
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.function.Supplier;
+
+import static com.jme3.audio.AudioSource.Status.Playing;
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive;
+import static museumhell.utils.ConstantManager.*;
 
 public class Enemy extends Node {
     private enum State {WANDER, CHASE}
 
     private State state = State.WANDER;
 
+    private final _6LightPlacer lightPlacer;
     private final CharacterControl control;
     private final PhysicsSpace space;
     private final PlayerController player;
@@ -38,69 +45,77 @@ public class Enemy extends Node {
     private final WorldBuilder world;
     private AnimComposer composer;
     private String lastAnim = "";
-
     private final Supplier<List<Vector3f>> requestNewPath;
     private Room currentRoomRef;
-
-    public Room currentRoom() {
-        return currentRoomRef;
-    }
-
-    private static final float DETECT_RANGE = 15f;
-    private static final float COS_HALF_FOV = FastMath.cos(FastMath.DEG_TO_RAD * 22.5f);
-    private static final float WANDER_SPEED = 0.05f;
-    private static final float CHASE_SPEED = 0.125f;
-    private static final float POINT_TOL = 0.25f;
-
     private final List<Vector3f> patrolPoints = new ArrayList<>();
     private int patrolIndex = 0;
-    private boolean patrolFinished = false;
     private final Vector3f lastDir = new Vector3f(1, 0, 0);
     private final Vector3f lastPos = new Vector3f();
     private float stuckTimer = 0f;
-    private static final float STUCK_EPS = 0.1f;
     private final Set<Door> openingDoors = new HashSet<>();
-    private final Random rnd = new Random();
     private boolean avoiding = false;
-    private int avoidDirSign = 0;
     private final Vector3f avoidOrigin = new Vector3f();
-    private static final float AVOID_DISTANCE = 1f;
-    private Quaternion[] rotSamples;
     private final Vector3f candDir = new Vector3f();
     private final Vector3f scratchVec = new Vector3f();
     private final Vector3f scratchEnd = new Vector3f();
-
+    private float alertTimer = 0f;
     private final AudioLoader audio;
+    private final AudioNode scream;
     private float stepTime = 0f;
     private int lastStepCount = 0;
-    private State prevState = null;
-    private static final float STEP_INTERVAL = 0.92f;
-    private static final float CHASE_STEP_INTERVAL = 0.33f;
+    private float stepFactor = 0f;
+    private final Vector3f bestDir = new Vector3f();
+    private float probeTimer = 0f;
+    private boolean pathBlocked = false;
+    private boolean alarmChasing = false;
+    private Room alarmTargetRoom = null;
+    private Supplier<List<Vector3f>> requestAlarmPath = null;
+
 
     private final Quaternion lookQuat = new Quaternion();
     private final Quaternion currentQuat = new Quaternion();
     private final Quaternion desiredQuat = new Quaternion();
     private final Quaternion offsetQuat = new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_Y);
 
+    private static final Quaternion[] ROT_SAMPLES;
+
+    static {
+        int samples = 16;
+        ROT_SAMPLES = new Quaternion[samples];
+        for (int i = 0; i < samples; i++) {
+            float ang = FastMath.TWO_PI * i / samples;
+            ROT_SAMPLES[i] = new Quaternion().fromAngleAxis(ang, Vector3f.UNIT_Y);
+        }
+    }
+
     public Enemy(AssetLoader am, PhysicsSpace space, PlayerController player, WorldBuilder world, Room room, float baseY, Node rootNode, AudioLoader audio, Supplier<List<Vector3f>> pathSupplier) {
         super("Enemy");
+        this.lightPlacer = world.getLightPlacer();
         this.space = space;
         this.player = player;
         this.world = world;
         this.audio = audio;
+        scream = audio.get("monsterScream").clone();
+        scream.setPositional(true);
+        scream.setRefDistance(5f);
+        scream.setMaxDistance(70f);
+        attachChild(scream);
         this.requestNewPath = pathSupplier;
 
-        int samples = 16;
-        rotSamples = new Quaternion[samples];
-        for (int i = 0; i < samples; i++) {
-            float angle = FastMath.TWO_PI * i / samples;
-            rotSamples[i] = new Quaternion().fromAngleAxis(angle, Vector3f.UNIT_Y);
-        }
-
-        model = am.get("wander1Animated");
-        model.setLocalScale(0.525f);
+        model = am.get("wander2Animated");
+        model.setLocalScale(0.65f);
         model.rotate(0, -FastMath.HALF_PI, 0);
-        model.setLocalTranslation(0, -1.64f, 0);
+        model.updateGeometricState();
+        model.setShadowMode(CastAndReceive);
+        BoundingBox bb = (BoundingBox) model.getWorldBound();
+        float yMin = bb.getCenter().y - bb.getYExtent();
+
+        float radius = 1f;
+        float cylHeight = 1f;
+        float yBottom = -(cylHeight * .5f + radius);
+
+        float offsetY = yBottom - yMin;
+        model.setLocalTranslation(0, offsetY, 0);
         model.depthFirstTraversal(spat -> {
             if (composer == null) {
                 composer = spat.getControl(AnimComposer.class);
@@ -130,85 +145,101 @@ public class Enemy extends Node {
         patrolPoints.clear();
         patrolPoints.addAll(pts);
         patrolIndex = 0;
-        patrolFinished = false;
-    }
-
-    public boolean isPatrolFinished() {
-        return patrolFinished;
     }
 
     public void update(float tpf) {
+        probeTimer -= tpf;
         currentRoomRef = world.whichRoom(control.getPhysicsLocation());
         Vector3f pos = control.getPhysicsLocation();
+        Vector3f doorProbe = scratchEnd.set(pos).addLocal(0, DOOR_H * 0.5f, 0);
 
-        // 1) Gestión de puertas
-        Door d = world.nearestDoor(pos, 3.5f);
-        if (d != null) {
-            if (!openingDoors.contains(d)) {
-                world.tryUseDoor(pos);
-                openingDoors.add(d);
+        Door nearDoor = world.nearestDoor(doorProbe, 4f);
+        if (nearDoor != null) {
+            if (!openingDoors.contains(nearDoor)) {
+                world.tryUseDoor(doorProbe);
+                openingDoors.add(nearDoor);
             }
-            if (!d.isOpen()) return;
-            openingDoors.remove(d);
+            if (!nearDoor.isOpen()) {
+                control.setWalkDirection(Vector3f.ZERO);
+                return;
+            }
+            openingDoors.remove(nearDoor);
         }
 
-        // 2) State transition
         boolean seesPlayer = canSee(pos);
-        State newState = seesPlayer ? State.CHASE : (state == State.CHASE ? State.WANDER : state);
+        boolean litByTorch = isDirectlyLit(getWorldTranslation());
+        alertTimer = (seesPlayer || litByTorch) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
 
-        if (newState != state) {
-            stepTime = 0f;
-            lastStepCount = 0;
-        }
-        state = newState;
+        boolean chasingPlayer = alertTimer > 0f;          // prioridad: si lo ve, persigue al jugador
+        boolean chasingByAlarm = alarmChasing && !chasingPlayer;
 
-        if (state != prevState) {
+        State previous = state;
+        state = (chasingPlayer || alarmChasing) ? State.CHASE : State.WANDER;
+        if (state != previous) {
             if (state == State.CHASE) {
-                composer.setGlobalSpeed(3f);
+                if (scream.getStatus() != Playing) scream.play();
             } else {
-                composer.setGlobalSpeed(1f);
+                if (scream.getStatus() == Playing) scream.stop();
             }
-            prevState = state;
-        }
-
-        // 3) Comportamiento
-        if (state == State.CHASE) chase(pos);
-        else wander(pos);
-
-        // 4) Animación de caminar + audio de pasos:
-        playAnimationIfChanged("ArmatureAction");
-
-        if ("ArmatureAction".equals(lastAnim)) {
-            stepTime += tpf;
-            float interval = (state == State.CHASE ? CHASE_STEP_INTERVAL : STEP_INTERVAL);
-            int stepCount = (int) (stepTime / interval);
-            if (stepCount > lastStepCount) {
-                lastStepCount = stepCount;
-                float volume = getVolume();
-                float dist3d = pos.distance(player.getLocation());
-                String soundName = dist3d <= 20f ? "monsterSteps1" : "monsterSteps2";
-                audio.playWithVolume(soundName, volume);
-            }
-        } else {
             stepTime = 0f;
             lastStepCount = 0;
+            composer.setGlobalSpeed(state == State.CHASE ? 3f : 1f);
         }
 
-        // 5) Avoidance & stuck detection
+        float baseSpeed = (state == State.CHASE) ? CHASE_SPEED : WANDER_SPEED;
+        float interval = (state == State.CHASE) ? EN_STEP_INTERVAL_RUN : EN_STEP_INTERVAL;
+
+        stepTime += tpf;
+        float phase = (stepTime / interval) % 1f;
+        float tri = 1f - FastMath.abs(phase * 2f - 1f);
+        stepFactor = FastMath.pow(tri, EN_STEP_SHARPNESS);
+
+        if (chasingPlayer) {
+            chase(pos);                 // directo al jugador
+        } else {
+            followPathToTarget(pos);    // sigue la ruta (random o de alarma)
+        }
+
         avoidObstacles(pos);
         detectStuck(pos, tpf);
 
-        // 6) Posicionamiento y rotación
+        float dtPhysics = space.getAccuracy();
+        Vector3f walk = lastDir.normalize().multLocal(baseSpeed * EN_STEP_GAIN * stepFactor * dtPhysics);
+        control.setWalkDirection(walk);
+
         setLocalTranslation(control.getPhysicsLocation());
 
         if (lastDir.lengthSquared() > 0f) {
-            lookQuat.lookAt(lastDir.normalizeLocal(), Vector3f.UNIT_Y);
+            lookQuat.lookAt(lastDir.normalize(), Vector3f.UNIT_Y);
             desiredQuat.set(lookQuat).multLocal(offsetQuat);
             currentQuat.set(model.getLocalRotation());
             currentQuat.slerp(desiredQuat, tpf * 5f);
             model.setLocalRotation(currentQuat);
         }
+
+        playAnimationIfChanged("ArmatureAction");
+        if ("ArmatureAction".equals(lastAnim)) {
+            int stepCnt = (int) (stepTime / interval);
+            if (stepCnt > lastStepCount) {
+                lastStepCount = stepCnt;
+                float volume = getVolume();
+                float dist3d = pos.distance(player.getLocation());
+                String snd = dist3d <= 20f ? "monsterSteps1" : "monsterSteps2";
+                audio.playWithVolume(snd, volume);
+            }
+        }
+
+        // ¿hemos llegado a la sala objetivo de la alarma?
+        if (alarmChasing) {
+            if ((alarmTargetRoom != null && currentRoomRef == alarmTargetRoom) || patrolIndex >= patrolPoints.size()) {
+                alarmChasing = false;
+                alarmTargetRoom = null;
+                requestAlarmPath = null;
+            }
+        }
     }
+
+
 
     private float getVolume() {
         Vector3f e = this.getWorldTranslation();
@@ -219,7 +250,7 @@ public class Enemy extends Node {
         float horizontalDist = FastMath.sqrt(dx * dx + dz * dz);
 
         float dy = Math.abs(e.y - j.y);
-        float verticalWeight = 2f; // penalizador de altura para mayor realismo
+        float verticalWeight = 2.5f; // penalizador de altura para mayor realismo
         float weightedDist = FastMath.sqrt(horizontalDist * horizontalDist + (verticalWeight * dy) * (verticalWeight * dy));
 
         float fullVolUntil = 13f;
@@ -236,11 +267,9 @@ public class Enemy extends Node {
         return volume;
     }
 
-
     private void chase(Vector3f p) {
-        Vector3f dir = player.getLocation().subtract(p).setY(0).normalizeLocal();
+        Vector3f dir = scratchVec.set(player.getLocation()).subtractLocal(p).setY(0).normalizeLocal();
         lastDir.set(dir);
-        control.setWalkDirection(dir.mult(CHASE_SPEED));
     }
 
     private void wander(Vector3f p) {
@@ -256,7 +285,7 @@ public class Enemy extends Node {
         }
 
         Vector3f tgt = patrolPoints.get(patrolIndex);
-        Vector3f d = tgt.subtract(p).setY(0);
+        Vector3f d = scratchVec.set(tgt).subtractLocal(p).setY(0);
 
         if (d.length() < POINT_TOL) {
             patrolIndex++;
@@ -265,30 +294,31 @@ public class Enemy extends Node {
 
         Vector3f dir = d.normalizeLocal();
         lastDir.set(dir);
-        control.setWalkDirection(dir.mult(WANDER_SPEED));
     }
 
     private void avoidObstacles(Vector3f p) {
         if (avoiding) {
             if (avoidOrigin.distance(p) > AVOID_DISTANCE) {
                 avoiding = false;
-                avoidDirSign = 0;
             } else {
                 return;
             }
         }
-        Vector3f dirNorm = lastDir.normalizeLocal();
+
+        if (!(probeTimer > 0f)) {
+            probeTimer = AVOID_PROBE_PERIOD;
+            Vector3f dirNorm = scratchVec.set(lastDir).normalizeLocal();
+            float probeLen = 1.5f;
+            pathBlocked = measureClearance(p, dirNorm, probeLen) < probeLen;
+        }
+        if (!pathBlocked) return;
+
+        Vector3f dirNorm = scratchVec.set(lastDir).normalizeLocal();
         float probeLen = 1.5f;
 
-        if (measureClearance(p, dirNorm, probeLen) >= probeLen) {
-            avoidDirSign = 0;
-            return;
-        }
-
-        // 1) busco la mejor muestra en 360°
+        // 1) buscar mejor muestra en 360°
         float bestClear = -1f;
-        Vector3f bestDir = new Vector3f();
-        for (Quaternion rot : rotSamples) {
+        for (Quaternion rot : ROT_SAMPLES) {
             rot.mult(dirNorm, candDir);
             float clear = measureClearance(p, candDir, probeLen);
             if (clear > bestClear) {
@@ -297,20 +327,19 @@ public class Enemy extends Node {
             }
         }
 
-        // 2) si ninguna muestra queda tan libre como medio probeLen, hago reverse 180°
+        // 2) si no hay dirección suficientemente libre, reverse 180°
         if (bestClear < probeLen * 0.5f) {
             lastDir.set(dirNorm.negate());
         } else {
             lastDir.set(bestDir);
         }
 
-        // 3) aplico la dirección elegida
-        float speed = (state == State.CHASE) ? CHASE_SPEED : WANDER_SPEED;
-        control.setWalkDirection(lastDir.mult(speed));
+        // 3) marcamos evitación; el movimiento se aplicará en update()
         avoiding = true;
         avoidOrigin.set(p);
         stuckTimer = 0f;
     }
+
 
     private float measureClearance(Vector3f origin, Vector3f dir, float maxDist) {
         scratchEnd.set(dir).multLocal(maxDist).addLocal(origin);
@@ -326,8 +355,6 @@ public class Enemy extends Node {
     }
 
     private void detectStuck(Vector3f pos, float tpf) {
-
-        // ¿se ha movido lo suficiente desde el último frame?
         if (lastPos.distanceSquared(pos) < STUCK_EPS * STUCK_EPS) {
             stuckTimer += tpf;
         } else {
@@ -335,13 +362,55 @@ public class Enemy extends Node {
             lastPos.set(pos);
             return;
         }
-
-        // Si lleva más de 0.8 s prácticamente quieto → nueva ruta
         if (stuckTimer > 0.8f) {
-            setPatrolPoints(requestNewPath.get());
+            if (alarmChasing && requestAlarmPath != null) {
+                List<Vector3f> path = requestAlarmPath.get();
+                if (path != null && !path.isEmpty()) setPatrolPoints(path);
+            } else {
+                setPatrolPoints(requestNewPath.get());
+            }
             stuckTimer = 0f;
             lastPos.set(pos);
         }
+    }
+
+
+    public void setAlarmChase(Room target, Supplier<List<Vector3f>> alarmPathSupplier, List<Vector3f> initialPath) {
+        this.alarmTargetRoom = target;
+        this.requestAlarmPath = alarmPathSupplier;
+        this.alarmChasing = true;
+        if (initialPath != null && !initialPath.isEmpty()) {
+            setPatrolPoints(initialPath);
+        }
+    }
+
+    private void followPathToTarget(Vector3f p) {
+        if (patrolPoints.isEmpty()) {
+            if (alarmChasing && requestAlarmPath != null) {
+                List<Vector3f> path = requestAlarmPath.get();
+                if (path != null && !path.isEmpty()) {
+                    setPatrolPoints(path);
+                }
+            } else {
+                setPatrolPoints(requestNewPath.get());
+            }
+            return;
+        }
+        if (patrolIndex >= patrolPoints.size()) {
+            if (alarmChasing && requestAlarmPath != null) {
+                List<Vector3f> path = requestAlarmPath.get();
+                if (path != null && !path.isEmpty()) setPatrolPoints(path);
+            }
+            return;
+        }
+        Vector3f tgt = patrolPoints.get(patrolIndex);
+        Vector3f d = scratchVec.set(tgt).subtractLocal(p).setY(0);
+        if (d.length() < POINT_TOL) {
+            patrolIndex++;
+            return;
+        }
+        Vector3f dir = d.normalizeLocal();
+        lastDir.set(dir);
     }
 
 
@@ -349,7 +418,6 @@ public class Enemy extends Node {
         // 1) Vector desde el enemigo hasta el jugador
         Vector3f playerPos = player.getLocation();
         scratchVec.set(playerPos).subtractLocal(enemyPos);
-
         // 2) Comprobación de rango usando distancia al cuadrado (sin sqrt)
         float dist2 = scratchVec.lengthSquared();
         if (dist2 > DETECT_RANGE * DETECT_RANGE) {
@@ -396,5 +464,27 @@ public class Enemy extends Node {
             composer.setCurrentAction(animName);
             lastAnim = animName;
         }
+    }
+
+    private boolean isDirectlyLit(Vector3f enemyPos) {
+        if (lightPlacer == null || lightPlacer.getFlashPosition() == null) return false;
+        if (!lightPlacer.isTargetLit(enemyPos, 0.6f)) return false;
+
+        Vector3f src = lightPlacer.getFlashPosition();
+        List<PhysicsRayTestResult> hits = space.rayTest(src, enemyPos);
+
+        float bestFrac = 1f;
+        PhysicsCollisionObject first = null;
+        for (PhysicsRayTestResult r : hits) {
+            if (r.getHitFraction() < bestFrac) {
+                bestFrac = r.getHitFraction();
+                first = r.getCollisionObject();
+            }
+        }
+        return first == this.control;
+    }
+
+    public Room currentRoom() {
+        return currentRoomRef;
     }
 }

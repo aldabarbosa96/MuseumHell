@@ -36,7 +36,7 @@ public class MuseumHell extends SimpleApplication {
         cfg.setTitle("MuseumHell");
         cfg.setVSync(true);
         cfg.setGammaCorrection(true);
-        if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate()); // todo --> revisar si se capan los fps
+        //if (dm.getRefreshRate() > 0) cfg.setFrequency(dm.getRefreshRate()); // todo --> revisar si se capan los fps
 
         MuseumHell app = new MuseumHell();
         app.setSettings(cfg);

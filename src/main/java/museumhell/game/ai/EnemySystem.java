@@ -26,8 +26,7 @@ public class EnemySystem extends BaseAppState {
     private final MuseumLayout layout;
     private final WorldBuilder world;
     private final PlayerController player;
-    private final Random rnd = new Random();
-
+private final Random rnd = new Random();
     private Enemy enemy;
     private Room spawnRoom;
     private int spawnFloorIdx;
@@ -57,20 +56,19 @@ public class EnemySystem extends BaseAppState {
     }
 
     private void spawnEnemy() {
-
-        // 1) planta y sala de aparición  ---------------------------
+        // 1) planta y sala de aparición
         spawnFloorIdx = rnd.nextInt(layout.floors().size());
         List<Room> rooms = layout.floors().get(spawnFloorIdx).rooms();
         spawnRoom = rooms.get(rnd.nextInt(rooms.size()));
         float baseY = layout.yOf(spawnFloorIdx);
 
-        // 2) Planner para esa planta ------------------------------
+        // 2) Planner para esa planta
         planner = new PatrolPlanner(layout, spawnFloorIdx);
 
         // 3) LAMBDA que Enemy usará cuando necesite un camino nuevo
         Supplier<List<Vector3f>> pathSupplier = () -> planner.randomRoute(enemy != null && enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom);
 
-        // 4) Crear el enemigo -------------------------------------
+        // 4) Crear el enemigo
         enemy = new Enemy(am, space, player, world, spawnRoom, baseY, rootNode, audio, pathSupplier);
 
         enemy.setPatrolPoints(planner.randomRoute(spawnRoom));
@@ -79,6 +77,36 @@ public class EnemySystem extends BaseAppState {
         enemy.setLocalTranslation(pos);
         enemy.getControl(CharacterControl.class).setPhysicsLocation(pos);
     }
+
+    public void onAlarm(Room room) {
+        if (enemy == null || room == null) return;
+
+        int roomFloor = floorOf(room);
+        if (roomFloor != spawnFloorIdx) return; // planner actual es por planta
+
+        Room start = enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom;
+
+        // Supplier para recalcular ruta dirigida (por si se queda atascado)
+        Supplier<List<Vector3f>> alarmSupplier = () ->
+                planner.routeTo(enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom, room);
+
+        List<Vector3f> path = planner.routeTo(start, room);
+        if (path != null && !path.isEmpty()) {
+            enemy.setAlarmChase(room, alarmSupplier, path); // entra en CHASE y corre a esa sala
+        }
+    }
+
+
+    private int floorOf(Room r) {
+        for (int i = 0; i < layout.floors().size(); i++) {
+            if (layout.floors().get(i).rooms().contains(r)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
 
     @Override
     protected void initialize(Application app) {

@@ -4,8 +4,10 @@ import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.game.ai.SecurityCamera;
 
@@ -22,6 +24,11 @@ public class _6LightPlacer {
     private Vector3f smoothPos;
     private Vector3f smoothDir;
     private final Map<Room, PointLight> roomBeacons = new HashMap<>();
+
+    private Spatial flashlightModel;
+    private Quaternion flashlightModelFix = new Quaternion();
+    private float flashlightModelAhead = 0f;
+    private final Vector3f tmp = new Vector3f();
 
     public _6LightPlacer(Node root) {
         this.root = root;
@@ -41,11 +48,23 @@ public class _6LightPlacer {
     }
 
     public void updateFlashlight(Vector3f targetPos, Vector3f targetDir) {
-        smoothPos.interpolateLocal(targetPos, SMOOTH_FACTOR);
-        smoothDir.interpolateLocal(targetDir, SMOOTH_FACTOR).normalizeLocal();
+        if (smoothPos == null) smoothPos = targetPos.clone();
+        if (smoothDir == null) smoothDir = targetDir.clone();
+
+        smoothPos.set(targetPos);
+        smoothDir.set(targetDir).normalizeLocal();
+
         flashlight.setPosition(smoothPos);
         flashlight.setDirection(smoothDir);
+
+        if (flashlightModel != null) {
+            Quaternion rot = new Quaternion().lookAt(smoothDir, Vector3f.UNIT_Y).multLocal(flashlightModelFix);
+            flashlightModel.setLocalRotation(rot);
+            Vector3f modelPos = tmp.set(smoothDir).multLocal(flashlightModelAhead).addLocal(smoothPos);
+            flashlightModel.setLocalTranslation(modelPos);
+        }
     }
+
 
     public void toggleFlashlight() {
         if (flashlight != null) {
@@ -72,8 +91,8 @@ public class _6LightPlacer {
         float z1 = room.z() + 0.75f;
         float z2 = room.z() + room.h() - 0.75f;
 
-        float range = 10f;
-        float angle = FastMath.DEG_TO_RAD * 40f;
+        float range = 20f;
+        float angle = FastMath.DEG_TO_RAD * 60f;
         ColorRGBA color = new ColorRGBA(1f, 0.85f, 0.6f, 1f).multLocal(2.5f);
 
         // 4 focos de techo hacia abajo
@@ -99,7 +118,7 @@ public class _6LightPlacer {
             Vector3f ctr = room.center3f(baseY + height * 0.5f);
             PointLight beacon = new PointLight();
             beacon.setColor(new ColorRGBA(0.5f, 0f, 0f, 1f).multLocal(2f));
-            beacon.setRadius( Math.max(room.w(), room.h()) * 3f ); // cubre la sala
+            beacon.setRadius(Math.max(room.w(), room.h()) * 3f); // cubre la sala
             beacon.setPosition(new Vector3f(ctr.x, baseY + height - 0.1f, ctr.z));
             beacon.setEnabled(false);
             root.addLight(beacon);
@@ -125,5 +144,48 @@ public class _6LightPlacer {
             sl.setColor(new ColorRGBA(1f, 0.85f, 0.6f, 1f).multLocal(2.5f));
             root.addLight(sl);
         }
+    }
+
+    public void attachFlashlightModel(Spatial model, Quaternion forwardFix, float scale, float aheadMeters) {
+        if (model == null) return;
+        flashlightModel = model;
+        flashlightModelFix.set(forwardFix);
+        flashlightModel.setLocalScale(scale);
+        flashlightModelAhead = aheadMeters;
+        root.attachChild(flashlightModel);
+
+        if (flashlightModel != null) {
+            Quaternion rot = new Quaternion().lookAt(smoothDir, Vector3f.UNIT_Y).multLocal(flashlightModelFix);
+            flashlightModel.setLocalRotation(rot);
+            // posición = haz + pequeño empuje hacia delante para que el pivote quede atrás
+            Vector3f modelPos = tmp.set(smoothDir).multLocal(flashlightModelAhead).addLocal(smoothPos);
+            flashlightModel.setLocalTranslation(modelPos);
+        }
+
+    }
+
+    public boolean isTargetLit(Vector3f target, float radius) {
+        if (flashlight == null || !flashlight.isEnabled()) {
+            return false;
+        }
+
+        Vector3f toTarget = target.subtract(flashlight.getPosition());
+        float dist = toTarget.length();
+
+        if (dist > flashlight.getSpotRange() + radius) {
+            return false;
+        }
+
+        float cosAngle = toTarget.normalizeLocal().dot(flashlight.getDirection());
+        float cosOuter = FastMath.cos(flashlight.getSpotOuterAngle());
+        return cosAngle >= cosOuter;
+    }
+
+    public Vector3f getFlashPosition() {
+        return flashlight != null ? flashlight.getPosition() : null;
+    }
+
+    public SpotLight getFlashlight() {
+        return flashlight;
     }
 }

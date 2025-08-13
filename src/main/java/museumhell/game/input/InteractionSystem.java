@@ -10,6 +10,8 @@ import museumhell.engine.world.levelgen.Door;
 import museumhell.game.loot.LootItem;
 import museumhell.game.loot.LootSystem;
 
+import static museumhell.utils.ConstantManager.DOOR_OPEN_DIST;
+
 public class InteractionSystem extends BaseAppState {
     private final PlayerController player;
     private final WorldBuilder world;
@@ -28,14 +30,14 @@ public class InteractionSystem extends BaseAppState {
         Vector3f p = player.getLocation();
 
         // Loot
-        LootItem li = loot.nearestLoot(p, 1.5f);
+        LootItem li = loot.nearestLoot(p, 2f);
         if (li != null) {
             hud.show("[ E ] Recoger");
             return;
         }
 
         // Puerta
-        Door d = world.nearestDoor(p, 3.5f);
+        Door d = world.nearestDoor(p, DOOR_OPEN_DIST);
         if (d != null) {
             hud.show(d.isOpen() ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta");
             return;

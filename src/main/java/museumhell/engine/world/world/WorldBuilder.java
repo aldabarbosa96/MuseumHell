@@ -44,9 +44,8 @@ public class WorldBuilder {
 
         /* ---------- 1) conexiones por planta ---------- */
         List<List<Connection>> floorConns = new ArrayList<>();
-        long seed = System.nanoTime();
         for (LevelLayout lvl : museum.floors()) {
-            floorConns.add(ConnectionGenerator.build(lvl, seed++));
+            floorConns.add(lvl.conns());
         }
 
         /* ---------- 2) planificación de escaleras ---------- */
@@ -104,7 +103,7 @@ public class WorldBuilder {
 
     public void tryUseDoor(Vector3f playerPos) {
         for (Door d : doors)
-            if (d.getAccessPoint().distance(playerPos) < 3.5f) {
+            if (d.getAccessPoint().distance(playerPos) < DOOR_OPEN_DIST) {
                 d.toggle();
                 doorOpen = true;
                 return;
@@ -156,7 +155,7 @@ public class WorldBuilder {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
                 } else { /* puerta */
-                    a4DoorBuilder.build(r, dir, y0, h - 0.2f, rooms);
+                    a4DoorBuilder.build(r, dir, y0, h, rooms);
                 }
             }
         }

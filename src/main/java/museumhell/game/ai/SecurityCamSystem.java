@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static museumhell.utils.ConstantManager.BLINK_INTERVAL;
+
 public class SecurityCamSystem extends BaseAppState {
     private final _6LightPlacer lightPlacer;
     private final AudioLoader audio;
@@ -31,9 +33,8 @@ public class SecurityCamSystem extends BaseAppState {
     private Room alarmRoom = null;
     private int toggleCount = 0;
     private float blinkTimer = 0f;
-    private static final float BLINK_INTERVAL = 0.425f;
     private final float maxDist = 20f;
-    private final float halfFov = FastMath.DEG_TO_RAD * 30;
+    private final float cosHalfFov = FastMath.cos(FastMath.DEG_TO_RAD * 30);
 
     public SecurityCamSystem(SecurityCamera camSys, PlayerController player, Node root, _6LightPlacer lightPlacer, AudioLoader audioLoader) {
         this.camSys = camSys;
@@ -75,25 +76,19 @@ public class SecurityCamSystem extends BaseAppState {
         }
         for (CameraData info : camSys.getCameraData()) {
             Room room = info.room();
-            if (detected.get(room)) {
-                continue;
-            }
+            if (detected.get(room)) continue;
+
             float baseY = info.baseY();
-            if (pPos.y < baseY || pPos.y > baseY + info.floorH()) {
+            if (pPos.y < baseY || pPos.y > baseY + info.floorH()) continue;
+            if (pPos.x < room.x() || pPos.x > room.x() + room.w() || pPos.z < room.z() || pPos.z > room.z() + room.h())
                 continue;
-            }
-            if (pPos.x < room.x() || pPos.x > room.x() + room.w() || pPos.z < room.z() || pPos.z > room.z() + room.h()) {
-                continue;
-            }
+
             Vector3f camPos = info.spat().getWorldTranslation();
             Vector3f toPlayer = pPos.subtract(camPos);
             float dist = toPlayer.length();
-            if (dist > maxDist) {
-                continue;
-            }
-            if (FastMath.acos(info.dir().dot(toPlayer.normalize())) > halfFov) {
-                continue;
-            }
+            if (dist > maxDist) continue;
+            if (info.dir().dot(toPlayer.normalize()) < cosHalfFov) continue;
+
             List<PhysicsRayTestResult> results = space.rayTest(camPos, pPos);
             float closestFrac = 1f;
             PhysicsCollisionObject closestObj = null;
@@ -103,11 +98,11 @@ public class SecurityCamSystem extends BaseAppState {
                     closestObj = r.getCollisionObject();
                 }
             }
-            if (closestObj != player.getCharacterControl()) {
-                continue;
-            }
+            if (closestObj != player.getCharacterControl()) continue;
+
             detected.put(room, true);
         }
+
         for (Map.Entry<Room, Boolean> entry : detected.entrySet()) {
             Room room = entry.getKey();
             boolean isNow = entry.getValue();
@@ -119,6 +114,12 @@ public class SecurityCamSystem extends BaseAppState {
                 toggleCount = 0;
                 blinkTimer = 0f;
                 audio.play("alarm");
+
+                // Avisar al enemigo para que corra a esta sala
+                EnemySystem es = getStateManager().getState(EnemySystem.class);
+                if (es != null) {
+                    es.onAlarm(room);
+                }
             }
             prevDetected.put(room, isNow);
         }

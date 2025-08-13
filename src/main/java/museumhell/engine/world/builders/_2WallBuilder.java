@@ -11,6 +11,7 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
@@ -20,6 +21,7 @@ import museumhell.utils.media.AssetLoader;
 
 import java.util.List;
 
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.Receive;
 import static museumhell.engine.world.levelgen.enums.Direction.*;
 import static museumhell.utils.ConstantManager.*;
 
@@ -27,7 +29,7 @@ public class _2WallBuilder {
     private final Node root;
     private final PhysicsSpace space;
     private final Material wallMat;
-    private final Spatial wallModel, wall2Model;
+    private final Spatial wallModel, wall2Model, wall3Model;
 
     private final float wallLength, wallHeight, wallThickness;
     private final float wall2Length, wall2Height, wall2Thickness;
@@ -41,6 +43,7 @@ public class _2WallBuilder {
 
         this.wallModel = assetLoader.get("wall1");
         this.wall2Model = assetLoader.get("wall2");
+        this.wall3Model = assetLoader.get("wall3");
 
         wallModel.updateGeometricState();
         BoundingBox bb1 = (BoundingBox) wallModel.getWorldBound();
@@ -77,7 +80,7 @@ public class _2WallBuilder {
             wall.setLocalScale(sx / wallLength, h / wallHeight, sz / wallThickness);
         }
 
-        wall.setShadowMode(ShadowMode.CastAndReceive);
+        wall.setShadowMode(Receive);
 
         float halfThick = (dir == NORTH || dir == SOUTH) ? sz * 0.5f : sx * 0.5f;
         float tx, tz;
@@ -121,6 +124,7 @@ public class _2WallBuilder {
 
             if (leftW > 0) {
                 Spatial slice = wall2Model.clone();
+                slice.setShadowMode(Receive);
                 slice.setLocalRotation(rotNS);
                 slice.setLocalScale(thickness / wall2Length, h / wall2Height, leftW / wall2Thickness);
                 slice.setLocalTranslation(r.x() + leftW * 0.5f, y0, tz);
@@ -128,6 +132,7 @@ public class _2WallBuilder {
             }
             if (rightW > 0) {
                 Spatial slice = wall2Model.clone();
+                slice.setShadowMode(Receive);
                 slice.setLocalRotation(rotNS);
                 slice.setLocalScale(thickness / wall2Length, h / wall2Height, rightW / wall2Thickness);
                 slice.setLocalTranslation(r.x() + r.w() - rightW * 0.5f, y0, tz);
@@ -143,6 +148,7 @@ public class _2WallBuilder {
 
             if (backD > 0) {
                 Spatial slice = wall2Model.clone();
+                slice.setShadowMode(Receive);
                 slice.setLocalRotation(rotEW);
                 slice.setLocalScale(thickness / wall2Length, h / wall2Height, backD / wall2Thickness);
                 slice.setLocalTranslation(tx, y0, r.z() + backD * 0.5f);
@@ -150,6 +156,7 @@ public class _2WallBuilder {
             }
             if (frontD > 0) {
                 Spatial slice = wall2Model.clone();
+                slice.setShadowMode(Receive);
                 slice.setLocalRotation(rotEW);
                 slice.setLocalScale(thickness / wall2Length, h / wall2Height, frontD / wall2Thickness);
                 slice.setLocalTranslation(tx, y0, r.z() + r.h() - frontD * 0.5f);
@@ -190,5 +197,18 @@ public class _2WallBuilder {
         var body = new RigidBodyControl(CollisionShapeFactory.createMeshShape(s), 0);
         s.addControl(body);
         space.add(body);
+    }
+
+    public Spatial makePatch(Direction dir, float width, float height, float thickness) {
+        Spatial slice = wall3Model.clone();
+        slice.setShadowMode(Receive);
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            slice.setLocalRotation(rotNS);
+            slice.setLocalScale(thickness / wall2Length, height / wall2Height, width / wall2Thickness);
+        } else { // EAST / WEST
+            slice.setLocalRotation(rotEW);
+            slice.setLocalScale(width / wall2Length, height / wall2Height, thickness / wall2Thickness);
+        }
+        return slice;
     }
 }
