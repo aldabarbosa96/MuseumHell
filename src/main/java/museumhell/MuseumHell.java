@@ -7,7 +7,7 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
-import museumhell.game.ai.SecurityCamera;
+import museumhell.game.ai.cameras.SecurityCamera;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;

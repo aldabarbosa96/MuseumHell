@@ -1,4 +1,4 @@
-package museumhell.game.ai;
+package museumhell.game.ai.cameras;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
@@ -10,7 +10,8 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import museumhell.engine.world.builders._6LightPlacer;
-import museumhell.game.ai.SecurityCamera.CameraData;
+import museumhell.game.ai.enemies.EnemySystem;
+import museumhell.game.ai.cameras.SecurityCamera.CameraData;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.game.player.PlayerController;
 import museumhell.utils.media.AudioLoader;

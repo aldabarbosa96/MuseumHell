@@ -1,4 +1,4 @@
-package museumhell.game.ai;
+package museumhell.game.ai.enemies;
 
 import com.jme3.math.Vector3f;
 import museumhell.engine.world.levelgen.Connection;

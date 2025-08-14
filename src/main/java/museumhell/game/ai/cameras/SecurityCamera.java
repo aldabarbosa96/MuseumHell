@@ -1,4 +1,4 @@
-package museumhell.game.ai;
+package museumhell.game.ai.cameras;
 
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;

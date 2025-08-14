@@ -11,8 +11,6 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
-import com.jme3.renderer.queue.RenderQueue;
-import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import museumhell.engine.world.levelgen.enums.Direction;
@@ -111,16 +109,32 @@ public class _2WallBuilder {
     }
 
     public void buildOpening(Room r, Direction dir, float y0, float h, List<Room> rooms, float holeWidth, float thickness) {
+
         float[] ov = getOverlapRange(r, rooms, dir);
+
         float center = (ov[0] + ov[1]) * 0.5f;
         float halfHole = holeWidth * 0.5f;
 
-        if (dir == NORTH || dir == SOUTH) {
-            float zEdge = (dir == NORTH) ? r.z() : r.z() + r.h();
+        float cornerClear = WALL_T + MARGIN; // p.ej. 2 + 1 = 3 unidades
+        float minC;
+        float maxC;
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            minC = Math.max(ov[0] + halfHole, r.x() + cornerClear + halfHole);
+            maxC = Math.min(ov[1] - halfHole, r.x() + r.w() - cornerClear - halfHole);
+        } else {
+            minC = Math.max(ov[0] + halfHole, r.z() + cornerClear + halfHole);
+            maxC = Math.min(ov[1] - halfHole, r.z() + r.h() - cornerClear - halfHole);
+        }
+        if (minC <= maxC) {
+            center = FastMath.clamp(center, minC, maxC);
+        }
+
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            float zEdge = (dir == Direction.NORTH) ? r.z() : r.z() + r.h();
             float leftW = center - halfHole - r.x();
             float rightW = (r.x() + r.w()) - (center + halfHole);
             float halfT = thickness * 0.5f;
-            float tz = (dir == NORTH) ? zEdge - halfT : zEdge + halfT;
+            float tz = (dir == Direction.NORTH) ? zEdge - halfT : zEdge + halfT;
 
             if (leftW > 0) {
                 Spatial slice = wall2Model.clone();
@@ -138,13 +152,12 @@ public class _2WallBuilder {
                 slice.setLocalTranslation(r.x() + r.w() - rightW * 0.5f, y0, tz);
                 addStaticModel(slice);
             }
-
         } else {
-            float xEdge = (dir == WEST) ? r.x() : r.x() + r.w();
+            float xEdge = (dir == Direction.WEST) ? r.x() : r.x() + r.w();
             float backD = center - halfHole - r.z();
             float frontD = (r.z() + r.h()) - (center + halfHole);
             float halfT = thickness * 0.5f;
-            float tx = (dir == WEST) ? xEdge - halfT : xEdge + halfT;
+            float tx = (dir == Direction.WEST) ? xEdge - halfT : xEdge + halfT;
 
             if (backD > 0) {
                 Spatial slice = wall2Model.clone();

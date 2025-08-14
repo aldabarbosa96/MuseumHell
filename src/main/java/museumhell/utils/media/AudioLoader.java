@@ -50,7 +50,6 @@ public class AudioLoader {
         node.setLooping(looping);
         node.setVolume(volume);
         if (looping) {
-            // adjunta al grafo PARA que persista en escena y pueda hacer bucle
             rootNode.attachChild(node);
         }
         sounds.put(name, new Entry(node, looping));

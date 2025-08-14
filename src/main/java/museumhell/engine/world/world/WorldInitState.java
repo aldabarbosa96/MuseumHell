@@ -10,7 +10,7 @@ import com.jme3.scene.Spatial;
 import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
-import museumhell.game.ai.SecurityCamera;
+import museumhell.game.ai.cameras.SecurityCamera;
 import museumhell.utils.media.AssetLoader;
 
 import java.util.List;

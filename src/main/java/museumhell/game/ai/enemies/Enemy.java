@@ -1,4 +1,4 @@
-package museumhell.game.ai;
+package museumhell.game.ai.enemies;
 
 import com.jme3.anim.AnimComposer;
 import com.jme3.audio.AudioNode;
