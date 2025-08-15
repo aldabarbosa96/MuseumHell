@@ -272,30 +272,6 @@ public class Enemy extends Node {
         lastDir.set(dir);
     }
 
-    private void wander(Vector3f p) {
-        if (patrolPoints.isEmpty()) {
-            setPatrolPoints(requestNewPath.get());
-            return;
-        }
-
-        if (patrolIndex >= patrolPoints.size()) {
-            // ruta agotada ⟶ conseguir otra
-            setPatrolPoints(requestNewPath.get());
-            return;
-        }
-
-        Vector3f tgt = patrolPoints.get(patrolIndex);
-        Vector3f d = scratchVec.set(tgt).subtractLocal(p).setY(0);
-
-        if (d.length() < POINT_TOL) {
-            patrolIndex++;
-            return;
-        }
-
-        Vector3f dir = d.normalizeLocal();
-        lastDir.set(dir);
-    }
-
     private void avoidObstacles(Vector3f p) {
         if (avoiding) {
             if (avoidOrigin.distance(p) > AVOID_DISTANCE) {

@@ -70,7 +70,7 @@ Tu objetivo: **robar el botín** repartido por salas **sin activar alarmas**.
 ## 🚀 Cómo probar (rápido)
 
 **Requisitos:**
-- ☕ Java 11 o superior
+- ☕ Java 17 o superior
 
 **Ejecución:**
 ```bash
