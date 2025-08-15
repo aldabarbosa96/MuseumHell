@@ -70,6 +70,7 @@ public class Enemy extends Node {
     private boolean alarmChasing = false;
     private Room alarmTargetRoom = null;
     private Supplier<List<Vector3f>> requestAlarmPath = null;
+    private Supplier<List<Vector3f>> chasePathSupplier;
 
 
     private final Quaternion lookQuat = new Quaternion();
@@ -170,7 +171,7 @@ public class Enemy extends Node {
         boolean litByTorch = isDirectlyLit(getWorldTranslation());
         alertTimer = (seesPlayer || litByTorch) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
 
-        boolean chasingPlayer = alertTimer > 0f;          // prioridad: si lo ve, persigue al jugador
+        boolean chasingPlayer = alertTimer > 0f;
         boolean chasingByAlarm = alarmChasing && !chasingPlayer;
 
         State previous = state;
@@ -195,9 +196,9 @@ public class Enemy extends Node {
         stepFactor = FastMath.pow(tri, EN_STEP_SHARPNESS);
 
         if (chasingPlayer) {
-            chase(pos);                 // directo al jugador
+            chase(pos);
         } else {
-            followPathToTarget(pos);    // sigue la ruta (random o de alarma)
+            followPathToTarget(pos);
         }
 
         avoidObstacles(pos);
@@ -240,7 +241,6 @@ public class Enemy extends Node {
     }
 
 
-
     private float getVolume() {
         Vector3f e = this.getWorldTranslation();
         Vector3f j = player.getLocation();
@@ -268,9 +268,34 @@ public class Enemy extends Node {
     }
 
     private void chase(Vector3f p) {
-        Vector3f dir = scratchVec.set(player.getLocation()).subtractLocal(p).setY(0).normalizeLocal();
-        lastDir.set(dir);
+        Vector3f toPlayer = scratchVec.set(player.getLocation()).subtractLocal(p);
+        float dist = toPlayer.length();
+
+        boolean hasLoS = canSee(p); // ya lo tienes
+        if (hasLoS && dist < 8f) {
+            // Cerca y visible → directo (suave, sin empotrar tanto)
+            lastDir.set(toPlayer.setY(0).normalizeLocal());
+            return;
+        }
+
+        // No hay LoS o está lejos → ruta por grafo (puertas/escaleras)
+        if (chasePathSupplier != null) {
+            if (patrolPoints.isEmpty() || patrolIndex >= patrolPoints.size()) {
+                List<Vector3f> path = chasePathSupplier.get();
+                if (path != null && !path.isEmpty()) {
+                    setPatrolPoints(path);
+                } else {
+                    // fallback de último recurso
+                    lastDir.set(toPlayer.setY(0).normalizeLocal());
+                    return;
+                }
+            }
+            followPathToTarget(p);
+        } else {
+            lastDir.set(toPlayer.setY(0).normalizeLocal());
+        }
     }
+
 
     private void avoidObstacles(Vector3f p) {
         if (avoiding) {
@@ -462,5 +487,9 @@ public class Enemy extends Node {
 
     public Room currentRoom() {
         return currentRoomRef;
+    }
+
+    public void setChasePathSupplier(Supplier<List<Vector3f>> s) {
+        this.chasePathSupplier = s;
     }
 }

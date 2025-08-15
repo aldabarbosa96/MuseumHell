@@ -26,7 +26,7 @@ public class EnemySystem extends BaseAppState {
     private final MuseumLayout layout;
     private final WorldBuilder world;
     private final PlayerController player;
-private final Random rnd = new Random();
+    private final Random rnd = new Random();
     private Enemy enemy;
     private Room spawnRoom;
     private int spawnFloorIdx;
@@ -56,56 +56,58 @@ private final Random rnd = new Random();
     }
 
     private void spawnEnemy() {
-        // 1) planta y sala de aparición
+        // 1) Planta y sala de aparición
         spawnFloorIdx = rnd.nextInt(layout.floors().size());
         List<Room> rooms = layout.floors().get(spawnFloorIdx).rooms();
         spawnRoom = rooms.get(rnd.nextInt(rooms.size()));
         float baseY = layout.yOf(spawnFloorIdx);
 
-        // 2) Planner para esa planta
-        planner = new PatrolPlanner(layout, spawnFloorIdx);
+        // 2) Planner global (soporta puertas + escaleras entre plantas)
+        planner = new PatrolPlanner(layout, world);
 
-        // 3) LAMBDA que Enemy usará cuando necesite un camino nuevo
-        Supplier<List<Vector3f>> pathSupplier = () -> planner.randomRoute(enemy != null && enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom);
+        // 3) Suppliers de rutas
+        // 3.1) Ruta de patrulla aleatoria (cuando se agota la actual o se atasca)
+        Supplier<List<Vector3f>> patrolSupplier = () -> planner.randomRoute(enemy != null && enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom);
 
-        // 4) Crear el enemigo
-        enemy = new Enemy(am, space, player, world, spawnRoom, baseY, rootNode, audio, pathSupplier);
+        // 3.2) Ruta de persecución (sin centros)
+        Supplier<List<Vector3f>> chaseSupplier = () -> {
+            Room from = (enemy != null && enemy.currentRoom() != null) ? enemy.currentRoom() : spawnRoom;
+            Room to = world.whichRoom(player.getLocation());
+            Vector3f goal = player.getLocation().clone();
+            return planner.routeToLean(from, to, goal);
+        };
 
+
+        // 4) Crear enemigo
+        enemy = new Enemy(am, space, player, world, spawnRoom, baseY, rootNode, audio, patrolSupplier);
+
+        // 5) Ruta inicial de patrulla y supplier de persecución
         enemy.setPatrolPoints(planner.randomRoute(spawnRoom));
+        enemy.setChasePathSupplier(chaseSupplier);
 
+        // 6) Colocar físicamente en la escena
         Vector3f pos = spawnRoom.center3f(baseY + 0.5f);
         enemy.setLocalTranslation(pos);
         enemy.getControl(CharacterControl.class).setPhysicsLocation(pos);
     }
 
+
     public void onAlarm(Room room) {
         if (enemy == null || room == null) return;
 
-        int roomFloor = floorOf(room);
-        if (roomFloor != spawnFloorIdx) return; // planner actual es por planta
+        Room start = (enemy.currentRoom() != null) ? enemy.currentRoom() : spawnRoom;
 
-        Room start = enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom;
+        Supplier<List<Vector3f>> alarmSupplier = () -> {
+            Room from = (enemy.currentRoom() != null) ? enemy.currentRoom() : spawnRoom;
+            return planner.routeToLean(from, room, null);
+        };
 
-        // Supplier para recalcular ruta dirigida (por si se queda atascado)
-        Supplier<List<Vector3f>> alarmSupplier = () ->
-                planner.routeTo(enemy.currentRoom() != null ? enemy.currentRoom() : spawnRoom, room);
-
-        List<Vector3f> path = planner.routeTo(start, room);
+        // Ruta inicial lean hacia la sala de la alarma (sin centros intermedios)
+        List<Vector3f> path = planner.routeToLean(start, room, null);
         if (path != null && !path.isEmpty()) {
-            enemy.setAlarmChase(room, alarmSupplier, path); // entra en CHASE y corre a esa sala
+            enemy.setAlarmChase(room, alarmSupplier, path);
         }
     }
-
-
-    private int floorOf(Room r) {
-        for (int i = 0; i < layout.floors().size(); i++) {
-            if (layout.floors().get(i).rooms().contains(r)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
 
 
     @Override

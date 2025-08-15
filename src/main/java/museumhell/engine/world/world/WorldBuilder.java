@@ -25,6 +25,7 @@ public class WorldBuilder {
     private final _2WallBuilder a2WallBuilder;
     private final _3DoorBuilder a4DoorBuilder;
     private final _4StairBuilder a5StairBuilder;
+    private _4StairBuilder.Plan stairPlan;
     private MuseumLayout layoutRef;
     private final List<Door> doors = new ArrayList<>();
     private boolean doorOpen = false;
@@ -49,11 +50,11 @@ public class WorldBuilder {
         }
 
         /* ---------- 2) planificación de escaleras ---------- */
-        _4StairBuilder.Plan plan = a5StairBuilder.plan(museum);
+        this.stairPlan = a5StairBuilder.plan(museum);
 
         /* ---------- 2.1) huecos‑base de escalera por planta ---------- */
         Map<Integer, List<Rect>> baseHoles = new HashMap<>();
-        for (var sp : plan.placements) {
+        for (var sp : stairPlan.placements) {
             Rect hole = computeHoleFromPlacement(sp, museum.floorHeight());
             baseHoles.computeIfAbsent(sp.floor(), k -> new ArrayList<>()).add(hole);
         }
@@ -63,7 +64,7 @@ public class WorldBuilder {
             LevelLayout lvl = museum.floors().get(i);
             List<Connection> cns = floorConns.get(i);
 
-            List<Rect> ceilHoles = plan.holes.getOrDefault(i, List.of());
+            List<Rect> ceilHoles = stairPlan.holes.getOrDefault(i, List.of());
 
             /*– huecos que SÍ perforan el suelo (llegada escalera) */
             List<Rect> floorHoles = new ArrayList<>(ceilHoles);
@@ -76,7 +77,7 @@ public class WorldBuilder {
         }
 
         /* ---------- 4) colocar las escaleras ---------- */
-        a5StairBuilder.place(plan, museum);
+        a5StairBuilder.place(stairPlan, museum);
     }
 
     private Rect computeHoleFromPlacement(_4StairBuilder.StairPlacement sp, float floorH) {
@@ -261,4 +262,6 @@ public class WorldBuilder {
     public boolean isDoorOpen() {
         return doorOpen;
     }
+
+    public _4StairBuilder.Plan getStairPlan() { return stairPlan; }
 }
