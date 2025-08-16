@@ -99,7 +99,7 @@ public class EnemySystem extends BaseAppState {
 
         Supplier<List<Vector3f>> alarmSupplier = () -> {
             Room from = (enemy.currentRoom() != null) ? enemy.currentRoom() : spawnRoom;
-            return planner.routeToLean(from, room, null);
+            return planner.routeTo(from, room);
         };
 
         // Ruta inicial lean hacia la sala de la alarma (sin centros intermedios)

@@ -284,5 +284,18 @@ public class _4StairBuilder {
         return ew ? new Rect(sp.x() - hxPad, sp.x() + hxPad, sp.z() - STEP_DEPTH * .5f - pad, sp.z() + runD + pad) : new Rect(sp.x() - STEP_DEPTH * .5f - pad, sp.x() + runD + pad, sp.z() - hxPad, sp.z() + hxPad);
     }
 
+    public static GeoUtil.Rect holeFor(StairPlacement sp, float floorH) {
+        int steps = (int) Math.ceil(floorH / STEP_H);
+        float runD = steps * STEP_DEPTH;
+        float hxPad = STAIR_WIDTH * 0.5f + RAIL_T;
+        float pad = STAIR_CLEAR;
+
+        boolean ew = ((Enum<?>) sp.orientation()).name().equals("EW");
+        if (ew) {
+            return new GeoUtil.Rect(sp.x() - hxPad, sp.x() + hxPad, sp.z() - STEP_DEPTH * .5f - pad, sp.z() + runD + pad);
+        } else {
+            return new GeoUtil.Rect(sp.x() - STEP_DEPTH * .5f - pad, sp.x() + runD + pad, sp.z() - hxPad, sp.z() + hxPad);
+        }
+    }
 
 }

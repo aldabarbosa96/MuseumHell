@@ -115,7 +115,7 @@ public class _2WallBuilder {
         float center = (ov[0] + ov[1]) * 0.5f;
         float halfHole = holeWidth * 0.5f;
 
-        float cornerClear = WALL_T + MARGIN; // p.ej. 2 + 1 = 3 unidades
+        float cornerClear = WALL_T + MARGIN;
         float minC;
         float maxC;
         if (dir == Direction.NORTH || dir == Direction.SOUTH) {
@@ -179,31 +179,56 @@ public class _2WallBuilder {
     }
 
     public float[] getOverlapRange(Room r, List<Room> rooms, Direction dir) {
-        if (dir == NORTH || dir == SOUTH) {
-            int a1 = r.x(), a2 = r.x() + r.w();
-            int zEdge = (dir == NORTH) ? r.z() : r.z() + r.h();
-            for (Room o : rooms) {
-                boolean match = (dir == NORTH && o.z() + o.h() == zEdge) || (dir == SOUTH && o.z() == zEdge);
-                if (match) {
-                    int b1 = o.x(), b2 = o.x() + o.w();
-                    int overlap = Math.min(a2, b2) - Math.max(a1, b1);
-                    if (overlap >= DOOR_MIN_OVERLAP) return new float[]{Math.max(a1, b1), Math.min(a2, b2)};
-                }
-            }
-        } else {
-            int a1 = r.z(), a2 = r.z() + r.h();
-            int xEdge = (dir == WEST) ? r.x() : r.x() + r.w();
-            for (Room o : rooms) {
-                boolean match = (dir == WEST && o.x() + o.w() == xEdge) || (dir == EAST && o.x() == xEdge);
-                if (match) {
-                    int b1 = o.z(), b2 = o.z() + o.h();
-                    int overlap = Math.min(a2, b2) - Math.max(a1, b1);
-                    if (overlap >= DOOR_MIN_OVERLAP) return new float[]{Math.max(a1, b1), Math.min(a2, b2)};
-                }
+        final boolean ns = (dir == Direction.NORTH || dir == Direction.SOUTH);
+        final int a1 = ns ? r.x() : r.z();
+        final int a2 = ns ? r.x() + r.w() : r.z() + r.h();
+        final int fullLen = a2 - a1;
+
+        final int edgeCoord = switch (dir) {
+            case NORTH -> r.z();
+            case SOUTH -> r.z() + r.h();
+            case WEST -> r.x();
+            case EAST -> r.x() + r.w();
+        };
+
+        int bestMin = Integer.MAX_VALUE, bestMax = Integer.MIN_VALUE;
+        boolean found = false, foundAboveThresh = false;
+        int bestLen = -1;
+
+        for (Room o : rooms) {
+            if (o == r) continue;
+            boolean adjacent = switch (dir) {
+                case NORTH -> (o.z() + o.h() == edgeCoord);
+                case SOUTH -> (o.z() == edgeCoord);
+                case WEST -> (o.x() + o.w() == edgeCoord);
+                case EAST -> (o.x() == edgeCoord);
+            };
+            if (!adjacent) continue;
+
+            int b1 = ns ? o.x() : o.z();
+            int b2 = ns ? o.x() + o.w() : o.z() + o.h();
+
+            int ovMin = Math.max(a1, b1);
+            int ovMax = Math.min(a2, b2);
+            int len = ovMax - ovMin;
+            if (len <= 0) continue;
+
+            boolean above = (len >= DOOR_MIN_OVERLAP);
+            if ((above && (!foundAboveThresh || len > bestLen)) || (!above && !foundAboveThresh && len > bestLen)) {
+                bestLen = len;
+                bestMin = ovMin;
+                bestMax = ovMax;
+                found = true;
+                if (len == fullLen && above) break;
+                if (above) foundAboveThresh = true;
             }
         }
-        throw new IllegalStateException("No vecino válido para dir=" + dir + " en sala " + r);
+
+        if (found) return new float[]{bestMin, bestMax};
+
+        return new float[]{a1, a2};
     }
+
 
     private void addStaticModel(Spatial s) {
         root.attachChild(s);

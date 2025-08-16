@@ -85,4 +85,5 @@ public class ConstantManager {
     public static final float AVOID_DISTANCE = 1f;
     public static final float ALERT_TIME = 3f;
     public static final float STUCK_EPS = 0.1f;
+    public static final float ALARM_CHASE_SECS = 25f;
 }

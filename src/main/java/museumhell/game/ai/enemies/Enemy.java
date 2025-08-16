@@ -71,6 +71,7 @@ public class Enemy extends Node {
     private Room alarmTargetRoom = null;
     private Supplier<List<Vector3f>> requestAlarmPath = null;
     private Supplier<List<Vector3f>> chasePathSupplier;
+    private float alarmTimeLeft = 0f;
 
 
     private final Quaternion lookQuat = new Quaternion();
@@ -172,7 +173,6 @@ public class Enemy extends Node {
         alertTimer = (seesPlayer || litByTorch) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
 
         boolean chasingPlayer = alertTimer > 0f;
-        boolean chasingByAlarm = alarmChasing && !chasingPlayer;
 
         State previous = state;
         state = (chasingPlayer || alarmChasing) ? State.CHASE : State.WANDER;
@@ -230,12 +230,16 @@ public class Enemy extends Node {
             }
         }
 
-        // ¿hemos llegado a la sala objetivo de la alarma?
         if (alarmChasing) {
-            if ((alarmTargetRoom != null && currentRoomRef == alarmTargetRoom) || patrolIndex >= patrolPoints.size()) {
-                alarmChasing = false;
-                alarmTargetRoom = null;
-                requestAlarmPath = null;
+            boolean reached = (alarmTargetRoom != null && currentRoomRef == alarmTargetRoom) || patrolIndex >= patrolPoints.size();
+
+            if (reached) {
+                stopAlarmChase(); // corta inmediatamente si llega antes de 15 s
+            } else {
+                alarmTimeLeft -= tpf;
+                if (alarmTimeLeft <= 0f) {
+                    stopAlarmChase(); // corta por timeout de 15 s
+                }
             }
         }
     }
@@ -269,23 +273,23 @@ public class Enemy extends Node {
 
     private void chase(Vector3f p) {
         Vector3f toPlayer = scratchVec.set(player.getLocation()).subtractLocal(p);
-        float dist = toPlayer.length();
+        boolean hasLoS = canSee(p);
 
-        boolean hasLoS = canSee(p); // ya lo tienes
-        if (hasLoS && dist < 8f) {
-            // Cerca y visible → directo (suave, sin empotrar tanto)
+        if (hasLoS) {
             lastDir.set(toPlayer.setY(0).normalizeLocal());
+            patrolPoints.clear();
+            patrolIndex = 0;
             return;
         }
 
-        // No hay LoS o está lejos → ruta por grafo (puertas/escaleras)
+        // Sin LoS: ruta por grafo (lean)
         if (chasePathSupplier != null) {
             if (patrolPoints.isEmpty() || patrolIndex >= patrolPoints.size()) {
                 List<Vector3f> path = chasePathSupplier.get();
                 if (path != null && !path.isEmpty()) {
                     setPatrolPoints(path);
                 } else {
-                    // fallback de último recurso
+                    // fallback
                     lastDir.set(toPlayer.setY(0).normalizeLocal());
                     return;
                 }
@@ -364,7 +368,10 @@ public class Enemy extends Node {
             return;
         }
         if (stuckTimer > 0.8f) {
-            if (alarmChasing && requestAlarmPath != null) {
+            if (alertTimer > 0f && chasePathSupplier != null) {
+                List<Vector3f> path = chasePathSupplier.get();
+                if (path != null && !path.isEmpty()) setPatrolPoints(path);
+            } else if (alarmChasing && requestAlarmPath != null) {
                 List<Vector3f> path = requestAlarmPath.get();
                 if (path != null && !path.isEmpty()) setPatrolPoints(path);
             } else {
@@ -380,10 +387,13 @@ public class Enemy extends Node {
         this.alarmTargetRoom = target;
         this.requestAlarmPath = alarmPathSupplier;
         this.alarmChasing = true;
+        this.alarmTimeLeft = ALARM_CHASE_SECS;
+
         if (initialPath != null && !initialPath.isEmpty()) {
             setPatrolPoints(initialPath);
         }
     }
+
 
     private void followPathToTarget(Vector3f p) {
         if (patrolPoints.isEmpty()) {
@@ -465,6 +475,13 @@ public class Enemy extends Node {
             composer.setCurrentAction(animName);
             lastAnim = animName;
         }
+    }
+
+    private void stopAlarmChase() {
+        alarmChasing = false;
+        alarmTargetRoom = null;
+        requestAlarmPath = null;
+        alarmTimeLeft = 0f;
     }
 
     private boolean isDirectlyLit(Vector3f enemyPos) {

@@ -16,8 +16,7 @@ public final class MuseumGenerator {
         for (int i = 0; i < floors; i++) {
             long s = seed + i * 1_337;
             LevelLayout floor = BspGenerator.generate(w, d, s);
-            List<Connection> conns = ConnectionGenerator.build(floor, s);
-            list.add(new LevelLayout(floor.rooms(), conns));
+            list.add(floor);
         }
 
         return new MuseumLayout(list, 15f);

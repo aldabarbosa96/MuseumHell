@@ -81,20 +81,7 @@ public class WorldBuilder {
     }
 
     private Rect computeHoleFromPlacement(_4StairBuilder.StairPlacement sp, float floorH) {
-
-        int steps = (int) Math.ceil(floorH / STEP_H);
-        float runD = steps * STEP_DEPTH;
-        float hxPad = STAIR_WIDTH * 0.5f;
-        float pad = 0.05f;
-
-        Enum<?> orient = (Enum<?>) sp.orientation();
-        boolean eastWest = orient.name().equals("EW");
-
-        if (eastWest) {
-            return new Rect(sp.x() - hxPad, sp.x() + hxPad, sp.z() - STEP_DEPTH * 0.5f - pad, sp.z() + runD + pad);
-        } else {
-            return new Rect(sp.x() - STEP_DEPTH * 0.5f - pad, sp.x() + runD + pad, sp.z() - hxPad, sp.z() + hxPad);
-        }
+        return _4StairBuilder.holeFor(sp, floorH);
     }
 
 
@@ -263,5 +250,7 @@ public class WorldBuilder {
         return doorOpen;
     }
 
-    public _4StairBuilder.Plan getStairPlan() { return stairPlan; }
+    public _4StairBuilder.Plan getStairPlan() {
+        return stairPlan;
+    }
 }
