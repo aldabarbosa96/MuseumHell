@@ -8,6 +8,7 @@ import museumhell.engine.world.builders.*;
 import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.enums.ConnectionType;
 import museumhell.engine.world.levelgen.enums.Direction;
+import museumhell.engine.world.levelgen.roomObjects.MirrorPlacer;
 import museumhell.utils.media.AssetLoader;
 import museumhell.utils.GeoUtil.*;
 
@@ -25,6 +26,7 @@ public class WorldBuilder {
     private final _3DoorBuilder a4DoorBuilder;
     private final _4StairBuilder a5StairBuilder;
     private _4StairBuilder.Plan stairPlan;
+    private final MirrorPlacer mirrorPlacer;
     private MuseumLayout layoutRef;
     private final List<Door> doors = new ArrayList<>();
     private boolean doorOpen = false;
@@ -36,6 +38,7 @@ public class WorldBuilder {
         this.a2WallBuilder = new _2WallBuilder(am, root, space, assetLoader);
         this.a4DoorBuilder = new _3DoorBuilder(am, space, root, doors, a2WallBuilder);
         this.a5StairBuilder = new _4StairBuilder(am, space, root);
+        this.mirrorPlacer = new MirrorPlacer(assetLoader, root, System.nanoTime());
     }
 
     public void build(MuseumLayout museum) {
@@ -134,15 +137,20 @@ public class WorldBuilder {
 
                 Connection c = findConnection(conns, r, dir);
                 if (c == null) {
-                    // Antes de poner un muro sólido, comprobamos si chocaría con alguna puerta ya creada
                     if (!isDoorIntersectingWall(r, dir)) {
                         a2WallBuilder.buildSolid(r, dir, y0, h);
+                        // SOLO si es pared interior (tiene vecino al otro lado)
+                        if (!isCorridor(r) && hasNeighbor(r, rooms, dir)) {
+                            mirrorPlacer.onWall(r, dir, y0, h, conns);
+                        }
                     }
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
-                } else { /* puerta */
+                    if (!isCorridor(r)) mirrorPlacer.onWall(r, dir, y0, h, conns);
+                } else { // puerta
                     a4DoorBuilder.build(r, dir, y0, h, rooms);
+                    if (!isCorridor(r)) mirrorPlacer.onWall(r, dir, y0, h, conns);
                 }
             }
         }

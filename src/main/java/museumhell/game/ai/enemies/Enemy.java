@@ -169,7 +169,7 @@ public class Enemy extends Node {
         }
 
         boolean seesPlayer = canSee(pos);
-        boolean litNow = isDirectlyLit(getWorldTranslation()); // <— NUEVO: cacheamos la iluminación directa
+        boolean litNow = isDirectlyLit(getWorldTranslation());
         alertTimer = (seesPlayer || litNow) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
 
         boolean chasingPlayer = alertTimer > 0f;

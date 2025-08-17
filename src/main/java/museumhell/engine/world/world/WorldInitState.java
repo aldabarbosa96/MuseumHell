@@ -11,9 +11,11 @@ import museumhell.engine.world.levelgen.MuseumLayout;
 import museumhell.engine.world.levelgen.Room;
 import museumhell.engine.world.levelgen.generator.MuseumGenerator;
 import museumhell.game.ai.cameras.SecurityCamera;
+import museumhell.utils.GeoUtil;
 import museumhell.utils.media.AssetLoader;
 
 import java.util.List;
+import java.util.Map;
 
 import static museumhell.utils.ConstantManager.WALL_T;
 
@@ -42,7 +44,10 @@ public class WorldInitState extends BaseAppState {
         cameraBase.scale(0.7f);
         float baseExtrusion = 1.25f;
         float cameraExtrusion = baseExtrusion + WALL_T * 0.5f * FastMath.sqrt(2f);
-        securityCameraBuilder = new SecurityCamera(rootNode, cameraBase, cameraExtrusion);
+        var stairPlan = worldBuilder.getStairPlan();
+        var holesByFloor = (stairPlan != null) ? stairPlan.holes : Map.<Integer, java.util.List<GeoUtil.Rect>>of();
+
+        securityCameraBuilder = new SecurityCamera(rootNode, cameraBase, cameraExtrusion, holesByFloor);
         securityCameraBuilder.build(museumLayout);
 
         worldBuilder.getLightPlacer().placeCameraLights(securityCameraBuilder.getCameraData());
