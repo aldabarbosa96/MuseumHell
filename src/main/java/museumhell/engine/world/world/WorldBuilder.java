@@ -9,6 +9,7 @@ import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.enums.ConnectionType;
 import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.engine.world.levelgen.roomObjects.MirrorPlacer;
+import museumhell.engine.world.levelgen.roomObjects.TablePlacer;
 import museumhell.utils.media.AssetLoader;
 import museumhell.utils.GeoUtil.*;
 
@@ -27,6 +28,7 @@ public class WorldBuilder {
     private final _4StairBuilder a5StairBuilder;
     private _4StairBuilder.Plan stairPlan;
     private final MirrorPlacer mirrorPlacer;
+    private final TablePlacer tablePlacer;
     private MuseumLayout layoutRef;
     private final List<Door> doors = new ArrayList<>();
     private boolean doorOpen = false;
@@ -39,6 +41,8 @@ public class WorldBuilder {
         this.a4DoorBuilder = new _3DoorBuilder(am, space, root, doors, a2WallBuilder);
         this.a5StairBuilder = new _4StairBuilder(am, space, root);
         this.mirrorPlacer = new MirrorPlacer(assetLoader, root, System.nanoTime());
+        this.tablePlacer = new TablePlacer(assetLoader, root, System.nanoTime());
+
     }
 
     public void build(MuseumLayout museum) {
@@ -150,8 +154,13 @@ public class WorldBuilder {
                     if (!isCorridor(r)) mirrorPlacer.onWall(r, dir, y0, h, conns);
                 } else { // puerta
                     a4DoorBuilder.build(r, dir, y0, h, rooms);
-                    if (!isCorridor(r)) mirrorPlacer.onWall(r, dir, y0, h, conns);
+                    if (!isCorridor(r)) {
+                        mirrorPlacer.onWall(r, dir, y0, h, conns);
+                    }
                 }
+            }
+            if (!isCorridor(r)) {
+                tablePlacer.placeInRoom(r, y0, conns);
             }
         }
     }

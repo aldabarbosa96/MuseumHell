@@ -18,6 +18,7 @@ public class AssetLoader {
     private void loadModels() {
         models.put("camera1", assetManager.loadModel("Models/CAMARAMIRRORV2.glb"));
         models.put("mirror", assetManager.loadModel("Models/mirror.glb"));
+        models.put("table1", assetManager.loadModel("Models/table1.glb"));
         models.put("lantern1", assetManager.loadModel("Models/LinternaV1.glb"));
         models.put("floor1", assetManager.loadModel("Models/Floor1.glb"));
         models.put("wall1", assetManager.loadModel("Models/Wall1.glb"));
