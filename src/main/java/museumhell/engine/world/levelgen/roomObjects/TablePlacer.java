@@ -1,7 +1,9 @@
 package museumhell.engine.world.levelgen.roomObjects;
 
 import com.jme3.bounding.BoundingBox;
-import com.jme3.math.FastMath;
+import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.control.RigidBodyControl;
+import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue;
@@ -20,29 +22,51 @@ import java.util.List;
 import java.util.Random;
 
 import static museumhell.engine.world.levelgen.enums.Direction.*;
-import static museumhell.utils.ConstantManager.DOOR_W;
-import static museumhell.utils.ConstantManager.HOLE_W;
+import static museumhell.utils.ConstantManager.*;
 
 public class TablePlacer {
     private final Node root;
     private final AssetLoader assets;
+    private final PhysicsSpace space;
     private final Random rng;
-
     private static final float PROB_PER_ROOM = 0.25f;
     private static final int MAX_PER_ROOM = 1;
-    private static final float SURF_EPS = 0.015f;
+    private static final float SURF_EPS = 0.02f;
     private static final float FLOOR_EPS = 0.005f;
     private static final float CORNER_CLEAR = 0.30f;
     private static final float GAP_PAD = 0.40f;
     private static final float SIDE_MARGIN = 0.60f;
-
     private static final float SCALE = 5f;
-
     private final Spatial base;
 
-    public TablePlacer(AssetLoader assets, Node root, long seed) {
+    private record Dims(float halfSpan, float halfDepth, float halfHeight) {
+    }
+
+    private Dims dimsFor(Direction dir) {
+        Spatial tmp = base.clone();
+        tmp.setLocalScale(SCALE);
+        Vector3f nrm = switch (dir) {
+            case NORTH -> new Vector3f(0, 0, 1);
+            case SOUTH -> new Vector3f(0, 0, -1);
+            case WEST -> new Vector3f(1, 0, 0);
+            case EAST -> new Vector3f(-1, 0, 0);
+        };
+        tmp.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
+        forceUpdateModelBounds(tmp);
+        tmp.updateGeometricState();
+
+        BoundingBox bb = (BoundingBox) tmp.getWorldBound();
+        float halfSpan = (dir == NORTH || dir == SOUTH) ? bb.getXExtent() : bb.getZExtent();
+        float halfDepth = (dir == NORTH || dir == SOUTH) ? bb.getZExtent() : bb.getXExtent();
+        float halfHeight = bb.getYExtent();
+        return new Dims(halfSpan, halfDepth, halfHeight);
+    }
+
+
+    public TablePlacer(AssetLoader assets, Node root, PhysicsSpace space, long seed) {
         this.assets = assets;
         this.root = root;
+        this.space = space;
         this.rng = new Random(seed);
         this.base = assets.get("table1");
         if (base == null) throw new IllegalStateException("Asset 'table1' no encontrado");
@@ -61,36 +85,19 @@ public class TablePlacer {
     }
 
     private boolean tryPlaceOnWall(Room r, Direction dir, float yBase, List<Connection> conns) {
-        Spatial probe = base.clone();
-        probe.setLocalScale(SCALE);
-
-        Vector3f wallNormal = switch (dir) {
-            case NORTH -> new Vector3f(0, 0, 1);
-            case SOUTH -> new Vector3f(0, 0, -1);
-            case WEST -> new Vector3f(1, 0, 0);
-            case EAST -> new Vector3f(-1, 0, 0);
-        };
-        Quaternion rot = new Quaternion().lookAt(wallNormal, Vector3f.UNIT_Y);
-        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
-            rot.multLocal(new Quaternion().fromAngleAxis(FastMath.PI, Vector3f.UNIT_Y));
-        }
-        probe.setLocalRotation(rot);
-        forceUpdateModelBounds(probe);
-        probe.updateGeometricState();
-
-        BoundingBox bb = (BoundingBox) probe.getWorldBound();
-        float cx = bb.getCenter().x, cy = bb.getCenter().y, cz = bb.getCenter().z;
-        float ex = bb.getXExtent(), ey = bb.getYExtent(), ez = bb.getZExtent();
-
+        Dims d = dimsFor(dir);
         boolean ns = (dir == NORTH || dir == SOUTH);
-        float halfSpan = ns ? ex : ez;
 
         float lo = ns ? r.x() : r.z();
         float hi = ns ? (r.x() + r.w()) : (r.z() + r.h());
-        lo += Math.max(SIDE_MARGIN, halfSpan + CORNER_CLEAR);
-        hi -= Math.max(SIDE_MARGIN, halfSpan + CORNER_CLEAR);
+
+        // Clearance lateral: respeta media profundidad de la mesa + margen + media pared
+        float edgeClear = Math.max(SIDE_MARGIN, d.halfSpan + CORNER_CLEAR + (WALL_T * 0.5f));
+        lo += edgeClear;
+        hi -= edgeClear;
         if (hi <= lo) return false;
 
+        // Bloquea puertas/aberturas con GAP + halfSpan + media pared
         List<float[]> blocks = new ArrayList<>();
         for (Connection c : conns) {
             if (!appliesToWall(c, r, dir)) continue;
@@ -98,8 +105,10 @@ public class TablePlacer {
             float ovMin = ns ? Math.max(r.x(), o.x()) : Math.max(r.z(), o.z());
             float ovMax = ns ? Math.min(r.x() + r.w(), o.x() + o.w()) : Math.min(r.z() + r.h(), o.z() + o.h());
             if (ovMax <= ovMin) continue;
+
             float center = (ovMin + ovMax) * 0.5f;
-            float holeHalf = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f) + GAP_PAD + halfSpan + CORNER_CLEAR;
+            float holeHalf = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f) + GAP_PAD + d.halfSpan + (WALL_T * 0.5f);
+
             float s = center - holeHalf, e = center + holeHalf;
             if (e > lo && s < hi) blocks.add(new float[]{Math.max(s, lo), Math.min(e, hi)});
         }
@@ -108,34 +117,48 @@ public class TablePlacer {
         if (free.isEmpty()) return false;
 
         float coord = pickFromSegments(free);
-        coord = Math.max(lo + halfSpan + CORNER_CLEAR, Math.min(hi - halfSpan - CORNER_CLEAR, coord));
+        coord = Math.max(lo + d.halfSpan, Math.min(hi - d.halfSpan, coord));
 
-        float ty = (yBase + FLOOR_EPS) - (cy - ey);
+        Vector3f nrm = switch (dir) {
+            case NORTH -> new Vector3f(0, 0, 1);
+            case SOUTH -> new Vector3f(0, 0, -1);
+            case WEST -> new Vector3f(1, 0, 0);
+            case EAST -> new Vector3f(-1, 0, 0);
+        };
 
-        float tx, tz;
+        Vector3f pos = new Vector3f();
         if (ns) {
-            tx = coord - cx;
-            if (dir == Direction.NORTH) {
-                tz = (r.z() + SURF_EPS) - (cz - ez);
-            } else {
-                tz = (r.z() + r.h() - SURF_EPS) - (cz + ez);
-            }
+            pos.x = coord;
+            pos.z = (dir == NORTH) ? r.z() + (d.halfDepth + SURF_EPS) : r.z() + r.h() - (d.halfDepth + SURF_EPS);
         } else {
-            tz = coord - cz;
-            if (dir == Direction.WEST) {
-                tx = (r.x() + SURF_EPS) - (cx - ex);
-            } else {
-                tx = (r.x() + r.w() - SURF_EPS) - (cx + ex);
-            }
+            pos.z = coord;
+            pos.x = (dir == WEST) ? r.x() + (d.halfDepth + SURF_EPS) : r.x() + r.w() - (d.halfDepth + SURF_EPS);
         }
 
         Spatial s = base.clone();
         s.setLocalScale(SCALE);
-        s.setLocalRotation(rot);
-        s.setLocalTranslation(tx, ty, tz);
-        s.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        root.attachChild(s);
+        s.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
+        s.setLocalTranslation(pos);
+
+        // Alinear con el suelo DESPUÉS de fijar X/Z
+        forceUpdateModelBounds(s);
+        s.updateGeometricState();
+        BoundingBox b = (BoundingBox) s.getWorldBound();
+        float bottom = b.getCenter().y - b.getYExtent();
+        pos.y += (yBase + FLOOR_EPS) - bottom;
+        s.setLocalTranslation(pos);
+
+        // Nada de adjustFlushToWall(); nada de clampInsideRoom() en eje normal
+        attachWithPhysics(s);
         return true;
+    }
+
+    private void attachWithPhysics(Spatial s) {
+        s.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        RigidBodyControl body = new RigidBodyControl(CollisionShapeFactory.createMeshShape(s), 0f);
+        s.addControl(body);
+        root.attachChild(s);
+        space.add(body);
     }
 
     private static boolean appliesToWall(Connection c, Room r, Direction dir) {
@@ -152,11 +175,8 @@ public class TablePlacer {
     }
 
     private static void forceUpdateModelBounds(Spatial s) {
-        if (s instanceof Geometry g) {
-            g.updateModelBound();
-        } else if (s instanceof Node n) {
-            for (Spatial c : n.getChildren()) forceUpdateModelBounds(c);
-        }
+        if (s instanceof Geometry g) g.updateModelBound();
+        else if (s instanceof Node n) for (Spatial c : n.getChildren()) forceUpdateModelBounds(c);
     }
 
     private static List<float[]> merge(List<float[]> ivs) {

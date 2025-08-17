@@ -85,7 +85,7 @@ public class MirrorPlacer {
         float maxC = hi - (halfSpan + CORNER_CLEAR);
         coord = Math.max(minC, Math.min(maxC, coord));
 
-        float y = yBase + wallH * 0.33f;
+        float y = yBase + wallH * .4f;
         Vector3f pos = new Vector3f();
         Vector3f nrm = new Vector3f();
         switch (dir) {

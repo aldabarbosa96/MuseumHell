@@ -41,7 +41,7 @@ public class WorldBuilder {
         this.a4DoorBuilder = new _3DoorBuilder(am, space, root, doors, a2WallBuilder);
         this.a5StairBuilder = new _4StairBuilder(am, space, root);
         this.mirrorPlacer = new MirrorPlacer(assetLoader, root, System.nanoTime());
-        this.tablePlacer = new TablePlacer(assetLoader, root, System.nanoTime());
+        this.tablePlacer = new TablePlacer(assetLoader, root, space, System.nanoTime());
 
     }
 
