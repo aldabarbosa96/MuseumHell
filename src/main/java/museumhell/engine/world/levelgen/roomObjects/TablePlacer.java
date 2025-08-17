@@ -1,6 +1,7 @@
 package museumhell.engine.world.levelgen.roomObjects;
 
 import com.jme3.bounding.BoundingBox;
+import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue;
@@ -19,10 +20,8 @@ import java.util.List;
 import java.util.Random;
 
 import static museumhell.engine.world.levelgen.enums.Direction.*;
-import static museumhell.utils.ConstantManager.CORRIDOR_WALL_T;
 import static museumhell.utils.ConstantManager.DOOR_W;
 import static museumhell.utils.ConstantManager.HOLE_W;
-import static museumhell.utils.ConstantManager.WALL_T;
 
 public class TablePlacer {
     private final Node root;
@@ -31,8 +30,7 @@ public class TablePlacer {
 
     private static final float PROB_PER_ROOM = 0.25f;
     private static final int MAX_PER_ROOM = 1;
-
-    private static final float SURF_EPS = 0.01f;
+    private static final float SURF_EPS = 0.015f;
     private static final float FLOOR_EPS = 0.005f;
     private static final float CORNER_CLEAR = 0.30f;
     private static final float GAP_PAD = 0.40f;
@@ -65,6 +63,7 @@ public class TablePlacer {
     private boolean tryPlaceOnWall(Room r, Direction dir, float yBase, List<Connection> conns) {
         Spatial probe = base.clone();
         probe.setLocalScale(SCALE);
+
         Vector3f wallNormal = switch (dir) {
             case NORTH -> new Vector3f(0, 0, 1);
             case SOUTH -> new Vector3f(0, 0, -1);
@@ -72,6 +71,9 @@ public class TablePlacer {
             case EAST -> new Vector3f(-1, 0, 0);
         };
         Quaternion rot = new Quaternion().lookAt(wallNormal, Vector3f.UNIT_Y);
+        if (dir == Direction.NORTH || dir == Direction.SOUTH) {
+            rot.multLocal(new Quaternion().fromAngleAxis(FastMath.PI, Vector3f.UNIT_Y));
+        }
         probe.setLocalRotation(rot);
         forceUpdateModelBounds(probe);
         probe.updateGeometricState();
@@ -108,25 +110,22 @@ public class TablePlacer {
         float coord = pickFromSegments(free);
         coord = Math.max(lo + halfSpan + CORNER_CLEAR, Math.min(hi - halfSpan - CORNER_CLEAR, coord));
 
-        float wallThick = (isCorridor(r) ? CORRIDOR_WALL_T : WALL_T);
-        float inset = switch (dir) { case NORTH, WEST -> wallThick; default -> 0f; };
-
         float ty = (yBase + FLOOR_EPS) - (cy - ey);
-        float tx, tz;
 
+        float tx, tz;
         if (ns) {
             tx = coord - cx;
-            if (dir == NORTH) {
-                tz = (r.z() + inset + SURF_EPS) - (cz - ez);
+            if (dir == Direction.NORTH) {
+                tz = (r.z() + SURF_EPS) - (cz - ez);
             } else {
-                tz = (r.z() + r.h() - inset - SURF_EPS) - (cz + ez);
+                tz = (r.z() + r.h() - SURF_EPS) - (cz + ez);
             }
         } else {
             tz = coord - cz;
-            if (dir == WEST) {
-                tx = (r.x() + inset + SURF_EPS) - (cx - ex);
+            if (dir == Direction.WEST) {
+                tx = (r.x() + SURF_EPS) - (cx - ex);
             } else {
-                tx = (r.x() + r.w() - inset - SURF_EPS) - (cx + ex);
+                tx = (r.x() + r.w() - SURF_EPS) - (cx + ex);
             }
         }
 
@@ -150,10 +149,6 @@ public class TablePlacer {
             case EAST -> WEST;
             case WEST -> EAST;
         };
-    }
-
-    private static boolean isCorridor(Room r) {
-        return Float.compare(r.w(), HOLE_W) == 0 || Float.compare(r.h(), HOLE_W) == 0;
     }
 
     private static void forceUpdateModelBounds(Spatial s) {
