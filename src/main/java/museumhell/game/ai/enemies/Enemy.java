@@ -169,8 +169,8 @@ public class Enemy extends Node {
         }
 
         boolean seesPlayer = canSee(pos);
-        boolean litByTorch = isDirectlyLit(getWorldTranslation());
-        alertTimer = (seesPlayer || litByTorch) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
+        boolean litNow = isDirectlyLit(getWorldTranslation()); // <— NUEVO: cacheamos la iluminación directa
+        alertTimer = (seesPlayer || litNow) ? ALERT_TIME : Math.max(0f, alertTimer - tpf);
 
         boolean chasingPlayer = alertTimer > 0f;
 
@@ -188,7 +188,7 @@ public class Enemy extends Node {
         }
 
         float baseSpeed = (state == State.CHASE) ? CHASE_SPEED : WANDER_SPEED;
-        float interval = (state == State.CHASE) ? EN_STEP_INTERVAL_RUN : EN_STEP_INTERVAL;
+        float interval  = (state == State.CHASE) ? EN_STEP_INTERVAL_RUN : EN_STEP_INTERVAL;
 
         stepTime += tpf;
         float phase = (stepTime / interval) % 1f;
@@ -201,7 +201,17 @@ public class Enemy extends Node {
             followPathToTarget(pos);
         }
 
-        avoidObstacles(pos);
+        // —— PARCHE: si está iluminado por la linterna, forzamos dirección al jugador y saltamos la evitación este frame
+        if (chasingPlayer && litNow) {
+            lastDir.set(scratchVec.set(player.getLocation()).subtractLocal(pos).setY(0).normalizeLocal());
+            patrolPoints.clear();
+            patrolIndex = 0;
+            avoiding = false;
+            pathBlocked = false;
+        } else {
+            avoidObstacles(pos);
+        }
+
         detectStuck(pos, tpf);
 
         float dtPhysics = space.getAccuracy();
@@ -232,18 +242,16 @@ public class Enemy extends Node {
 
         if (alarmChasing) {
             boolean reached = (alarmTargetRoom != null && currentRoomRef == alarmTargetRoom) || patrolIndex >= patrolPoints.size();
-
             if (reached) {
-                stopAlarmChase(); // corta inmediatamente si llega antes de 15 s
+                stopAlarmChase();
             } else {
                 alarmTimeLeft -= tpf;
                 if (alarmTimeLeft <= 0f) {
-                    stopAlarmChase(); // corta por timeout de 15 s
+                    stopAlarmChase();
                 }
             }
         }
     }
-
 
     private float getVolume() {
         Vector3f e = this.getWorldTranslation();
