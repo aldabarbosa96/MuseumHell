@@ -1,5 +1,6 @@
 package museumhell.engine.world.levelgen.roomObjects;
 
+import com.jme3.bounding.BoundingBox;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import static museumhell.engine.world.levelgen.enums.Direction.*;
 import static museumhell.utils.ConstantManager.DOOR_W;
 import static museumhell.utils.ConstantManager.HOLE_W;
 
@@ -23,98 +25,117 @@ public class MirrorPlacer {
     private final AssetLoader assets;
     private final Random rng;
 
-    private static final float PROB = 0.7f;
-    private static final float WALL_EPS = 0.03f;
-    private static final float SIDE_MARGIN = 0.9f;
+    private static final float PROB = 0.3f;
+    private static final float CORNER_CLEAR = 0.7f;
+    private static final float SURF_EPS = 0.015f;
+    private static final float GAP_PAD = 0.35f;
+    private static final float SIDE_MARGIN = 0.80f;
+    private static final float SCALE = 7f;
 
-    // NUEVO: evitar esquinas y exigir un tramo mínimo
-    private static final float CORNER_PAD = 0.45f; // margen en extremos del muro para no “comerse” esquinas
-    private static final float GAP_PAD = 0.30f; // margen a cada lado de puertas / openings
-    private static final float MIN_SEG = 1.00f; // longitud mínima de tramo sólido para poner espejo
-    private static final int MAX_TRIES = 16;
-
-    private static final Quaternion MODEL_FORWARD_FIX = new Quaternion().fromAngles(0, 0, 0);
+    private final Spatial mirrorBase;
 
     public MirrorPlacer(AssetLoader assets, Node root, long seed) {
         this.assets = assets;
         this.root = root;
         this.rng = new Random(seed);
+        Spatial m = assets.get("mirror");
+        if (m == null) throw new IllegalStateException("No existe asset 'mirror'");
+        this.mirrorBase = m;
     }
 
     public void onWall(Room r, Direction dir, float yBase, float wallH, List<Connection> levelConns) {
         if (rng.nextFloat() > PROB) return;
 
-        Spatial mirror = assets.get("mirror");
-        if (mirror == null) return;
-        mirror.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        mirror.setLocalScale(7f);
+        Dims dims = dimsFor(dir);
+        float halfSpan = dims.halfSpan;
+        float halfDepth = dims.halfDepth;
 
-        float y = yBase + wallH * 0.33f;
-
-        final boolean ns = (dir == Direction.NORTH || dir == Direction.SOUTH);
+        final boolean ns = (dir == NORTH || dir == SOUTH);
         float lo = ns ? r.x() : r.z();
         float hi = ns ? (r.x() + r.w()) : (r.z() + r.h());
 
-        // margen lateral + margen de esquina
-        lo += Math.max(SIDE_MARGIN, CORNER_PAD);
-        hi -= Math.max(SIDE_MARGIN, CORNER_PAD);
-        if (hi - lo < MIN_SEG) return; // no hay tramo útil
+        lo += Math.max(SIDE_MARGIN, halfSpan + CORNER_CLEAR);
+        hi -= Math.max(SIDE_MARGIN, halfSpan + CORNER_CLEAR);
+        if (hi <= lo) return;
 
-        // 1) rangos bloqueados por puertas/openings en ESTE muro
         List<float[]> blocks = new ArrayList<>();
         for (Connection c : levelConns) {
             if (!appliesToWall(c, r, dir)) continue;
 
-            // superposición a lo largo del eje del muro
             Room o = (c.a() == r) ? c.b() : c.a();
             float ovMin = ns ? Math.max(r.x(), o.x()) : Math.max(r.z(), o.z());
             float ovMax = ns ? Math.min(r.x() + r.w(), o.x() + o.w()) : Math.min(r.z() + r.h(), o.z() + o.h());
             if (ovMax <= ovMin) continue;
 
-            // asumimos hueco centrado (igual que buildOpening/door), con padding
             float center = (ovMin + ovMax) * 0.5f;
-            float half = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f) + GAP_PAD;
-            float s = center - half;
-            float e = center + half;
+            float holeHalf = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f) + GAP_PAD + halfSpan + CORNER_CLEAR;
 
-            // clamp al tramo del muro
+            float s = center - holeHalf;
+            float e = center + holeHalf;
             if (e <= lo || s >= hi) continue;
+
             blocks.add(new float[]{Math.max(s, lo), Math.min(e, hi)});
         }
 
-        // 2) construir tramos libres = [lo,hi] \ blocks (merge + resta)
         List<float[]> free = subtractMerged(lo, hi, merge(blocks));
-        free.removeIf(seg -> (seg[1] - seg[0]) < MIN_SEG);
         if (free.isEmpty()) return;
-
-        // 3) muestrea un tramo proporcional a su longitud y toma coord
         float coord = pickFromSegments(free);
 
+        float minC = lo + (halfSpan + CORNER_CLEAR);
+        float maxC = hi - (halfSpan + CORNER_CLEAR);
+        coord = Math.max(minC, Math.min(maxC, coord));
+
+        float y = yBase + wallH * 0.33f;
         Vector3f pos = new Vector3f();
-        Vector3f normal = new Vector3f();
+        Vector3f nrm = new Vector3f();
         switch (dir) {
             case NORTH -> {
-                pos.set(coord, y, r.z() + WALL_EPS);
-                normal.set(Vector3f.UNIT_Z);
+                pos.set(coord, y, r.z() + (halfDepth + SURF_EPS));
+                nrm.set(0, 0, 1);
             }
             case SOUTH -> {
-                pos.set(coord, y, r.z() + r.h() - WALL_EPS);
-                normal.set(Vector3f.UNIT_Z).negateLocal();
+                pos.set(coord, y, r.z() + r.h() - (halfDepth + SURF_EPS));
+                nrm.set(0, 0, -1);
             }
             case WEST -> {
-                pos.set(r.x() + WALL_EPS, y, coord);
-                normal.set(Vector3f.UNIT_X);
+                pos.set(r.x() + (halfDepth + SURF_EPS), y, coord);
+                nrm.set(1, 0, 0);
             }
             case EAST -> {
-                pos.set(r.x() + r.w() - WALL_EPS, y, coord);
-                normal.set(Vector3f.UNIT_X).negateLocal();
+                pos.set(r.x() + r.w() - (halfDepth + SURF_EPS), y, coord);
+                nrm.set(-1, 0, 0);
             }
         }
 
-        Quaternion rot = new Quaternion().lookAt(normal, Vector3f.UNIT_Y).multLocal(MODEL_FORWARD_FIX);
+        Spatial mirror = mirrorBase.clone();
+        mirror.setLocalScale(SCALE);
+        mirror.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
         mirror.setLocalTranslation(pos);
-        mirror.setLocalRotation(rot);
+        mirror.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         root.attachChild(mirror);
+    }
+
+    private record Dims(float halfSpan, float halfDepth) {
+    }
+
+    private Dims dimsFor(Direction dir) {
+        Spatial tmp = mirrorBase.clone();
+        tmp.setLocalScale(SCALE);
+
+        Vector3f nrm = switch (dir) {
+            case NORTH -> new Vector3f(0, 0, 1);
+            case SOUTH -> new Vector3f(0, 0, -1);
+            case WEST -> new Vector3f(1, 0, 0);
+            case EAST -> new Vector3f(-1, 0, 0);
+        };
+        tmp.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
+        tmp.updateGeometricState();
+
+        BoundingBox bb = (BoundingBox) tmp.getWorldBound();
+
+        float halfSpan = (dir == NORTH || dir == SOUTH) ? bb.getXExtent() : bb.getZExtent();
+        float halfDepth = (dir == NORTH || dir == SOUTH) ? bb.getZExtent() : bb.getXExtent();
+        return new Dims(halfSpan, halfDepth);
     }
 
     private static boolean appliesToWall(Connection c, Room r, Direction dir) {
@@ -123,14 +144,12 @@ public class MirrorPlacer {
 
     private static Direction opposite(Direction d) {
         return switch (d) {
-            case NORTH -> Direction.SOUTH;
-            case SOUTH -> Direction.NORTH;
-            case EAST -> Direction.WEST;
-            case WEST -> Direction.EAST;
+            case NORTH -> SOUTH;
+            case SOUTH -> NORTH;
+            case EAST -> WEST;
+            case WEST -> EAST;
         };
     }
-
-    // ---- utilidades de intervalos ----
 
     private static List<float[]> merge(List<float[]> ivs) {
         ivs.sort((a, b) -> Float.compare(a[0], b[0]));
@@ -163,7 +182,6 @@ public class MirrorPlacer {
             if (t <= len) return s[0] + t;
             t -= len;
         }
-        // fallback
         float[] last = segs.get(segs.size() - 1);
         return (last[0] + last[1]) * 0.5f;
     }
