@@ -24,29 +24,36 @@ public class MirrorPlacer {
     private final Node root;
     private final AssetLoader assets;
     private final Random rng;
-
-    private static final float PROB = 0.3f;
+    private static final float PROB = 0.66f;
     private static final float CORNER_CLEAR = 0.7f;
     private static final float SURF_EPS = 0.015f;
     private static final float GAP_PAD = 0.35f;
     private static final float SIDE_MARGIN = 0.80f;
     private static final float SCALE = 7f;
+    private static final float CLAMP_EPS = 0.01f;
 
-    private final Spatial mirrorBase;
+    private final List<Spatial> cuadros = new ArrayList<>(4);
 
     public MirrorPlacer(AssetLoader assets, Node root, long seed) {
         this.assets = assets;
         this.root = root;
         this.rng = new Random(seed);
-        Spatial m = assets.get("mirror");
-        if (m == null) throw new IllegalStateException("No existe asset 'mirror'");
-        this.mirrorBase = m;
+
+        // admite hasta 4 (si falta alguno no pasa nada)
+        for (String key : List.of("cuadro1", "cuadro2", "cuadro3")) {
+            Spatial s = assets.get(key);
+            if (s != null) cuadros.add(s);
+        }
+        if (cuadros.isEmpty()) {
+            throw new IllegalStateException("Error: assets de cuadros no encontrados");
+        }
     }
 
     public void onWall(Room r, Direction dir, float yBase, float wallH, List<Connection> levelConns) {
         if (rng.nextFloat() > PROB) return;
 
-        Dims dims = dimsFor(dir);
+        Spatial cuadroBase = cuadros.get(rng.nextInt(cuadros.size()));
+        Dims dims = dimsFor(cuadroBase, dir);
         float halfSpan = dims.halfSpan;
         float halfDepth = dims.halfDepth;
 
@@ -54,21 +61,23 @@ public class MirrorPlacer {
         float lo = ns ? r.x() : r.z();
         float hi = ns ? (r.x() + r.w()) : (r.z() + r.h());
 
+        // márgenes contra esquinas
         lo += Math.max(SIDE_MARGIN, halfSpan + CORNER_CLEAR);
         hi -= Math.max(SIDE_MARGIN, halfSpan + CORNER_CLEAR);
         if (hi <= lo) return;
 
+        // bloqueos por puertas / huecos
         List<float[]> blocks = new ArrayList<>();
         for (Connection c : levelConns) {
             if (!appliesToWall(c, r, dir)) continue;
-
             Room o = (c.a() == r) ? c.b() : c.a();
             float ovMin = ns ? Math.max(r.x(), o.x()) : Math.max(r.z(), o.z());
             float ovMax = ns ? Math.min(r.x() + r.w(), o.x() + o.w()) : Math.min(r.z() + r.h(), o.z() + o.h());
             if (ovMax <= ovMin) continue;
 
             float center = (ovMin + ovMax) * 0.5f;
-            float holeHalf = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f) + GAP_PAD + halfSpan + CORNER_CLEAR;
+            float holeHalf = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f)
+                    + GAP_PAD + halfSpan + CORNER_CLEAR;
 
             float s = center - holeHalf;
             float e = center + holeHalf;
@@ -79,61 +88,73 @@ public class MirrorPlacer {
 
         List<float[]> free = subtractMerged(lo, hi, merge(blocks));
         if (free.isEmpty()) return;
-        float coord = pickFromSegments(free);
 
-        float minC = lo + (halfSpan + CORNER_CLEAR);
-        float maxC = hi - (halfSpan + CORNER_CLEAR);
-        coord = Math.max(minC, Math.min(maxC, coord));
+        // --- Elegimos un SEGMENTO libre y luego clampamos dentro de él ---
+        float[] seg = pickSegment(free);           // <-- segmento elegido [s,e]
+        float coord = rng.nextFloat() * (seg[1] - seg[0]) + seg[0];
 
         float y = yBase + wallH * .4f;
         Vector3f pos = new Vector3f();
         Vector3f nrm = new Vector3f();
         switch (dir) {
-            case NORTH -> {
-                pos.set(coord, y, r.z() + (halfDepth + SURF_EPS));
-                nrm.set(0, 0, 1);
-            }
-            case SOUTH -> {
-                pos.set(coord, y, r.z() + r.h() - (halfDepth + SURF_EPS));
-                nrm.set(0, 0, -1);
-            }
-            case WEST -> {
-                pos.set(r.x() + (halfDepth + SURF_EPS), y, coord);
-                nrm.set(1, 0, 0);
-            }
-            case EAST -> {
-                pos.set(r.x() + r.w() - (halfDepth + SURF_EPS), y, coord);
-                nrm.set(-1, 0, 0);
-            }
+            case NORTH -> { pos.set(coord, y, r.z() + (halfDepth + SURF_EPS)); nrm.set(0, 0, 1); }
+            case SOUTH -> { pos.set(coord, y, r.z() + r.h() - (halfDepth + SURF_EPS)); nrm.set(0, 0, -1); }
+            case WEST  -> { pos.set(r.x() + (halfDepth + SURF_EPS), y, coord); nrm.set(1, 0, 0); }
+            case EAST  -> { pos.set(r.x() + r.w() - (halfDepth + SURF_EPS), y, coord); nrm.set(-1, 0, 0); }
         }
 
-        Spatial mirror = mirrorBase.clone();
-        mirror.setLocalScale(SCALE);
-        mirror.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
-        mirror.setLocalTranslation(pos);
-        mirror.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        root.attachChild(mirror);
+        Spatial cuadro = cuadroBase.clone();
+        cuadro.setLocalScale(SCALE);
+        cuadro.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
+        cuadro.setLocalTranslation(pos);
+        cuadro.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+
+        // --- (NUEVO) Clamp seguro del bounding box dentro del segmento libre ---
+        cuadro.updateGeometricState();
+        BoundingBox bb = (BoundingBox) cuadro.getWorldBound();
+
+        // ancho real del cuadro sobre el eje de pared
+        float span = (ns ? bb.getXExtent() : bb.getZExtent()) * 2f;
+        float segLen = seg[1] - seg[0];
+        if (span + CLAMP_EPS > segLen) {
+            // Si por pivot raro no cabe, lo evitamos (mejor que invadir paso)
+            return;
+        }
+
+        float minEdge = ns ? bb.getCenter().x - bb.getXExtent()
+                : bb.getCenter().z - bb.getZExtent();
+        float maxEdge = ns ? bb.getCenter().x + bb.getXExtent()
+                : bb.getCenter().z + bb.getZExtent();
+
+        float shift = 0f;
+        if (minEdge < seg[0] + CLAMP_EPS) shift += (seg[0] + CLAMP_EPS) - minEdge;
+        if (maxEdge > seg[1] - CLAMP_EPS) shift -= maxEdge - (seg[1] - CLAMP_EPS);
+
+        if (Math.abs(shift) > 0f) {
+            if (ns) pos.x += shift; else pos.z += shift;
+            cuadro.setLocalTranslation(pos);
+            cuadro.updateGeometricState();
+        }
+
+        root.attachChild(cuadro);
     }
 
-    private record Dims(float halfSpan, float halfDepth) {
-    }
+    private record Dims(float halfSpan, float halfDepth) { }
 
-    private Dims dimsFor(Direction dir) {
-        Spatial tmp = mirrorBase.clone();
+    private Dims dimsFor(Spatial base, Direction dir) {
+        Spatial tmp = base.clone();
         tmp.setLocalScale(SCALE);
-
         Vector3f nrm = switch (dir) {
             case NORTH -> new Vector3f(0, 0, 1);
             case SOUTH -> new Vector3f(0, 0, -1);
-            case WEST -> new Vector3f(1, 0, 0);
-            case EAST -> new Vector3f(-1, 0, 0);
+            case WEST  -> new Vector3f(1, 0, 0);
+            case EAST  -> new Vector3f(-1, 0, 0);
         };
         tmp.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
         tmp.updateGeometricState();
 
         BoundingBox bb = (BoundingBox) tmp.getWorldBound();
-
-        float halfSpan = (dir == NORTH || dir == SOUTH) ? bb.getXExtent() : bb.getZExtent();
+        float halfSpan  = (dir == NORTH || dir == SOUTH) ? bb.getXExtent() : bb.getZExtent();
         float halfDepth = (dir == NORTH || dir == SOUTH) ? bb.getZExtent() : bb.getXExtent();
         return new Dims(halfSpan, halfDepth);
     }
@@ -141,13 +162,12 @@ public class MirrorPlacer {
     private static boolean appliesToWall(Connection c, Room r, Direction dir) {
         return (c.a() == r && c.dir() == dir) || (c.b() == r && opposite(c.dir()) == dir);
     }
-
     private static Direction opposite(Direction d) {
         return switch (d) {
             case NORTH -> SOUTH;
             case SOUTH -> NORTH;
-            case EAST -> WEST;
-            case WEST -> EAST;
+            case EAST  -> WEST;
+            case WEST  -> EAST;
         };
     }
 
@@ -160,7 +180,6 @@ public class MirrorPlacer {
         }
         return out;
     }
-
     private static List<float[]> subtractMerged(float lo, float hi, List<float[]> blocks) {
         List<float[]> res = new ArrayList<>();
         float cur = lo;
@@ -173,16 +192,15 @@ public class MirrorPlacer {
         return res;
     }
 
-    private float pickFromSegments(List<float[]> segs) {
+    private float[] pickSegment(List<float[]> segs) {  // <-- devuelve el segmento elegido
         float total = 0f;
         for (float[] s : segs) total += (s[1] - s[0]);
         float t = rng.nextFloat() * total;
         for (float[] s : segs) {
             float len = s[1] - s[0];
-            if (t <= len) return s[0] + t;
+            if (t <= len) return s;
             t -= len;
         }
-        float[] last = segs.get(segs.size() - 1);
-        return (last[0] + last[1]) * 0.5f;
+        return segs.get(segs.size() - 1);
     }
 }

@@ -144,7 +144,7 @@ public class WorldBuilder {
                     a2WallBuilder.buildSolid(r, dir, y0, h);
                     if (!isCorridor(r) && hasNeighbor(r, rooms, dir)) {
                         mirrorPlacer.onWall(r, dir, y0, h, conns);
-                        tablePlacer.onWall(r, dir, y0, h, conns);
+                        tablePlacer.onWall(r, dir, y0, conns);
                     }
 
                 } else if (c.type() == ConnectionType.OPENING) {
@@ -153,7 +153,7 @@ public class WorldBuilder {
                     if (!isCorridor(r)) {
                         mirrorPlacer.onWall(r, dir, y0, h, conns);
                         if (hasNeighbor(r, rooms, dir)) {
-                            tablePlacer.onWall(r, dir, y0, h, conns);
+                            tablePlacer.onWall(r, dir, y0, conns);
                         }
                     }
 
@@ -162,11 +162,11 @@ public class WorldBuilder {
                     if (!isCorridor(r)) {
                         mirrorPlacer.onWall(r, dir, y0, h, conns);
                         if (hasNeighbor(r, rooms, dir)) {
-                            tablePlacer.onWall(r, dir, y0, h, conns);
+                            tablePlacer.onWall(r, dir, y0, conns);
                         }
                     }
                 }
-                }
+            }
         }
     }
 

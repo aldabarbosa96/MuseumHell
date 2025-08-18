@@ -2,9 +2,9 @@ package museumhell.engine.world.levelgen.roomObjects;
 
 import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
-import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue;
@@ -30,20 +30,24 @@ public class TablePlacer {
     private static final float PROB_PER_ROOM = 0.25f;
     private static final int MAX_PER_ROOM = 1;
     private static final float FLOOR_EPS = 0.005f;
-    private static final float WALL_CLEAR = 0.09f;   // ~9cm
+    private static final float WALL_CLEAR = 0.09f;
     private static final float CORNER_CLEAR = 0.30f;
     private static final float GAP_PAD = 0.40f;
     private static final float SIDE_MARGIN = 0.60f;
     private static final float SCALE = 5f;
+    private static final float DECO_SCALE = 4f;
+    private static final float DECO_SURF_EPS = 0.008f;
+    private static final float DECO_FWD_OFFSET = 0.12f;
 
-    private final Spatial base;
+    private final Spatial tableBase;
+    private final List<Spatial> decoBases = new ArrayList<>(4);
     private final IdentityHashMap<Room, Integer> count = new IdentityHashMap<>();
 
     private record Dims(float halfSpan, float halfDepth, float halfHeight) {
     }
 
     private Dims dimsFor(Direction dir) {
-        Spatial tmp = base.clone();
+        Spatial tmp = tableBase.clone();
         tmp.setLocalScale(SCALE);
         Vector3f nrm = switch (dir) {
             case NORTH -> new Vector3f(0, 0, 1);
@@ -67,11 +71,20 @@ public class TablePlacer {
         this.root = root;
         this.space = space;
         this.rng = new Random(seed);
-        this.base = assets.get("table1");
-        if (base == null) throw new IllegalStateException("Asset 'table1' no encontrado");
+
+        this.tableBase = assets.get("table1");
+        if (tableBase == null) throw new IllegalStateException("Asset 'table1' no encontrado");
+
+        for (String key : List.of("deco1", "deco2", "deco3", "deco4")) {
+            Spatial s = assets.get(key);
+            if (s != null) decoBases.add(s);
+        }
+        if (decoBases.isEmpty()) {
+            throw new IllegalStateException("No se pudo cargar ningún deco (deco1..deco4)");
+        }
     }
 
-    public void onWall(Room r, Direction dir, float yBase, float wallH, List<Connection> conns) {
+    public void onWall(Room r, Direction dir, float yBase, List<Connection> conns) {
         if (rng.nextFloat() > PROB_PER_ROOM) return;
         if (count.getOrDefault(r, 0) >= MAX_PER_ROOM) return;
         if (tryPlaceOnWall(r, dir, yBase, conns)) {
@@ -86,7 +99,7 @@ public class TablePlacer {
         float lo = ns ? r.x() : r.z();
         float hi = ns ? (r.x() + r.w()) : (r.z() + r.h());
 
-        // Clearance lateral: media mesa + esquinas + media pared + margen propio
+        // Clearance lateral: media mesa + esquinas + media pared + margen
         float edgeClear = Math.max(SIDE_MARGIN, d.halfSpan + CORNER_CLEAR + (WALL_T * 0.5f) + WALL_CLEAR);
         lo += edgeClear;
         hi -= edgeClear;
@@ -124,37 +137,64 @@ public class TablePlacer {
         Vector3f pos = new Vector3f();
         if (ns) {
             pos.x = coord;
-            // Separación desde el plano del muro con WALL_CLEAR (no un EPS minúsculo)
             pos.z = (dir == NORTH) ? r.z() + (d.halfDepth + WALL_CLEAR) : r.z() + r.h() - (d.halfDepth + WALL_CLEAR);
         } else {
             pos.z = coord;
             pos.x = (dir == WEST) ? r.x() + (d.halfDepth + WALL_CLEAR) : r.x() + r.w() - (d.halfDepth + WALL_CLEAR);
         }
 
-        Spatial s = base.clone();
-        s.setLocalScale(SCALE);
-        s.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
-        s.setLocalTranslation(pos);
+        Spatial table = tableBase.clone();
+        table.setLocalScale(SCALE);
+        table.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
+        table.setLocalTranslation(pos);
 
-        // Alinear con el suelo DESPUÉS de fijar X/Z
-        forceUpdateModelBounds(s);
-        s.updateGeometricState();
-        BoundingBox b = (BoundingBox) s.getWorldBound();
+        // Alinear con el suelo
+        forceUpdateModelBounds(table);
+        table.updateGeometricState();
+        BoundingBox b = (BoundingBox) table.getWorldBound();
         float bottom = b.getCenter().y - b.getYExtent();
         pos.y += (yBase + FLOOR_EPS) - bottom;
-        s.setLocalTranslation(pos);
+        table.setLocalTranslation(pos);
 
-        // Clamp post-colocación: asegura separación mínima del muro
-        forceUpdateModelBounds(s);
-        s.updateGeometricState();
-        Vector3f nudge = nudgeOffWall(dir, r, (BoundingBox) s.getWorldBound(), WALL_CLEAR);
+        // Clamp post-colocación: asegura separación mínima al muro
+        forceUpdateModelBounds(table);
+        table.updateGeometricState();
+        Vector3f nudge = nudgeOffWall(dir, r, (BoundingBox) table.getWorldBound(), WALL_CLEAR);
         if (nudge.x != 0f || nudge.z != 0f) {
             pos.addLocal(nudge);
-            s.setLocalTranslation(pos);
+            table.setLocalTranslation(pos);
+            forceUpdateModelBounds(table);
+            table.updateGeometricState();
         }
 
-        attachWithPhysics(s);
+        attachWithPhysics(table);
+
+        // ---- colocar deco aleatorio encima de la mesa ----
+        placeDecorOn(table, nrm);
+
         return true;
+    }
+
+    private void placeDecorOn(Spatial table, Vector3f nrm) {
+        if (decoBases.isEmpty()) return;
+
+        // Centro superior de la mesa
+        BoundingBox tb = (BoundingBox) table.getWorldBound();
+        Vector3f topCenter = tb.getCenter().clone();
+        topCenter.y += tb.getYExtent();
+
+        // Empuje hacia el interior de la sala y leve EPS para evitar z-fighting
+        Vector3f fwd = nrm.normalize().mult(DECO_FWD_OFFSET);
+
+        // Elegir un deco al azar
+        Spatial deco = decoBases.get(rng.nextInt(decoBases.size())).clone();
+        deco.setLocalScale(DECO_SCALE);
+        deco.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
+        deco.setLocalTranslation(topCenter.add(fwd).add(0, DECO_SURF_EPS, 0));
+
+        deco.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+
+        root.attachChild(deco);
     }
 
     private void attachWithPhysics(Spatial s) {
