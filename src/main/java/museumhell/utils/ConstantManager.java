@@ -63,6 +63,7 @@ public class ConstantManager {
     public static final float RAIL_T = 0.2f;
     public static final float STAIR_CLEAR = 0.04f;
     public static final float BLINK_INTERVAL = 0.425f;
+    public static final float STAIR_WALL_TOL = WALL_T * 1.5f;
 
 
     // ITEMS

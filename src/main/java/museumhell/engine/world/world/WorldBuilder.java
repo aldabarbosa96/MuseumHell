@@ -142,11 +142,14 @@ public class WorldBuilder {
                 Connection c = findConnection(conns, r, dir);
                 if (c == null) {
                     a2WallBuilder.buildSolid(r, dir, y0, h);
-                    if (!isCorridor(r) && hasNeighbor(r, rooms, dir)) {
+                    if (!isCorridor(r)) {
+                        // cuadros también en perimetrales
                         mirrorPlacer.onWall(r, dir, y0, h, conns);
-                        tablePlacer.onWall(r, dir, y0, conns);
+                        // mesas solo en muros compartidos (interiores)
+                        if (hasNeighbor(r, rooms, dir)) {
+                            tablePlacer.onWall(r, dir, y0, conns);
+                        }
                     }
-
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
