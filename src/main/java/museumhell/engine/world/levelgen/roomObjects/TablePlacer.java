@@ -4,6 +4,7 @@ import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
+import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue;
@@ -16,10 +17,7 @@ import museumhell.engine.world.levelgen.enums.ConnectionType;
 import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.utils.media.AssetLoader;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import static museumhell.engine.world.levelgen.enums.Direction.*;
 import static museumhell.utils.ConstantManager.*;
@@ -31,13 +29,15 @@ public class TablePlacer {
     private final Random rng;
     private static final float PROB_PER_ROOM = 0.25f;
     private static final int MAX_PER_ROOM = 1;
-    private static final float SURF_EPS = 0.02f;
     private static final float FLOOR_EPS = 0.005f;
+    private static final float WALL_CLEAR = 0.09f;   // ~9cm
     private static final float CORNER_CLEAR = 0.30f;
     private static final float GAP_PAD = 0.40f;
     private static final float SIDE_MARGIN = 0.60f;
     private static final float SCALE = 5f;
+
     private final Spatial base;
+    private final IdentityHashMap<Room, Integer> count = new IdentityHashMap<>();
 
     private record Dims(float halfSpan, float halfDepth, float halfHeight) {
     }
@@ -62,7 +62,6 @@ public class TablePlacer {
         return new Dims(halfSpan, halfDepth, halfHeight);
     }
 
-
     public TablePlacer(AssetLoader assets, Node root, PhysicsSpace space, long seed) {
         this.assets = assets;
         this.root = root;
@@ -72,15 +71,11 @@ public class TablePlacer {
         if (base == null) throw new IllegalStateException("Asset 'table1' no encontrado");
     }
 
-    public void placeInRoom(Room r, float yBase, List<Connection> conns) {
+    public void onWall(Room r, Direction dir, float yBase, float wallH, List<Connection> conns) {
         if (rng.nextFloat() > PROB_PER_ROOM) return;
-        List<Direction> walls = new ArrayList<>(List.of(NORTH, SOUTH, WEST, EAST));
-        Collections.shuffle(walls, rng);
-        int placed = 0;
-        for (Direction dir : walls) {
-            if (tryPlaceOnWall(r, dir, yBase, conns)) {
-                if (++placed >= MAX_PER_ROOM) break;
-            }
+        if (count.getOrDefault(r, 0) >= MAX_PER_ROOM) return;
+        if (tryPlaceOnWall(r, dir, yBase, conns)) {
+            count.put(r, count.getOrDefault(r, 0) + 1);
         }
     }
 
@@ -91,13 +86,13 @@ public class TablePlacer {
         float lo = ns ? r.x() : r.z();
         float hi = ns ? (r.x() + r.w()) : (r.z() + r.h());
 
-        // Clearance lateral: respeta media profundidad de la mesa + margen + media pared
-        float edgeClear = Math.max(SIDE_MARGIN, d.halfSpan + CORNER_CLEAR + (WALL_T * 0.5f));
+        // Clearance lateral: media mesa + esquinas + media pared + margen propio
+        float edgeClear = Math.max(SIDE_MARGIN, d.halfSpan + CORNER_CLEAR + (WALL_T * 0.5f) + WALL_CLEAR);
         lo += edgeClear;
         hi -= edgeClear;
         if (hi <= lo) return false;
 
-        // Bloquea puertas/aberturas con GAP + halfSpan + media pared
+        // Bloquear alrededor de puertas/aberturas
         List<float[]> blocks = new ArrayList<>();
         for (Connection c : conns) {
             if (!appliesToWall(c, r, dir)) continue;
@@ -107,7 +102,7 @@ public class TablePlacer {
             if (ovMax <= ovMin) continue;
 
             float center = (ovMin + ovMax) * 0.5f;
-            float holeHalf = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f) + GAP_PAD + d.halfSpan + (WALL_T * 0.5f);
+            float holeHalf = ((c.type() == ConnectionType.DOOR ? DOOR_W : HOLE_W) * 0.5f) + GAP_PAD + d.halfSpan + (WALL_T * 0.5f) + WALL_CLEAR;
 
             float s = center - holeHalf, e = center + holeHalf;
             if (e > lo && s < hi) blocks.add(new float[]{Math.max(s, lo), Math.min(e, hi)});
@@ -129,10 +124,11 @@ public class TablePlacer {
         Vector3f pos = new Vector3f();
         if (ns) {
             pos.x = coord;
-            pos.z = (dir == NORTH) ? r.z() + (d.halfDepth + SURF_EPS) : r.z() + r.h() - (d.halfDepth + SURF_EPS);
+            // Separación desde el plano del muro con WALL_CLEAR (no un EPS minúsculo)
+            pos.z = (dir == NORTH) ? r.z() + (d.halfDepth + WALL_CLEAR) : r.z() + r.h() - (d.halfDepth + WALL_CLEAR);
         } else {
             pos.z = coord;
-            pos.x = (dir == WEST) ? r.x() + (d.halfDepth + SURF_EPS) : r.x() + r.w() - (d.halfDepth + SURF_EPS);
+            pos.x = (dir == WEST) ? r.x() + (d.halfDepth + WALL_CLEAR) : r.x() + r.w() - (d.halfDepth + WALL_CLEAR);
         }
 
         Spatial s = base.clone();
@@ -148,14 +144,24 @@ public class TablePlacer {
         pos.y += (yBase + FLOOR_EPS) - bottom;
         s.setLocalTranslation(pos);
 
-        // Nada de adjustFlushToWall(); nada de clampInsideRoom() en eje normal
+        // Clamp post-colocación: asegura separación mínima del muro
+        forceUpdateModelBounds(s);
+        s.updateGeometricState();
+        Vector3f nudge = nudgeOffWall(dir, r, (BoundingBox) s.getWorldBound(), WALL_CLEAR);
+        if (nudge.x != 0f || nudge.z != 0f) {
+            pos.addLocal(nudge);
+            s.setLocalTranslation(pos);
+        }
+
         attachWithPhysics(s);
         return true;
     }
 
     private void attachWithPhysics(Spatial s) {
         s.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        RigidBodyControl body = new RigidBodyControl(CollisionShapeFactory.createMeshShape(s), 0f);
+        CollisionShape shape = CollisionShapeFactory.createMeshShape(s);
+        shape.setMargin(0.005f); // margen pequeño para no “engordar” la colisión
+        RigidBodyControl body = new RigidBodyControl(shape, 0f);
         s.addControl(body);
         root.attachChild(s);
         space.add(body);
@@ -180,7 +186,7 @@ public class TablePlacer {
     }
 
     private static List<float[]> merge(List<float[]> ivs) {
-        ivs.sort((a, b) -> Float.compare(a[0], b[0]));
+        ivs.sort(Comparator.comparingDouble(a -> a[0]));
         List<float[]> out = new ArrayList<>();
         for (float[] iv : ivs) {
             if (out.isEmpty() || iv[0] > out.get(out.size() - 1)[1]) out.add(new float[]{iv[0], iv[1]});
@@ -212,5 +218,31 @@ public class TablePlacer {
         }
         float[] last = segs.get(segs.size() - 1);
         return (last[0] + last[1]) * 0.5f;
+    }
+
+    private static Vector3f nudgeOffWall(Direction dir, Room r, BoundingBox bb, float clear) {
+        float minX = bb.getCenter().x - bb.getXExtent();
+        float maxX = bb.getCenter().x + bb.getXExtent();
+        float minZ = bb.getCenter().z - bb.getZExtent();
+        float maxZ = bb.getCenter().z + bb.getZExtent();
+
+        return switch (dir) {
+            case NORTH -> {
+                float need = (r.z() + clear) - minZ;
+                yield (need > 0f) ? new Vector3f(0, 0, need) : Vector3f.ZERO;
+            }
+            case SOUTH -> {
+                float need = maxZ - (r.z() + r.h() - clear);
+                yield (need > 0f) ? new Vector3f(0, 0, -need) : Vector3f.ZERO;
+            }
+            case WEST -> {
+                float need = (r.x() + clear) - minX;
+                yield (need > 0f) ? new Vector3f(need, 0, 0) : Vector3f.ZERO;
+            }
+            case EAST -> {
+                float need = maxX - (r.x() + r.w() - clear);
+                yield (need > 0f) ? new Vector3f(-need, 0, 0) : Vector3f.ZERO;
+            }
+        };
     }
 }

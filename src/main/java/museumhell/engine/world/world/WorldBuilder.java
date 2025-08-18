@@ -141,62 +141,33 @@ public class WorldBuilder {
 
                 Connection c = findConnection(conns, r, dir);
                 if (c == null) {
-                    if (!isDoorIntersectingWall(r, dir)) {
-                        a2WallBuilder.buildSolid(r, dir, y0, h);
-                        // SOLO si es pared interior (tiene vecino al otro lado)
-                        if (!isCorridor(r) && hasNeighbor(r, rooms, dir)) {
-                            mirrorPlacer.onWall(r, dir, y0, h, conns);
-                        }
+                    a2WallBuilder.buildSolid(r, dir, y0, h);
+                    if (!isCorridor(r) && hasNeighbor(r, rooms, dir)) {
+                        mirrorPlacer.onWall(r, dir, y0, h, conns);
+                        tablePlacer.onWall(r, dir, y0, h, conns);
                     }
+
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
-                    if (!isCorridor(r)) mirrorPlacer.onWall(r, dir, y0, h, conns);
-                } else { // puerta
+                    if (!isCorridor(r)) {
+                        mirrorPlacer.onWall(r, dir, y0, h, conns);
+                        if (hasNeighbor(r, rooms, dir)) {
+                            tablePlacer.onWall(r, dir, y0, h, conns);
+                        }
+                    }
+
+                } else { // DOOR
                     a4DoorBuilder.build(r, dir, y0, h, rooms);
                     if (!isCorridor(r)) {
                         mirrorPlacer.onWall(r, dir, y0, h, conns);
+                        if (hasNeighbor(r, rooms, dir)) {
+                            tablePlacer.onWall(r, dir, y0, h, conns);
+                        }
                     }
                 }
-            }
-            if (!isCorridor(r)) {
-                tablePlacer.placeInRoom(r, y0, conns);
-            }
+                }
         }
-    }
-
-    private boolean isDoorIntersectingWall(Room r, Direction dir) {
-        float halfDoorThick = DOOR_T * 0.5f + 0.1f;
-        for (Door d : doors) {
-            Vector3f p = d.getAccessPoint();
-            switch (dir) {
-                case NORTH:
-                    // plano Z = r.z
-                    if (Math.abs(p.z - r.z()) < halfDoorThick && p.x >= r.x() && p.x <= r.x() + r.w()) {
-                        return true;
-                    }
-                    break;
-                case SOUTH:
-                    // plano Z = r.z + r.h
-                    if (Math.abs(p.z - (r.z() + r.h())) < halfDoorThick && p.x >= r.x() && p.x <= r.x() + r.w()) {
-                        return true;
-                    }
-                    break;
-                case WEST:
-                    // plano X = r.x
-                    if (Math.abs(p.x - r.x()) < halfDoorThick && p.z >= r.z() && p.z <= r.z() + r.h()) {
-                        return true;
-                    }
-                    break;
-                case EAST:
-                    // plano X = r.x + r.w
-                    if (Math.abs(p.x - (r.x() + r.w())) < halfDoorThick && p.z >= r.z() && p.z <= r.z() + r.h()) {
-                        return true;
-                    }
-                    break;
-            }
-        }
-        return false;
     }
 
     private boolean hasNeighbor(Room a, List<Room> rooms, Direction dir) {
