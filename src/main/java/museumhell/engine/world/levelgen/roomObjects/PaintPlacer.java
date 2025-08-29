@@ -13,7 +13,6 @@ import museumhell.engine.world.levelgen.enums.Direction;
 import museumhell.utils.media.AssetLoader;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -22,26 +21,25 @@ import static museumhell.engine.world.levelgen.enums.Direction.*;
 import static museumhell.utils.ConstantManager.DOOR_W;
 import static museumhell.utils.ConstantManager.HOLE_W;
 
-public class MirrorPlacer {
+public class PaintPlacer {
     private final Node root;
     private final AssetLoader assets;
     private final Random rng;
 
-    // — Tuning —
-    private static final float CORNER_CLEAR = 0.55f;   // antes 0.7
-    private static final float SURF_EPS     = 0.015f;
-    private static final float GAP_PAD      = 0.25f;   // antes 0.35
-    private static final float SIDE_MARGIN  = 0.55f;   // antes 0.80
-    private static final float SCALE        = 7f;
-    private static final float CLAMP_EPS    = 0.01f;
-    private static final float FRAME_GAP    = 0.40f;   // antes 0.55
+    private static final float CORNER_CLEAR = 0.75f;
+    private static final float SURF_EPS = 0.015f;
+    private static final float GAP_PAD = 0.35f;
+    private static final float SIDE_MARGIN = 0.75f;
+    private static final float SCALE = 7f;
+    private static final float CLAMP_EPS = 0.01f;
+    private static final float FRAME_GAP = 0.55f;
     private static final float ROW_Y_FACTOR = 0.40f;
 
     private final List<Spatial> cuadros = new ArrayList<>(4);
     private float maxHalfSpanNS = 0f;
     private float maxHalfSpanEW = 0f;
 
-    public MirrorPlacer(AssetLoader assets, Node root, long seed) {
+    public PaintPlacer(AssetLoader assets, Node root, long seed) {
         this.assets = assets;
         this.root = root;
         this.rng = new Random(seed);
@@ -90,14 +88,15 @@ public class MirrorPlacer {
         Vector3f nrm = switch (dir) {
             case NORTH -> new Vector3f(0, 0, 1);
             case SOUTH -> new Vector3f(0, 0, -1);
-            case WEST  -> new Vector3f(1, 0, 0);
-            case EAST  -> new Vector3f(-1, 0, 0);
+            case WEST -> new Vector3f(1, 0, 0);
+            case EAST -> new Vector3f(-1, 0, 0);
         };
 
         float y = yBase + wallH * ROW_Y_FACTOR;
 
         // Precalcular variantes (ancho) para esta dirección y ordenarlas de mayor a menor
-        record Variant(Spatial base, Dims dims, float width) {}
+        record Variant(Spatial base, Dims dims, float width) {
+        }
         List<Variant> variants = new ArrayList<>();
         for (Spatial s : cuadros) {
             Dims d = dimsFor(s, dir);
@@ -133,8 +132,8 @@ public class MirrorPlacer {
                 switch (dir) {
                     case NORTH -> pos.set(nextCenter, y, r.z() + (pick.dims.halfDepth + SURF_EPS));
                     case SOUTH -> pos.set(nextCenter, y, r.z() + r.h() - (pick.dims.halfDepth + SURF_EPS));
-                    case WEST  -> pos.set(r.x() + (pick.dims.halfDepth + SURF_EPS), y, nextCenter);
-                    case EAST  -> pos.set(r.x() + r.w() - (pick.dims.halfDepth + SURF_EPS), y, nextCenter);
+                    case WEST -> pos.set(r.x() + (pick.dims.halfDepth + SURF_EPS), y, nextCenter);
+                    case EAST -> pos.set(r.x() + r.w() - (pick.dims.halfDepth + SURF_EPS), y, nextCenter);
                 }
 
                 Spatial cuadro = pick.base.clone();
@@ -150,9 +149,10 @@ public class MirrorPlacer {
                 float maxEdge = ns ? bb.getCenter().x + bb.getXExtent() : bb.getCenter().z + bb.getZExtent();
                 float shift = 0f;
                 if (minEdge < segStart + CLAMP_EPS) shift += (segStart + CLAMP_EPS) - minEdge;
-                if (maxEdge > segEnd   - CLAMP_EPS) shift -= maxEdge - (segEnd - CLAMP_EPS);
+                if (maxEdge > segEnd - CLAMP_EPS) shift -= maxEdge - (segEnd - CLAMP_EPS);
                 if (Math.abs(shift) > 0f) {
-                    if (ns) pos.x += shift; else pos.z += shift;
+                    if (ns) pos.x += shift;
+                    else pos.z += shift;
                     cuadro.setLocalTranslation(pos);
                     cuadro.updateGeometricState();
                 }
@@ -166,7 +166,8 @@ public class MirrorPlacer {
         }
     }
 
-    private record Dims(float halfSpan, float halfDepth) { }
+    private record Dims(float halfSpan, float halfDepth) {
+    }
 
     private Dims dimsFor(Spatial base, Direction dir) {
         Spatial tmp = base.clone();
@@ -174,14 +175,14 @@ public class MirrorPlacer {
         Vector3f nrm = switch (dir) {
             case NORTH -> new Vector3f(0, 0, 1);
             case SOUTH -> new Vector3f(0, 0, -1);
-            case WEST  -> new Vector3f(1, 0, 0);
-            case EAST  -> new Vector3f(-1, 0, 0);
+            case WEST -> new Vector3f(1, 0, 0);
+            case EAST -> new Vector3f(-1, 0, 0);
         };
         tmp.setLocalRotation(new Quaternion().lookAt(nrm, Vector3f.UNIT_Y));
         tmp.updateGeometricState();
 
         BoundingBox bb = (BoundingBox) tmp.getWorldBound();
-        float halfSpan  = (dir == NORTH || dir == SOUTH) ? bb.getXExtent() : bb.getZExtent();
+        float halfSpan = (dir == NORTH || dir == SOUTH) ? bb.getXExtent() : bb.getZExtent();
         float halfDepth = (dir == NORTH || dir == SOUTH) ? bb.getZExtent() : bb.getXExtent();
         return new Dims(halfSpan, halfDepth);
     }
@@ -192,12 +193,7 @@ public class MirrorPlacer {
             Spatial tmp = s.clone();
             tmp.setLocalScale(SCALE);
             for (Direction d : ns ? List.of(NORTH, SOUTH) : List.of(EAST, WEST)) {
-                tmp.setLocalRotation(new Quaternion().lookAt(
-                        (d == NORTH) ? new Vector3f(0, 0, 1)
-                                : (d == SOUTH) ? new Vector3f(0, 0, -1)
-                                : (d == EAST)  ? new Vector3f(-1, 0, 0)
-                                : new Vector3f(1, 0, 0),
-                        Vector3f.UNIT_Y));
+                tmp.setLocalRotation(new Quaternion().lookAt((d == NORTH) ? new Vector3f(0, 0, 1) : (d == SOUTH) ? new Vector3f(0, 0, -1) : (d == EAST) ? new Vector3f(-1, 0, 0) : new Vector3f(1, 0, 0), Vector3f.UNIT_Y));
                 tmp.updateGeometricState();
                 BoundingBox bb = (BoundingBox) tmp.getWorldBound();
                 float halfSpan = ns ? bb.getXExtent() : bb.getZExtent();
@@ -210,12 +206,13 @@ public class MirrorPlacer {
     private static boolean appliesToWall(Connection c, Room r, Direction dir) {
         return (c.a() == r && c.dir() == dir) || (c.b() == r && opposite(c.dir()) == dir);
     }
+
     private static Direction opposite(Direction d) {
         return switch (d) {
             case NORTH -> SOUTH;
             case SOUTH -> NORTH;
-            case EAST  -> WEST;
-            case WEST  -> EAST;
+            case EAST -> WEST;
+            case WEST -> EAST;
         };
     }
 
@@ -228,6 +225,7 @@ public class MirrorPlacer {
         }
         return out;
     }
+
     private static List<float[]> subtractMerged(float lo, float hi, List<float[]> blocks) {
         List<float[]> res = new ArrayList<>();
         float cur = lo;

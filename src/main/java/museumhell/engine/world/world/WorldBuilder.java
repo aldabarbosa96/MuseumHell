@@ -8,7 +8,7 @@ import museumhell.engine.world.builders.*;
 import museumhell.engine.world.levelgen.*;
 import museumhell.engine.world.levelgen.enums.ConnectionType;
 import museumhell.engine.world.levelgen.enums.Direction;
-import museumhell.engine.world.levelgen.roomObjects.MirrorPlacer;
+import museumhell.engine.world.levelgen.roomObjects.PaintPlacer;
 import museumhell.engine.world.levelgen.roomObjects.TablePlacer;
 import museumhell.utils.media.AssetLoader;
 import museumhell.utils.GeoUtil.*;
@@ -27,7 +27,7 @@ public class WorldBuilder {
     private final _3DoorBuilder a4DoorBuilder;
     private final _4StairBuilder a5StairBuilder;
     private _4StairBuilder.Plan stairPlan;
-    private final MirrorPlacer mirrorPlacer;
+    private final PaintPlacer paintPlacer;
     private final TablePlacer tablePlacer;
     private MuseumLayout layoutRef;
     private final List<Door> doors = new ArrayList<>();
@@ -40,7 +40,7 @@ public class WorldBuilder {
         this.a2WallBuilder = new _2WallBuilder(am, root, space, assetLoader);
         this.a4DoorBuilder = new _3DoorBuilder(am, space, root, doors, a2WallBuilder);
         this.a5StairBuilder = new _4StairBuilder(am, space, root);
-        this.mirrorPlacer = new MirrorPlacer(assetLoader, root, System.nanoTime());
+        this.paintPlacer = new PaintPlacer(assetLoader, root, System.nanoTime());
         this.tablePlacer = new TablePlacer(assetLoader, root, space, System.nanoTime());
 
     }
@@ -139,12 +139,15 @@ public class WorldBuilder {
                     continue;
                 }
 
+                // NO colocar mesas/cuadros en una pared tocada por hueco de escalera
+                boolean stairWall = isStairWall(r, dir, ceilHoles);
+
                 Connection c = findConnection(conns, r, dir);
                 if (c == null) {
                     a2WallBuilder.buildSolid(r, dir, y0, h);
-                    if (!isCorridor(r)) {
+                    if (!isCorridor(r) && !stairWall) {
                         // cuadros también en perimetrales
-                        mirrorPlacer.onWall(r, dir, y0, h, conns);
+                        paintPlacer.onWall(r, dir, y0, h, conns);
                         // mesas solo en muros compartidos (interiores)
                         if (hasNeighbor(r, rooms, dir)) {
                             tablePlacer.onWall(r, dir, y0, conns);
@@ -153,8 +156,8 @@ public class WorldBuilder {
                 } else if (c.type() == ConnectionType.OPENING) {
                     float thickness = isCorridor(r) ? CORRIDOR_WALL_T : WALL_T;
                     a2WallBuilder.buildOpening(r, dir, y0, h, rooms, HOLE_W, thickness);
-                    if (!isCorridor(r)) {
-                        mirrorPlacer.onWall(r, dir, y0, h, conns);
+                    if (!isCorridor(r) && !stairWall) {
+                        paintPlacer.onWall(r, dir, y0, h, conns);
                         if (hasNeighbor(r, rooms, dir)) {
                             tablePlacer.onWall(r, dir, y0, conns);
                         }
@@ -162,8 +165,8 @@ public class WorldBuilder {
 
                 } else { // DOOR
                     a4DoorBuilder.build(r, dir, y0, h, rooms);
-                    if (!isCorridor(r)) {
-                        mirrorPlacer.onWall(r, dir, y0, h, conns);
+                    if (!isCorridor(r) && !stairWall) {
+                        paintPlacer.onWall(r, dir, y0, h, conns);
                         if (hasNeighbor(r, rooms, dir)) {
                             tablePlacer.onWall(r, dir, y0, conns);
                         }
@@ -172,6 +175,7 @@ public class WorldBuilder {
             }
         }
     }
+
 
     private boolean hasNeighbor(Room a, List<Room> rooms, Direction dir) {
         for (Room b : rooms) {
@@ -227,6 +231,33 @@ public class WorldBuilder {
         return null;
     }
 
+    private boolean isStairWall(Room r, Direction dir, List<Rect> holes) {
+        final float MARGIN = WALL_T + 0.20f;
+
+        for (Rect h : holes) {
+            float x1 = Math.max(h.x1(), r.x());
+            float x2 = Math.min(h.x2(), r.x() + r.w());
+            float z1 = Math.max(h.z1(), r.z());
+            float z2 = Math.min(h.z2(), r.z() + r.h());
+            if (x1 < x2 && z1 < z2) { // el hueco interseca esta sala
+                switch (dir) {
+                    case NORTH -> {
+                        if (z1 - r.z() <= MARGIN) return true;
+                    }
+                    case SOUTH -> {
+                        if ((r.z() + r.h()) - z2 <= MARGIN) return true;
+                    }
+                    case WEST -> {
+                        if (x1 - r.x() <= MARGIN) return true;
+                    }
+                    case EAST -> {
+                        if ((r.x() + r.w()) - x2 <= MARGIN) return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
     private boolean isCorridor(Room r) {
         return Float.compare(r.w(), HOLE_W) == 0 || Float.compare(r.h(), HOLE_W) == 0;
