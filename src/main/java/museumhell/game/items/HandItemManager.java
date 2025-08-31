@@ -38,4 +38,8 @@ public class HandItemManager {
     public int getActiveSlotIndex() {
         return selected;
     }
+
+    public HandItem getActiveItem() {
+        return slots.get(selected);
+    }
 }

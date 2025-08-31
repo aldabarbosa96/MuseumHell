@@ -1,6 +1,7 @@
 package museumhell.game.input;
 
 import com.jme3.app.Application;
+import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.input.FlyByCamera;
@@ -8,9 +9,14 @@ import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
 import com.jme3.input.controls.*;
+import com.jme3.material.Material;
+import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.shape.Cylinder;
 import museumhell.game.items.HandItemManager;
+import museumhell.game.items.Pistol;
 import museumhell.game.player.PlayerController;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
@@ -49,8 +55,8 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
         inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
         inMgr.addMapping("Crouch", new KeyTrigger(KeyInput.KEY_LCONTROL));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
-        inMgr.addMapping("Lantern", new MouseButtonTrigger(0));
-        inMgr.addListener(this, "Debug", "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
+        inMgr.addMapping("Primary", new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
+        inMgr.addListener(this, "Debug", "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Primary", "Crouch");
 
         flyCam.setDragToRotate(false);
         flyCam.setRotationSpeed(1.5f);
@@ -102,7 +108,7 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
 
         switch (name) {
             case "Debug" -> {
-                debug = isPressed; // opcional; si lo usas en otro sitio
+                debug = isPressed;
                 if (isPressed) {
                     physics.setDebugEnabled(!physics.isDebugEnabled());
                 }
@@ -128,14 +134,20 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
                 }
             }
 
-            case "Lantern" -> {
+            case "Primary" -> {
                 if (isPressed && world != null) {
-                    // Solo permite toggle si la linterna está equipada (slot 0)
                     if (activeSlot == 0) {
                         world.getLightPlacer().toggleFlashlight();
                         if (audio != null) audio.play("flashlight");
-                    } else {
-                        world.getLightPlacer().setFlashlightEnabled(false);
+                    } else if (activeSlot == 1 && handMgr != null) {
+                        var item = handMgr.getActiveItem();
+                        if (item instanceof Pistol pistol) {
+                            pistol.fire(
+                                    (SimpleApplication) getApplication(),
+                                    physics.getPhysicsSpace()
+                            );
+                            if (audio != null) audio.play("click");
+                        }
                     }
                 }
             }
@@ -232,7 +244,6 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
             world.getLightPlacer().setFlashlightEnabled(false);
         }
     }
-
 
     @Override
     protected void cleanup(Application application) {
