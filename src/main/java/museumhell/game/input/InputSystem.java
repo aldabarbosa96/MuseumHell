@@ -49,7 +49,7 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
         inMgr.addMapping("Sprint", new KeyTrigger(KeyInput.KEY_LSHIFT));
         inMgr.addMapping("Crouch", new KeyTrigger(KeyInput.KEY_LCONTROL));
         inMgr.addMapping("Use", new KeyTrigger(KeyInput.KEY_E));
-        inMgr.addMapping("Lantern", new MouseButtonTrigger(1));
+        inMgr.addMapping("Lantern", new MouseButtonTrigger(0));
         inMgr.addListener(this, "Debug", "Left", "Right", "Up", "Down", "Jump", "Sprint", "Use", "Lantern", "Crouch");
 
         flyCam.setDragToRotate(false);
@@ -107,11 +107,11 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
                     physics.setDebugEnabled(!physics.isDebugEnabled());
                 }
             }
-            case "Left"  -> left  = isPressed;
+            case "Left" -> left = isPressed;
             case "Right" -> right = isPressed;
-            case "Up"    -> up    = isPressed;
-            case "Down"  -> down  = isPressed;
-            case "Sprint"-> sprint= isPressed;
+            case "Up" -> up = isPressed;
+            case "Down" -> down = isPressed;
+            case "Sprint" -> sprint = isPressed;
 
             case "Jump" -> {
                 jump = isPressed;
@@ -214,11 +214,25 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
         inMgr.addMapping("Slot5", new KeyTrigger(KeyInput.KEY_5));
         inMgr.addListener(this, "Slot1", "Slot2", "Slot3", "Slot4", "Slot5");
 
-// Rueda mouse
+        // Rueda mouse
         inMgr.addMapping("NextSlot", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, false));
         inMgr.addMapping("PrevSlot", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, true));
         inMgr.addListener((AnalogListener) this, "NextSlot", "PrevSlot");
     }
+
+
+    private void syncActiveSlotAfterWheel() {
+        if (handMgr == null) return;
+        // si tu HandItemManager no tiene getter, añádelo (getActiveSlotIndex)
+        int idx = handMgr.getActiveSlotIndex();
+        if (idx >= 0) activeSlot = idx;
+
+        // regla: si no es la linterna, no hay luz
+        if (world != null && activeSlot != 0) {
+            world.getLightPlacer().setFlashlightEnabled(false);
+        }
+    }
+
 
     @Override
     protected void cleanup(Application application) {
@@ -239,7 +253,12 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
     @Override
     public void onAnalog(String name, float value, float tpf) {
         if (handMgr == null) return;
-        if ("NextSlot".equals(name)) handMgr.next();
-        else if ("PrevSlot".equals(name)) handMgr.prev();
+        if ("NextSlot".equals(name)) {
+            handMgr.next();
+            syncActiveSlotAfterWheel();
+        } else if ("PrevSlot".equals(name)) {
+            handMgr.prev();
+            syncActiveSlotAfterWheel();
+        }
     }
 }

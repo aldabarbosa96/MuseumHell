@@ -34,4 +34,8 @@ public class HandItemManager {
             if (slots.get(cand)!=null) { selectSlot(cand); return; }
         }
     }
+
+    public int getActiveSlotIndex() {
+        return selected;
+    }
 }
