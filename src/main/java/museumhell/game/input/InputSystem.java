@@ -29,6 +29,8 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
     private PlayerController player;
     private LootSystem lootMgr;
     private boolean up, down, left, right, sprint, crouch, debug, jump;
+    private int activeSlot = 0;
+
 
     public InputSystem(InputManager inMgr, FlyByCamera flyCam, BulletAppState physics) {
         this.inMgr = inMgr;
@@ -68,52 +70,52 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
 
     @Override
     public void onAction(String name, boolean isPressed, float tpf) {
+        // --- Slots: solo en PRESSED para no duplicar en release ---
         if (handMgr != null && isPressed) {
             switch (name) {
                 case "Slot1":
                     handMgr.selectSlot(0);
-                    return;
+                    activeSlot = 0;
+                    break;
                 case "Slot2":
                     handMgr.selectSlot(1);
-                    return;
+                    activeSlot = 1;
+                    if (world != null) world.getLightPlacer().setFlashlightEnabled(false);
+                    break;
                 case "Slot3":
                     handMgr.selectSlot(2);
-                    return;
+                    activeSlot = 2;
+                    if (world != null) world.getLightPlacer().setFlashlightEnabled(false);
+                    break;
                 case "Slot4":
                     handMgr.selectSlot(3);
-                    return;
+                    activeSlot = 3;
+                    if (world != null) world.getLightPlacer().setFlashlightEnabled(false);
+                    break;
                 case "Slot5":
                     handMgr.selectSlot(4);
-                    return;
+                    activeSlot = 4;
+                    if (world != null) world.getLightPlacer().setFlashlightEnabled(false);
+                    break;
             }
         }
 
         switch (name) {
-            case "Left" -> left = isPressed;
-            case "Right" -> right = isPressed;
-            case "Up" -> up = isPressed;
-            case "Down" -> down = isPressed;
-            case "Sprint" -> sprint = isPressed;
-
-            case "Crouch" -> {
-                crouch = isPressed;
-                if (player != null) {
-                    player.setCrouch(crouch);
+            case "Debug" -> {
+                debug = isPressed; // opcional; si lo usas en otro sitio
+                if (isPressed) {
+                    physics.setDebugEnabled(!physics.isDebugEnabled());
                 }
             }
+            case "Left"  -> left  = isPressed;
+            case "Right" -> right = isPressed;
+            case "Up"    -> up    = isPressed;
+            case "Down"  -> down  = isPressed;
+            case "Sprint"-> sprint= isPressed;
 
             case "Jump" -> {
                 jump = isPressed;
-                if (isPressed && player != null) {
-                    player.jump();
-                }
-            }
-
-            case "Debug" -> {
-                debug = isPressed;
-                if (isPressed && physics != null) {
-                    physics.setDebugEnabled(!physics.isDebugEnabled());
-                }
+                if (isPressed && player != null) player.jump();
             }
 
             case "Use" -> {
@@ -122,19 +124,25 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
                     if (world.isDoorOpen() && audio != null) {
                         audio.play("door");
                     }
-                    if (lootMgr != null) {
-                        lootMgr.tryPickUp(player.getLocation());
-                    }
+                    if (lootMgr != null) lootMgr.tryPickUp(player.getLocation());
                 }
             }
 
             case "Lantern" -> {
-                if (isPressed && world != null && world.getLightPlacer() != null) {
-                    world.getLightPlacer().toggleFlashlight();
-                    if (audio != null) {
-                        audio.play("flashlight");
+                if (isPressed && world != null) {
+                    // Solo permite toggle si la linterna está equipada (slot 0)
+                    if (activeSlot == 0) {
+                        world.getLightPlacer().toggleFlashlight();
+                        if (audio != null) audio.play("flashlight");
+                    } else {
+                        world.getLightPlacer().setFlashlightEnabled(false);
                     }
                 }
+            }
+
+            case "Crouch" -> {
+                crouch = isPressed;
+                if (player != null) player.setCrouch(crouch);
             }
         }
     }
@@ -164,7 +172,6 @@ public class InputSystem extends BaseAppState implements ActionListener, AnalogL
             player.move(Vector3f.ZERO);
         }
     }
-
 
     public boolean isMoving() {
         return up || down || left || right;
