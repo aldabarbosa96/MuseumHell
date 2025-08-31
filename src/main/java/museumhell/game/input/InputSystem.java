@@ -6,11 +6,11 @@ import com.jme3.bullet.BulletAppState;
 import com.jme3.input.FlyByCamera;
 import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
-import com.jme3.input.controls.ActionListener;
-import com.jme3.input.controls.KeyTrigger;
-import com.jme3.input.controls.MouseButtonTrigger;
+import com.jme3.input.MouseInput;
+import com.jme3.input.controls.*;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import museumhell.game.items.HandItemManager;
 import museumhell.game.player.PlayerController;
 import museumhell.engine.world.world.WorldBuilder;
 import museumhell.game.loot.LootSystem;
@@ -18,8 +18,9 @@ import museumhell.utils.media.AudioLoader;
 
 import static museumhell.utils.ConstantManager.*;
 
-public class InputSystem extends BaseAppState implements ActionListener {
+public class InputSystem extends BaseAppState implements ActionListener, AnalogListener {
     private WorldBuilder world;
+    private HandItemManager handMgr;
     private AudioLoader audio;
     private BulletAppState physics;
     private final InputManager inMgr;
@@ -67,48 +68,77 @@ public class InputSystem extends BaseAppState implements ActionListener {
 
     @Override
     public void onAction(String name, boolean isPressed, float tpf) {
-        switch (name) {
-            case "Debug" -> {
-                debug = isPressed;
-                if (isPressed) {
-                    physics.setDebugEnabled(!physics.isDebugEnabled());
-                }
+        if (handMgr != null && isPressed) {
+            switch (name) {
+                case "Slot1":
+                    handMgr.selectSlot(0);
+                    return;
+                case "Slot2":
+                    handMgr.selectSlot(1);
+                    return;
+                case "Slot3":
+                    handMgr.selectSlot(2);
+                    return;
+                case "Slot4":
+                    handMgr.selectSlot(3);
+                    return;
+                case "Slot5":
+                    handMgr.selectSlot(4);
+                    return;
             }
+        }
+
+        switch (name) {
             case "Left" -> left = isPressed;
             case "Right" -> right = isPressed;
             case "Up" -> up = isPressed;
             case "Down" -> down = isPressed;
             case "Sprint" -> sprint = isPressed;
-            case "Jump" -> {
-                jump = isPressed;
-                if (isPressed && player != null) player.jump();
-            }
-            case "Use" -> {
-                if (isPressed && world != null && player != null) {
-                    world.tryUseDoor(player.getLocation());
-                    if (world.isDoorOpen()) {
-                        audio.play("door");
-                    }
-                    if (lootMgr != null) lootMgr.tryPickUp(player.getLocation());
-                }
-            }
-            case "Lantern" -> {
-                if (isPressed && world != null && world.getLightPlacer() != null) {
-                    world.getLightPlacer().toggleFlashlight();
 
-                    if (audio != null) {
-                        audio.play("flashlight");
-                    }
-                }
-            }
             case "Crouch" -> {
                 crouch = isPressed;
                 if (player != null) {
                     player.setCrouch(crouch);
                 }
             }
+
+            case "Jump" -> {
+                jump = isPressed;
+                if (isPressed && player != null) {
+                    player.jump();
+                }
+            }
+
+            case "Debug" -> {
+                debug = isPressed;
+                if (isPressed && physics != null) {
+                    physics.setDebugEnabled(!physics.isDebugEnabled());
+                }
+            }
+
+            case "Use" -> {
+                if (isPressed && world != null && player != null) {
+                    world.tryUseDoor(player.getLocation());
+                    if (world.isDoorOpen() && audio != null) {
+                        audio.play("door");
+                    }
+                    if (lootMgr != null) {
+                        lootMgr.tryPickUp(player.getLocation());
+                    }
+                }
+            }
+
+            case "Lantern" -> {
+                if (isPressed && world != null && world.getLightPlacer() != null) {
+                    world.getLightPlacer().toggleFlashlight();
+                    if (audio != null) {
+                        audio.play("flashlight");
+                    }
+                }
+            }
         }
     }
+
 
     public void update(float tpf) {
         if (player == null || cam == null) return;
@@ -164,9 +194,23 @@ public class InputSystem extends BaseAppState implements ActionListener {
         return jump;
     }
 
+    public void setHandManager(HandItemManager m) {
+        this.handMgr = m;
+    }
+
     @Override
     protected void initialize(Application application) {
+        inMgr.addMapping("Slot1", new KeyTrigger(KeyInput.KEY_1));
+        inMgr.addMapping("Slot2", new KeyTrigger(KeyInput.KEY_2));
+        inMgr.addMapping("Slot3", new KeyTrigger(KeyInput.KEY_3));
+        inMgr.addMapping("Slot4", new KeyTrigger(KeyInput.KEY_4));
+        inMgr.addMapping("Slot5", new KeyTrigger(KeyInput.KEY_5));
+        inMgr.addListener(this, "Slot1", "Slot2", "Slot3", "Slot4", "Slot5");
 
+// Rueda mouse
+        inMgr.addMapping("NextSlot", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, false));
+        inMgr.addMapping("PrevSlot", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, true));
+        inMgr.addListener((AnalogListener) this, "NextSlot", "PrevSlot");
     }
 
     @Override
@@ -183,5 +227,12 @@ public class InputSystem extends BaseAppState implements ActionListener {
     @Override
     protected void onDisable() {
 
+    }
+
+    @Override
+    public void onAnalog(String name, float value, float tpf) {
+        if (handMgr == null) return;
+        if ("NextSlot".equals(name)) handMgr.next();
+        else if ("PrevSlot".equals(name)) handMgr.prev();
     }
 }

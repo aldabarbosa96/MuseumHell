@@ -24,6 +24,9 @@ import museumhell.game.ai.cameras.SecurityCamera;
 import museumhell.game.ai.cameras.SecurityCamSystem;
 import museumhell.game.input.InputSystem;
 import museumhell.game.input.InteractionSystem;
+import museumhell.game.items.Flashlight;
+import museumhell.game.items.HandItemManager;
+import museumhell.game.items.Pistol;
 import museumhell.game.loot.LootSystem;
 import museumhell.game.player.MoveEffectState;
 import museumhell.game.player.PlayerController;
@@ -128,11 +131,11 @@ public class GameSystemState extends BaseAppState {
         flashSSR.setShadowZFadeLength(20f);
         app.getViewPort().addProcessor(flashSSR);
 
-        Spatial torchModel = assetManager.get("lantern1");
-        torchModel.setShadowMode(CastAndReceive);
-
-        Quaternion forwardFix = new Quaternion().fromAngles(FastMath.DEG_TO_RAD * -10f, FastMath.PI, FastMath.DEG_TO_RAD * -15f);
-        world.getLightPlacer().attachFlashlightModel(torchModel, forwardFix, 0.2f, 0.15f);
+        HandItemManager hand = new HandItemManager();
+        hand.setSlot(0, new Flashlight(world.getLightPlacer(), assetManager));
+        hand.setSlot(1, new Pistol(world.getLightPlacer(), assetManager, "pistol1"));
+        hand.selectSlot(0);
+        input.setHandManager(hand);
 
     }
 

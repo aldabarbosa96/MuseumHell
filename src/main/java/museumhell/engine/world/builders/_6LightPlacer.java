@@ -181,6 +181,21 @@ public class _6LightPlacer {
         return cosAngle >= cosOuter;
     }
 
+    public void setFlashlightEnabled(boolean enabled) {
+        if (flashlight != null) flashlight.setEnabled(enabled);
+    }
+
+    public void detachHandModel() {
+        if (flashlightModel != null) {
+            if (flashlightModel.getParent() != null) {
+                flashlightModel.removeFromParent();
+            }
+            flashlightModel = null;
+        }
+    }
+
+
+
     public Vector3f getFlashPosition() {
         return flashlight != null ? flashlight.getPosition() : null;
     }
