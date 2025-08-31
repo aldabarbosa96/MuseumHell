@@ -27,6 +27,7 @@ public class AssetLoader {
         models.put("deco3", assetManager.loadModel("Models/deco3.glb"));
         models.put("deco4", assetManager.loadModel("Models/deco4.glb"));
         models.put("lantern1", assetManager.loadModel("Models/LinternaV1.glb"));
+        models.put("pistol1", assetManager.loadModel("Models/pistol.glb"));
         models.put("floor1", assetManager.loadModel("Models/Floor1.glb"));
         models.put("wall1", assetManager.loadModel("Models/Wall1.glb"));
         models.put("wall2", assetManager.loadModel("Models/Wall2.glb"));

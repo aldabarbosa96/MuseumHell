@@ -19,6 +19,7 @@ import museumhell.utils.media.AssetLoader;
 
 import java.util.List;
 
+import static com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive;
 import static com.jme3.renderer.queue.RenderQueue.ShadowMode.Receive;
 import static museumhell.engine.world.levelgen.enums.Direction.*;
 import static museumhell.utils.ConstantManager.*;
@@ -78,7 +79,7 @@ public class _2WallBuilder {
             wall.setLocalScale(sx / wallLength, h / wallHeight, sz / wallThickness);
         }
 
-        wall.setShadowMode(Receive);
+        wall.setShadowMode(CastAndReceive);
 
         float halfThick = (dir == NORTH || dir == SOUTH) ? sz * 0.5f : sx * 0.5f;
         float tx, tz;
